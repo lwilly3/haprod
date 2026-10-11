@@ -1144,8 +1144,6 @@ def search_images(pid: str, req: ImagesRequest):
         service.requeue(assets.images_job_id(pid), "project_images", _claude_payload(pid), state)
     except ValueError as e:
         raise HTTPException(409, str(e)) from e
-    with service.editing(pid) as project:
-        service.start_step(project, "assets")
     return assets.images_state(pid)
 
 
@@ -1218,7 +1216,6 @@ def capture_sources(pid: str, req: CaptureRequest | None = None):
                               {"project": pid, "sources": sources, "dest": str(folder)}, {"done": {}, "next": 0})
     with service.editing(pid) as p:
         p["jobs"]["captures"] = job.id
-        service.start_step(p, "assets")
     return _view(pid)
 
 

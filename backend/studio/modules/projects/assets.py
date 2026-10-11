@@ -52,7 +52,6 @@ def start_download(project: dict, video: dict, options: dict, clip: dict | None,
                              options["transcribe"], language, clip, options["precise"])
     project["assets"]["downloads"].append({"job": job.id, "video": video["id"], "dest": label,
                                            "common": common, "category": category, "recorded": False})
-    service.start_step(project, "assets")
 
 
 def _download_view(d: dict) -> dict | None:

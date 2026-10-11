@@ -68,7 +68,7 @@ DOCS = (SCRIPT_FILE, NOTES_FILE)
 WRITABLE_DOCS = (NOTES_FILE,)
 
 # les étapes, dans l'ordre (l'interface en a la description complète)
-STEPS = ("angle", "titre", "vignette", "script", "roast", "tournage", "derush", "assets", "transcript",
+STEPS = ("angle", "titre", "vignette", "script", "roast", "tournage", "derush", "transcript",
          "storyboard", "montage", "motion", "son", "selection", "smontage", "soustitres",
          "rendu", "description", "upload")
 NEXT = {"transcript": ("storyboard", "selection"), "son": ("rendu",), "soustitres": ("rendu",)}
@@ -227,9 +227,6 @@ def create(mode: str, title: str, brief: dict, pid: str | None = None) -> dict:
         "assets": empty_assets(),
         "jobs": {}, "copies": [],
     }
-    if mode == "video":
-        # une vidéo déjà montée a encore besoin d'assets (B-roll, images) pour la suite
-        project["status"]["assets"] = "todo"
     _write(project)
     write_brief(pid, brief)
     write_documentation(pid, project["research"])
