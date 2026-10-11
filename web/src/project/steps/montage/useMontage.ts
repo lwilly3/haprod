@@ -134,6 +134,14 @@ export function useMontage(pid: string) {
     } catch { /* la liste reste vide */ }
   }
   loadAvailable();
+  // un média versé dans la bibliothèque (ou le projet) depuis un autre onglet apparaît au retour sur le montage
+  const onVisible = () => { if (document.visibilityState === "visible") loadAvailable(); };
+  document.addEventListener("visibilitychange", onVisible);
+  window.addEventListener("focus", loadAvailable);
+  onUnmounted(() => {
+    document.removeEventListener("visibilitychange", onVisible);
+    window.removeEventListener("focus", loadAvailable);
+  });
 
   return { view, tl, available, dirty, holding, busy, total, edit, shiftBeats, save, flush, undo, send, stop, exportResolve, load, loadAvailable };
 }
