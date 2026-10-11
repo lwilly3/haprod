@@ -212,7 +212,14 @@ async function removeBeat(id: string) {
   SB.edit((list) => list.filter((x) => x.id !== id), 0);
   if (beatSel.value === id) beatSel.value = null;
 }
-const anims = computed<Record<string, AnimState>>(() => SB.view.value?.anim_jobs ?? {});
+/** les beats dont on vient de demander la création : affichés « en file » tout de suite, sans attendre le serveur */
+const launching = ref<string[]>([]);
+const anims = computed<Record<string, AnimState>>(() => {
+  const a = { ...(SB.view.value?.anim_jobs ?? {}) };
+  for (const id of launching.value)
+    if (!["queued", "running"].includes(a[id]?.status ?? "")) a[id] = { status: "queued", activity: null, error: null };
+  return a;
+});
 const ORDER = ["running", "queued", "error"];
 /** les créations visibles dans la barre des tâches : en cours d'abord, puis en file, puis ratées */
 const tasks = computed(() => pending.value
@@ -229,10 +236,18 @@ const launchable = computed(() => pending.value.filter((b) => !["queued", "runni
 const toAnimate = computed(() => launchable.value.filter(needsAnim));
 const toPlace = computed(() => launchable.value.filter((b) => !needsAnim(b)));
 async function createAnimations(ids: string[]) {
-  const r = await SB.animate(ids);
-  if (r?.skipped.length) toast(tr("editing.storyboard.skipped", r.skipped.length));
-  if (r?.missing.length) toast(tr("editing.storyboard.broll.missingToast", r.missing.length));
-  await M.load();
+  // un double clic ne relance pas ce qui part déjà
+  ids = ids.filter((id) => !launching.value.includes(id));
+  if (!ids.length) return;
+  launching.value = [...launching.value, ...ids];
+  try {
+    const r = await SB.animate(ids);
+    if (r?.skipped.length) toast(tr("editing.storyboard.skipped", r.skipped.length));
+    if (r?.missing.length) toast(tr("editing.storyboard.broll.missingToast", r.missing.length));
+    await M.load();
+  } finally {
+    launching.value = launching.value.filter((id) => !ids.includes(id));
+  }
 }
 // une animation terminée : la timeline relue pour afficher sa composition
 watch(() => Object.keys(SB.view.value?.composed ?? {}).join(","), () => M.load());
