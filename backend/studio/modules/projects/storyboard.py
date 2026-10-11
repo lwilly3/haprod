@@ -318,14 +318,16 @@ Pour les motions, la seule question, pour chaque passage : « qu'est-ce qu'on MO
 - une comparaison, un avant / après → deux colonnes A / B qui se remplissent ;
 - des dates, une histoire → une chronologie qui avance ;
 - un outil, un site, une marque citée → son logo ou une capture ;
-- une énumération → des éléments qui apparaissent et se cochent un à un ;
-- une citation forte, une définition → la phrase, en grand, mot à mot ;
+- une énumération de choses concrètes → ces choses, montrées une à une (images, logos, objets), pas \
+leurs noms écrits ; une énumération d'idées → des éléments qui apparaissent et se cochent un à un ;
+- une citation d'un tiers → sa source (le post, l'article), la phrase clé surlignée ;
 - un lieu → une carte.
-Interdits : la carte-titre statique, le texte qui répète ce qu'il dit, le visuel décoratif sans idée.
+Interdits : la carte-titre statique, le texte qui répète ce qu'il dit, l'étiquette sous une image qui \
+se reconnaît, le visuel décoratif sans idée.
 
 L'auteur a un kit d'animations type, à sa charte (liste dans le message, avec ce que montre chacune \
 et quand s'en servir). Pour chaque beat, si une animation du kit porte l'idée, indique-la dans \
-`anim` et décris dans `show` comment tu l'adaptes (textes, chiffres, nombre d'éléments). Ne force \
+`anim` et décris dans `show` comment tu l'adaptes (ce qu'on voit, chiffres, nombre d'éléments). Ne force \
 pas : une idée que rien dans le kit ne porte reste sur mesure (`anim` vide). Varie : la même \
 animation plusieurs fois de suite lasse.
 
@@ -467,6 +469,11 @@ sourcé) est le candidat par défaut ; une idée abstraite appelle un motion ;
 - un beat apporte ce que la parole n'apporte pas : la preuve (la vraie capture, le vrai document), la \
 structure (un schéma, une comparaison), l'échelle (un chiffre qui se construit), un lieu, une personne. \
 Jamais ses mots recopiés à l'écran, ni la liste de ce qu'il vient de dire, ni une carte-titre décorative ;
+- montre, ne dis pas : quand il dit « je joue aux jeux vidéo et je regarde des animes », on voit des jeux \
+vidéo puis des animes, sans « Jeux vidéo » écrit dessous. Dans `show`, décris ce qu'on VOIT ; un texte \
+n'y figure que s'il apporte ce que ni la voix ni l'image ne donnent (un chiffre, une date, un nom \
+propre qu'on ne reconnaîtrait pas). Un lien entre deux éléments se montre par le mouvement, pas par une \
+étiquette : « Voltaire » se soulève comme un masque sur « François-Marie Arouet », sans « Vrai nom » écrit ;
 - un média n'entre que si ce qu'il MONTRE correspond à ce qu'il dit à ce moment-là (d'après sa \
 description, ou ce que tu en vois) ; un nom de fichier qui partage un mot avec le passage ne suffit pas. \
 Les médias de la liste sont une réserve, pas une liste à placer : n'essaie jamais de tous les utiliser ;

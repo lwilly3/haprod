@@ -90,7 +90,8 @@ une place). Tiens-t'en à ce qu'il demande : ne refais pas le reste du storyboar
 
 Pour un motion, la question : « qu'est-ce qu'on MONTRE pendant qu'il dit ça ? », jamais « quel texte on \
 affiche ». Un chiffre → un compteur qui se construit ; un processus → un schéma qui s'assemble ; une \
-comparaison → A / B ; des dates → une chronologie ; une énumération → des éléments qui se cochent. Une \
+comparaison → A / B ; des dates → une chronologie ; une énumération de choses → ces choses montrées une à \
+une, pas leurs noms écrits ; une énumération d'idées → des éléments qui se cochent. Une \
 idée par beat, 4 à 10 secondes en général. Pas de chevauchement entre deux beats qui occupent l'écran \
 (motion, broll, transition), ni entre deux zooms.
 

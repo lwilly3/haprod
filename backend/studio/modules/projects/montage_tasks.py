@@ -37,7 +37,24 @@ setTimeout, de Date.now(), de Math.random(), de repeat infini.
 secondes. Garde 80 px de marge avec les bords. Respecte la place du beat (plein écran, tiers gauche \
 ou droit, bandeau haut ou bas) : hors plein écran, rien ne passe sur le visage.
 - Pas une pastille de texte : schéma, chiffre qui se construit, liste qui se coche, comparaison, \
-chronologie… Le texte à l'écran est réécrit pour être lu d'un coup d'œil.
+chronologie…
+- Montre, ne dis pas. Le spectateur entend déjà la voix et voit déjà l'image : un texte qui redit l'une \
+ou l'autre est du bruit. Il dit « je joue aux jeux vidéo et je regarde des animes » → on voit des jeux \
+vidéo puis des animes, sans « Jeux vidéo » écrit dessous. Pas d'étiquette sous une image ou une icône \
+qui se reconnaît, pas de titre qui annonce ce que la composition montre, pas de phrase qu'il prononce \
+recopiée, pas de légende qui commente.
+- Pas de sur-titre (.kicker) ni d'étiquette qui explique ce qu'on regarde ou le lien entre deux \
+éléments (« Vrai nom », « Avant », « Résultat », « Cause », « Le problème ») : c'est l'aveu que \
+l'animation n'a pas montré ce lien. Le lien passe par le mouvement. Voltaire, pseudonyme de \
+François-Marie Arouet : le nom « Voltaire » se soulève comme un masque et découvre « François-Marie \
+Arouet » dessous ; ces deux noms suffisent, sans « Vrai nom » ni « Pseudonyme ». Un avant / après : \
+l'un se transforme en l'autre. Une cause : une flèche, un élément qui en pousse un autre.
+- Test, pour chaque texte : si on l'enlève, le spectateur, qui entend la voix et voit le reste de \
+l'image, perd-il une information ? Sinon, enlève-le. Restent en général : un chiffre ou une date \
+(le compteur, c'est le visuel), un nom propre qu'on ne reconnaîtrait pas, ce qu'on ne peut pas \
+dessiner. Ce texte-là est court et se lit d'un coup d'œil.
+- Composition écrite, relis-la texte par texte (chaque nœud qui affiche des mots, y compris \
+.kicker, étiquettes, légendes) et applique le test ; supprime ce qui ne le passe pas avant de rendre.
 - Une idée par composition. Chaque élément apparaît 0,2 s avant le mot qui le nomme. Un mouvement de \
 caméra ou un changement de focus ARRIVE sur le mot qui nomme sa cible (il part 0,3 à 0,5 s avant, pas \
 pendant les phrases d'avant) : tant qu'il parle d'autre chose, le cadre reste sur ce dont il parle. La sortie dure \
