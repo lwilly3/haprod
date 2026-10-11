@@ -24,12 +24,13 @@ timeline.json (temps de la timeline en secondes, sauf `in` / `out` : temps dans 
       "zooms":   [{"id", "at", "dur", "scale", "x", "y", "beat"?}], # zoom sur l'A-roll ; x, y : décalage du centre (fraction)
       "broll":   [{"id", "src", "at", "in", "out", "enter"?, "exit"?, "beat"?}], # plans de coupe, au-dessus de l'A-roll (muets)
       "motion":  [{"id", "at", "dur", "title", "kind", "idea", "enter"?, "exit"?, "beat"?}],  # motion design, au-dessus du B-roll
-      "audio":   [{"id", "src", "at", "in", "out", "gain_db", "role": "sfx" | "music"}],
+      "audio":   [{"id", "src", "at", "in", "out", "gain_db", "role": "sfx" | "music", "motion"?}],
       "texts":   [{"id", "at", "dur", "text", "x", "y", "size", "color", "angle"}],  # texte écrit à la main, au-dessus de tout
       "markers": [{"id", "t", "text", "kind": "chapter" | "note", "by": "user" | "ai", "done"}]
     }
 
-`beat` : le beat du storyboard dont vient l'élément.
+`beat` : le beat du storyboard dont vient l'élément. `motion` d'un son : le motion dont il fait le sound design ; il
+le suit quand on le déplace et il est remplacé quand Daryl réécrit les sons du motion (beat_anim.place_sounds).
 `transition`, `enter`, `exit` : une transition de la bibliothèque {"fx", "dur"} (transitions.py), ou null / absent
 pour une coupe franche.
 `texts` : une note écrite par le client (corriger une phrase mal audible, préciser un mot), en écriture manuscrite ;
@@ -241,6 +242,8 @@ def clean(pid: str, raw: dict, source_duration: float) -> dict:
             if track == "audio":
                 entry["gain_db"] = max(-60.0, min(_num(item.get("gain_db")), 12.0))
                 entry["role"] = "music" if item.get("role") == "music" else "sfx"
+                if item.get("motion"):
+                    entry["motion"] = str(item["motion"])[:20]
             out[track].append(entry)
 
     for m in raw.get("motion") or []:

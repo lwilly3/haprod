@@ -1156,6 +1156,7 @@ def compose(pid: str, only: list[str] | None = None) -> dict:
             out["placed"].append(b["id"])
             changed = True
             continue
+        mid = None
         if kind == "broll" and media_kind(b["src"]) == "video":
             src = montage._resolve_src(pid, b["src"])
             if not src:
@@ -1187,7 +1188,9 @@ def compose(pid: str, only: list[str] | None = None) -> dict:
             timeline["audio"].append({"id": next_id("audio"), "src": sound["src"],
                                       "at": round(max(0.0, b["at"] - SFX_LEAD), 3), "in": 0.0,
                                       "out": round(min(sound["duration"] or 1.0, b["dur"]), 3),
-                                      "gain_db": sound.get("gain_db", SFX_GAIN), "role": "sfx"})
+                                      "gain_db": sound.get("gain_db", SFX_GAIN), "role": "sfx",
+                                      # le son d'entrée d'un motion : remplacé si Daryl en fait le sound design
+                                      **({"motion": mid} if mid else {})})
         out["placed"].append(b["id"])
         changed = True
     if changed:

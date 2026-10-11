@@ -12,7 +12,8 @@ export interface Zoom { id: string; at: number; dur: number; scale: number; x: n
 /** enter / exit : la transition depuis et vers ce qui est dessous (absente : coupe franche) */
 export interface Broll { id: string; src: string; at: number; in: number; out: number; enter?: Fx | null; exit?: Fx | null }
 export interface Motion { id: string; at: number; dur: number; title: string; kind: string; idea: string; enter?: Fx | null; exit?: Fx | null }
-export interface Sound { id: string; src: string; at: number; in: number; out: number; gain_db: number; role: "sfx" | "music" }
+/** `motion` : le motion dont le son fait le sound design ; il le suit quand on le déplace */
+export interface Sound { id: string; src: string; at: number; in: number; out: number; gain_db: number; role: "sfx" | "music"; motion?: string }
 /**
  * Un texte écrit à la main, à l'écran (corriger un mot mal audible) : x, y le centre du texte (fraction de l'image),
  * size la hauteur de la police (fraction de la hauteur de l'image), angle en degrés.

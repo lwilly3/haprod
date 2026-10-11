@@ -128,6 +128,8 @@ export function remove(tl: Timeline, track: Track, id: string): void {
     return;
   }
   (tl[track] as { id: string }[]) = (tl[track] as { id: string }[]).filter((x) => x.id !== id);
+  // les sons d'un motion partent avec lui
+  if (track === "motion") tl.audio = tl.audio.filter((s) => s.motion !== id);
 }
 
 /** Change les bornes d'un clip de l'A-roll (dans son média : `limit`, sa durée), avec ripple. */

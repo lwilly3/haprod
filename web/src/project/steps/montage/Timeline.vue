@@ -412,6 +412,13 @@ function apply(tl: Timeline, d: NonNullable<typeof drag>, t: number) {
     if (o.dur != null) it.dur = round(end - o.at);
     else it.out = round(Math.min(limit, o.in! + end - o.at));
   }
+  // un motion déplacé, ou tiré par son début (sa composition démarre avec lui), emmène ses sons
+  if (d.track === "motion" && it.at !== o.at) {
+    for (const s of tl.audio) {
+      const so = s.motion === d.id ? d.origin.audio.find((x) => x.id === s.id) : undefined;
+      if (so) s.at = round(Math.max(0, so.at + it.at - o.at));
+    }
+  }
 }
 
 function move(e: PointerEvent) {
