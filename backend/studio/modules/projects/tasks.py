@@ -272,7 +272,7 @@ def render(ctx: TaskContext) -> None:
         partial.replace(dest)
 
 
-from . import asset_tasks, autoderush, beat_anim, kit_adapt, montage_tasks, publish, render as long_render, roast, storyboard, storyboard_chat, thumb_tasks, thumbs  # noqa: E402
+from . import asset_tasks, autoderush, beat_anim, kit_adapt, montage, montage_tasks, publish, render as long_render, roast, storyboard, storyboard_chat, thumb_tasks, thumbs  # noqa: E402
 
 TASKS = {
     # un type de job (et une file) par modèle d'image : les modèles tournent en parallèle
@@ -287,7 +287,8 @@ TASKS = {
     "project_copy": Task(queue="io", run=copy),
     "project_render": Task(queue="render", run=render),
     autoderush.KIND: Task(queue="autoderush", run=autoderush.run),
-    "project_montage": Task(queue="montage", run=montage_tasks.chat),
+    # les demandes à Daryl dans le chat du montage : une file par place, pour en traiter plusieurs à la fois
+    **{kind: Task(queue=f"montage_{i}", run=montage_tasks.chat) for i, kind in enumerate(montage.TASK_KINDS)},
     storyboard.KIND: Task(queue="storyboard", run=storyboard.run),
     storyboard_chat.KIND: Task(queue="storyboard", run=storyboard_chat.run),
     # les animations des beats : une file par place, pour en créer plusieurs à la fois

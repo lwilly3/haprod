@@ -10,8 +10,9 @@ Tout vit dans le dossier du projet, que Resolve lit tel quel (chemins absolus) :
   montage/<titre>.fcpxml       l'export pour Resolve, refait à chaque modification
   montage/.history/            les états précédents de timeline.json, pour annuler
   montage/.revs/               les dernières versions écrites, par empreinte (fusionner une retouche faite sur l'une)
-  montage/daryl/timeline.json  la copie de travail de Daryl pendant un tour du chat, fusionnée à la fin du tour
-                               avec la timeline, que le client continue de monter à la main (merge)
+  montage/daryl/<demande>/     la copie de travail de Daryl pendant un tour du chat (timeline.json, contexte.md,
+                               insertions.json), fusionnée à la fin du tour avec la timeline, que le client continue
+                               de monter à la main (merge) ; plusieurs demandes tournent à la fois
   montage/.cache/              forme d'onde et vignettes de la vidéo source
   assets/<catégorie>/          B-roll, musique, sons : un son de la bibliothèque y est copié
                                dès qu'il entre dans la timeline
@@ -64,9 +65,16 @@ RENDERS_DIR = "renders"
 HISTORY_DIR = ".history"
 CACHE_DIR = ".cache"
 HISTORY_MAX = 60
-# la copie de travail de Daryl ; dedans, WORK_BASE : la timeline et les compositions au début du tour, ses insertions
+# les copies de travail de Daryl, une par demande en cours (daryl/<demande>/) ; dans chacune, WORK_BASE : la timeline
+# et les compositions au début du tour, ses insertions ; RESERVED_FILE : les ids de motion qui lui sont réservés
 WORK_DIR = "daryl"
 WORK_BASE = ".depart"
+RESERVED_FILE = "ids.json"
+RESERVED = 10
+# les demandes faites à Daryl : une file par place, SLOTS demandes traitées à la fois (la première garde le nom
+# d'avant, pour les demandes déjà en base)
+TASK_SLOTS = 3
+TASK_KINDS = ["project_montage"] + [f"project_montage_{i}" for i in range(1, TASK_SLOTS)]
 REVS_DIR = ".revs"
 REVS_MAX = 30
 # une écriture de la timeline à la fois (l'API et le worker sont deux processus)
@@ -362,14 +370,15 @@ def shift_beats(pid: str, at: float, length: float) -> None:
         file.write_text(json.dumps(done + [{"at": at, "length": length}]), encoding="utf-8")
 
 
-def apply_insertions(pid: str) -> list[str]:
+def apply_insertions(pid: str, task: str) -> list[str]:
     """
-    Les clips que Daryl a demandé d'insérer (montage/insertions.json : [{src, at, in, out, gain_db?}], `at` en temps
+    Les clips que Daryl a demandé d'insérer pour la demande `task` (insertions.json dans son dossier de travail :
+    [{src, at, in, out, gain_db?}], `at` en temps
     de la timeline au moment où il écrit le fichier) : insérés dans sa copie de travail l'un après l'autre, du dernier
     au premier pour que les temps restent justes. Les beats du storyboard ne suivent qu'à la fin du tour, si son A-roll
     est gardé (finish_work). Le fichier est effacé ; rend ce qui n'a pas pu l'être.
     """
-    file = root(pid) / INSERTIONS_FILE
+    file = work_dir(pid, task) / INSERTIONS_FILE
     if not file.is_file():
         return []
     try:
@@ -382,7 +391,7 @@ def apply_insertions(pid: str) -> list[str]:
         wanted = [wanted]
     project = service.load(pid)
     duration = (_source(project) or {}).get("duration") or 0.0
-    timeline = clean(pid, _read(work_file(pid)) or load(pid), duration)
+    timeline = clean(pid, _read(work_file(pid, task)) or load(pid), duration)
     problems, shifts = [], []
     for w in sorted((w for w in wanted if isinstance(w, dict)), key=lambda w: -_num(w.get("at"))):
         src = _resolve_src(pid, str(w.get("src") or ""))
@@ -397,8 +406,8 @@ def apply_insertions(pid: str) -> list[str]:
             continue
         done = insert_aroll(timeline, _num(w.get("at")), {"src": src, "in": a, "out": b, "gain_db": _num(w.get("gain_db"))})
         shifts.append({"at": done["at"], "length": done["length"]})
-    _dump(work_file(pid), clean(pid, timeline, duration))
-    noted = work_file(pid).parent / WORK_BASE / SHIFTS_FILE
+    _dump(work_file(pid, task), clean(pid, timeline, duration))
+    noted = work_dir(pid, task) / WORK_BASE / SHIFTS_FILE
     before = json.loads(noted.read_text(encoding="utf-8")) if noted.is_file() else []
     noted.write_text(json.dumps(before + shifts), encoding="utf-8")
     return problems
@@ -468,8 +477,8 @@ def _locked(pid: str) -> Iterator[None]:
         path.unlink(missing_ok=True)
 
 
-def snapshot(pid: str, motions: Path | None = None) -> None:
-    """Garde l'état actuel de la timeline (et des compositions : celles de `motions` si donné) avant une modification."""
+def snapshot(pid: str, motions: list[Path] | None = None) -> None:
+    """Garde l'état actuel de la timeline (et des compositions : seulement `motions` si donné) avant une modification."""
     path = root(pid) / TIMELINE_FILE
     if not path.is_file():
         return
@@ -478,7 +487,7 @@ def snapshot(pid: str, motions: Path | None = None) -> None:
     target = history / str(n)
     target.mkdir(parents=True, exist_ok=True)
     shutil.copy2(path, target / TIMELINE_FILE)
-    for comp in (motions or motion_dir(pid)).glob("*.html"):
+    for comp in motion_dir(pid).glob("*.html") if motions is None else motions:
         (target / MOTION_DIR).mkdir(exist_ok=True)
         shutil.copy2(comp, target / MOTION_DIR / comp.name)
     for old in sorted((p for p in history.iterdir() if p.name.isdigit()), key=lambda p: int(p.name))[:-HISTORY_MAX]:
@@ -535,33 +544,69 @@ def save(pid: str, raw: dict, keep_history: bool = True, shifts: list[dict] | No
 
 # --- La copie de travail de Daryl ------------------------------------------------------------
 
-def work_file(pid: str) -> Path:
-    return root(pid) / WORK_DIR / TIMELINE_FILE
+def task_slot() -> str:
+    """La file la moins chargée pour une demande à Daryl (tous projets confondus)."""
+    load_ = {k: 0 for k in TASK_KINDS}
+    for j in jobs.list_jobs(service.MODULE):
+        if j.kind in load_ and not j.finished:
+            load_[j.kind] += 1
+    return min(TASK_KINDS, key=lambda k: load_[k])
 
 
-def start_work(pid: str) -> None:
-    """Début d'un tour du chat : Daryl reçoit une copie de la timeline ; l'état de départ (timeline et compositions)
-    est gardé pour la fusion et pour annuler son tour."""
-    work = root(pid) / WORK_DIR
-    shutil.rmtree(work, ignore_errors=True)
-    (work / WORK_BASE / MOTION_DIR).mkdir(parents=True)
-    timeline = load(pid)
-    _dump(work / TIMELINE_FILE, timeline)
-    _dump(work / WORK_BASE / TIMELINE_FILE, timeline)
-    for comp in motion_dir(pid).glob("*.html"):
-        shutil.copy2(comp, work / WORK_BASE / MOTION_DIR / comp.name)
+def work_dir(pid: str, task: str) -> Path:
+    """Le dossier de travail de Daryl pour une demande : sa copie de la timeline, son contexte, ses insertions."""
+    return root(pid) / WORK_DIR / task
 
 
-def finish_work(pid: str, motions_changed: bool) -> tuple[bool, list[str]]:
+def work_file(pid: str, task: str) -> Path:
+    return work_dir(pid, task) / TIMELINE_FILE
+
+
+def _motion_numbers(timeline: dict | None) -> set[int]:
+    return {int(m["id"][1:]) for m in (timeline or {}).get("motion") or [] if re.fullmatch(r"m\d+", str(m.get("id")))}
+
+
+def start_work(pid: str, task: str) -> list[str]:
     """
-    Fin d'un tour : la copie de Daryl est fusionnée dans la timeline, que le client a pu retoucher pendant ce temps
-    (sa version gagne quand les deux ont changé la même chose). L'état d'avant est historisé : annuler défait le tour
-    de Daryl, pas les retouches du client. Rend (quelque chose a changé, ce qui n'a pas pu être pris).
+    Début d'un tour du chat : Daryl reçoit une copie de la timeline ; l'état de départ (timeline et compositions)
+    est gardé pour la fusion et pour annuler son tour. D'autres demandes tournent peut-être en même temps : il reçoit
+    des ids de motion à lui (pas deux fois le même fichier de composition). Rend ces ids.
     """
-    work = root(pid) / WORK_DIR
+    with _locked(pid):
+        work = work_dir(pid, task)
+        shutil.rmtree(work, ignore_errors=True)
+        (work / WORK_BASE / MOTION_DIR).mkdir(parents=True)
+        timeline = load(pid)
+        _dump(work / TIMELINE_FILE, timeline)
+        _dump(work / WORK_BASE / TIMELINE_FILE, timeline)
+        for comp in motion_dir(pid).glob("*.html"):
+            shutil.copy2(comp, work / WORK_BASE / MOTION_DIR / comp.name)
+        # au-delà de tout ce qui existe ou est réservé par les autres demandes en cours
+        used = _motion_numbers(timeline) | {int(p.stem[1:]) for p in motion_dir(pid).glob("m*.html") if p.stem[1:].isdigit()}
+        for other in (root(pid) / WORK_DIR).iterdir():
+            used |= _motion_numbers(_read(other / TIMELINE_FILE))
+            used |= {int(i[1:]) for i in json.loads((other / RESERVED_FILE).read_text(encoding="utf-8"))} \
+                if (other / RESERVED_FILE).is_file() else set()
+        n = max(used, default=0) + 1
+        ids = [f"m{n + i}" for i in range(RESERVED)]
+        (work / RESERVED_FILE).write_text(json.dumps(ids), encoding="utf-8")
+    return ids
+
+
+def finish_work(pid: str, task: str, touched: set[str]) -> tuple[bool, list[str]]:
+    """
+    Fin d'un tour : la copie de Daryl est fusionnée dans la timeline, que le client (et les autres demandes finies
+    entre-temps) a pu changer pendant ce temps : la timeline gagne quand les deux ont changé la même chose. `touched` :
+    les compositions qu'il a écrites (noms de fichiers). L'état d'avant est historisé : annuler défait ce tour, pas le
+    reste. Rend (quelque chose a changé, ce qui n'a pas pu être pris).
+    """
+    work = work_dir(pid, task)
     base, theirs = _read(work / WORK_BASE / TIMELINE_FILE), _read(work / TIMELINE_FILE)
     if base is None or theirs is None:
-        return motions_changed, []
+        return False, []
+    before = {name: work / WORK_BASE / MOTION_DIR / name for name in touched}
+    motions_changed = any(not p.is_file() or not (motion_dir(pid) / p.name).is_file()
+                          or p.read_bytes() != (motion_dir(pid) / p.name).read_bytes() for p in before.values())
     project = service.load(pid)
     duration = (_source(project) or {}).get("duration") or 0.0
     theirs = clean(pid, theirs, duration)
@@ -576,7 +621,8 @@ def finish_work(pid: str, motions_changed: bool) -> tuple[bool, list[str]]:
                 comp = motion_dir(pid) / f"{old}.html"
                 if comp.is_file():
                     comp.replace(motion_dir(pid) / f"{new}.html")
-            snapshot(pid, work / WORK_BASE / MOTION_DIR)
+            # les compositions qu'il a retouchées, telles qu'avant son tour
+            snapshot(pid, [p for p in before.values() if p.is_file()])
             _write(pid, clean(pid, merged, duration))
             # ses insertions dans l'A-roll sont gardées : les beats du storyboard les suivent
             if _shape(merged["aroll"]) == _shape(theirs["aroll"]):

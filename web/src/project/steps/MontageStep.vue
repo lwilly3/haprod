@@ -1,14 +1,15 @@
 <script setup lang="ts">
 /**
  * Montage de la vidéo longue : l'atelier du monteur. Aperçu, inspecteur, timeline zoomable, et le chat
- * où le monteur (Claude) reçoit les demandes et modifie la timeline sous les yeux du client.
+ * où le monteur (Claude) reçoit les demandes : elles se mettent en file, chacune avec sa conversation, et
+ * il en traite plusieurs à la fois, chacune sur sa copie de la timeline, pendant que le client continue de monter.
  * Tout s'exporte en FCPXML dans le dossier du projet, que DaVinci Resolve ouvre tel quel.
  *
  * Raccourcis (conventions de Resolve) : Espace lecture, J/K/L, ←/→ image par image (Maj : 1 s),
  * ↑/↓ coupe précédente / suivante, A sélection, B lame, Ctrl+B couper à la tête, Suppr supprimer,
  * M beat (posé à la tête de lecture, à tirer sur son passage), I/O plage, Alt+X effacer la plage, Ctrl+molette ou +/− zoom, Maj+Z ajuster, Ctrl+Z annuler.
  */
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, post } from "../../lib/api";
 import { toast } from "../../lib/toast";
@@ -17,10 +18,11 @@ import { usePlaylist, type Piece } from "./derush/usePlaylist";
 import BeatPanel from "./montage/BeatPanel.vue";
 import Inspector from "./montage/Inspector.vue";
 import MonteurChat from "./montage/MonteurChat.vue";
+import TaskQueue from "./montage/TaskQueue.vue";
 import { addMedia, bladeAroll, bladeItem, insertAroll, isVideo, remove } from "./montage/ops";
 import Preview from "./montage/Preview.vue";
 import Timeline from "./montage/Timeline.vue";
-import { clipStarts, fxSpan, isImage, needsAnim, spanOf, tcd, trackLabel, TYPE_COLOR, type AnimState, type Beat, type AvailableMedia, type Broll, type Motion, type Selection, type Shot, type Timeline as TL, type Track } from "./montage/types";
+import { clipStarts, fxSpan, isImage, needsAnim, spanOf, tcd, trackLabel, TYPE_COLOR, type AnimState, type Beat, type AvailableMedia, type Broll, type MontageTask, type Motion, type Selection, type Shot, type Timeline as TL, type Track } from "./montage/types";
 import { useMontage } from "./montage/useMontage";
 import { useStoryboard } from "./montage/useStoryboard";
 
@@ -111,19 +113,43 @@ function pick(s: Selection) {
   if (span) seek(span[0]);
 }
 
-async function send(text: string, sel: Selection | null, shot: Shot | null, fresh: boolean) {
+// --- les demandes à Daryl : celle dont on voit la conversation (null : une nouvelle demande)
+const current = ref<string | null>(null);
+const task = computed(() => view.value?.tasks.find((x) => x.id === current.value) ?? null);
+// à l'ouverture : la dernière demande
+watch(() => !!view.value, (ready) => { if (ready) current.value = view.value!.tasks.at(-1)?.id ?? null; }, { once: true });
+
+async function send(text: string, sel: Selection | null, shot: Shot | null) {
   if (player.playing.value) player.toggle();
-  await M.send(text, sel, shot, fresh);
+  const id = await M.send(text, sel, shot, task.value?.id ?? null);
+  if (id) current.value = id;
 }
 
-/** Discuter de l'image en pause : l'aperçu capturé tel qu'on le voit, dans une nouvelle discussion. */
+/** Une nouvelle demande, pendant que les autres attendent ou tournent. */
+async function newRequest() {
+  current.value = null;
+  await nextTick();
+}
+
+/** Ouvre une demande de la file : sa conversation, et sa portée dans la timeline. */
+function openTask(x: MontageTask) {
+  current.value = x.id;
+  const first = x.messages.find((m) => m.role === "user");
+  if (first?.selection) pick(first.selection);
+  else if (first?.frame != null) seek(first.frame);
+}
+
+/** Discuter de l'image en pause : l'aperçu capturé tel qu'on le voit, dans une nouvelle demande. */
 async function discussFrame() {
   const at = t.value;
   const image = await preview.value?.capture().catch(() => null) ?? null;
-  chat.value?.restart({ t: at, image });
+  await newRequest();
+  chat.value?.frame({ t: at, image });
 }
 
-function comment(text?: string) {
+/** Commenter, demandes de l'inspecteur : une nouvelle demande sur la sélection. */
+async function comment(text?: string) {
+  await newRequest();
   chat.value?.compose(text ?? "");
 }
 
@@ -360,10 +386,12 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
       <div class="tabs">
         <span class="tab on" :title="tr('editing.chat.sub')">{{ tr("common.assistant") }}</span>
         <span class="spacer" />
-        <button class="link-btn new" :disabled="M.busy.value || !view.chat.messages.length" @click="chat?.restart()">{{ tr("editing.chat.new") }}</button>
+        <button class="link-btn new" :disabled="!current" @click="newRequest">{{ tr("editing.chat.new") }}</button>
       </div>
-      <MonteurChat ref="chat" :chat="view.chat" :selection="selection" :describe="describe"
-        @send="send" @stop="M.stop()" @pick="pick" @seek="seek" />
+      <TaskQueue v-if="view.tasks.length" :tasks="view.tasks" :current="current" :describe="describe"
+        @open="openTask" @stop="M.stop" @close="M.close" />
+      <MonteurChat ref="chat" :task="task" :usage="view.usage" :selection="selection" :describe="describe"
+        @send="send" @stop="M.stop(current!)" @pick="pick" @seek="seek" />
     </div>
   </div>
 </template>

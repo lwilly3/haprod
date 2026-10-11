@@ -1,16 +1,18 @@
 <script setup lang="ts">
 /**
- * Le chat avec le monteur (Claude) : tu es le client, il travaille dans la timeline sous tes yeux.
- * Une demande porte sur la sélection en cours (élément ou plage), affichée au-dessus de la saisie.
- * Discuter de l'image en pause ouvre une nouvelle discussion, avec son timecode et l'image joints.
+ * Une demande au monteur (Claude) et sa conversation, ou une nouvelle demande (`task` null), mise en file :
+ * on peut en lancer d'autres sans attendre. Une demande porte sur la sélection en cours (élément ou plage),
+ * affichée au-dessus de la saisie, ou sur l'image en pause, avec son timecode et la capture jointes.
  */
 import { computed, nextTick, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { store } from "../../store";
-import { tcd, trackLabel, type MontageView, type Selection, type Shot } from "./types";
+import { tcd, trackLabel, type MontageTask, type Selection, type Shot } from "./types";
 
-const props = defineProps<{ chat: MontageView["chat"]; selection: Selection | null; describe: (s: Selection) => string }>();
-const emit = defineEmits<{ send: [string, Selection | null, Shot | null, boolean]; stop: []; pick: [Selection]; seek: [number] }>();
+const props = defineProps<{
+  task: MontageTask | null; usage: Record<string, number> | null; selection: Selection | null; describe: (s: Selection) => string;
+}>();
+const emit = defineEmits<{ send: [string, Selection | null, Shot | null]; stop: []; pick: [Selection]; seek: [number] }>();
 
 const { t } = useI18n();
 const input = ref("");
@@ -22,25 +24,24 @@ watch(() => JSON.stringify(props.selection), () => { attach.value = true; });
 const target = computed(() => (attach.value ? props.selection : null));
 /** l'image en pause dont on parle (son temps et sa capture), jointe à la demande */
 const shot = ref<Shot | null>(null);
-/** la prochaine demande ouvre une nouvelle discussion : l'ancien fil est masqué, puis effacé à l'envoi */
-const fresh = ref(false);
-const messages = computed(() => (fresh.value ? [] : props.chat.messages));
+const messages = computed(() => props.task?.messages ?? []);
+/** Daryl traite la demande, ou elle attend son tour : on ne peut pas y répondre */
+const busy = computed(() => props.task?.status === "queued" || props.task?.status === "running");
 
 const CHIPS = computed(() => (shot.value ? [] : target.value
   ? ["motion", "broll", "zooms", "sound"].map((k) => t(`editing.chat.chipsSelection.${k}`))
   : ["chapters", "music", "zooms"].map((k) => t(`editing.chat.chipsVideo.${k}`))));
 
-watch(() => [props.chat.messages.length, props.chat.messages.at(-1)?.text.length, props.chat.busy, props.chat.activity], async () => {
+watch(() => [props.task?.id, messages.value.length, messages.value.at(-1)?.text.length, props.task?.status, props.task?.activity], async () => {
   await nextTick();
   thread.value?.scrollTo({ top: thread.value.scrollHeight });
 }, { immediate: true });
 
 function send(text = input.value) {
-  if (!text.trim() || props.chat.busy) return;
-  emit("send", text.trim(), target.value, shot.value, fresh.value);
+  if (!text.trim() || busy.value) return;
+  emit("send", text.trim(), target.value, shot.value);
   input.value = "";
   shot.value = null;
-  fresh.value = false;
 }
 function onKey(e: KeyboardEvent) {
   e.stopPropagation();
@@ -62,29 +63,21 @@ async function compose(text = "") {
   await nextTick();
   box.value?.focus();
 }
-/** Repart d'une discussion vierge ; `at` : l'image en pause dont le client veut parler. */
-async function restart(at: Shot | null = null) {
-  fresh.value = true;
+/** Joint l'image en pause dont le client veut parler (à la place de la sélection). */
+async function frame(at: Shot) {
   shot.value = at;
-  if (at) attach.value = false;
+  attach.value = false;
   await nextTick();
   box.value?.focus();
 }
-function resume() {
-  fresh.value = false;
-  shot.value = null;
-}
 const fileUrl = (rel: string) => `/api/projects/${store.project?.id}/files/${rel}`;
-defineExpose({ compose, send, restart });
+defineExpose({ compose, send, frame });
 </script>
 
 <template>
   <div class="chat">
     <div ref="thread" class="thread">
-      <span v-if="!messages.length" class="empty">
-        {{ t(fresh ? "editing.chat.fresh" : "editing.chat.empty") }}
-        <button v-if="fresh && chat.messages.length" class="link-btn" @click="resume">{{ t("editing.chat.resume") }}</button>
-      </span>
+      <span v-if="!messages.length" class="empty">{{ t("editing.chat.empty") }}</span>
       <div v-for="(m, i) in messages" :key="i" class="msg" :class="m.role">
         <img v-if="m.role === 'user' && m.image" class="shot" :src="fileUrl(m.image)" alt="" @click="emit('seek', m.frame!)">
         <span v-if="m.role === 'user' && m.frame != null" class="ref mono" @click="emit('seek', m.frame!)">{{ t("editing.chat.frameRef", { tc: tcd(m.frame) }) }}</span>
@@ -92,12 +85,13 @@ defineExpose({ compose, send, restart });
         <span v-if="m.text" class="text">{{ m.text }}</span>
         <span v-if="m.role === 'ai' && m.tools?.length" class="tools mono" :title="m.tools.join(' · ')">{{ t("editing.chat.actions", m.tools.length) }}{{ m.changed ? t("editing.chat.timelineChanged") : "" }}</span>
       </div>
-      <span v-if="chat.busy && !fresh" class="busy mono">{{ chat.activity ? `${chat.activity}…` : "…" }}</span>
-      <span v-if="chat.error" class="error">{{ chat.error }}</span>
+      <span v-if="task?.status === 'queued'" class="busy mono">{{ t("editing.chat.queued") }}</span>
+      <span v-else-if="task?.status === 'running'" class="busy mono">{{ task.activity ? `${task.activity}…` : "…" }}</span>
+      <span v-if="task?.error" class="error">{{ task.error }}</span>
     </div>
     <div class="compose">
       <div class="chips">
-        <button v-for="c in CHIPS" :key="c" class="chip" :disabled="chat.busy" @click="send(c)">{{ c }}</button>
+        <button v-for="c in CHIPS" :key="c" class="chip" :disabled="busy" @click="send(c)">{{ c }}</button>
       </div>
       <div v-if="shot" class="ctx">
         <img v-if="shot.image" class="shot sm" :src="shot.image" alt="">
@@ -108,14 +102,14 @@ defineExpose({ compose, send, restart });
         <span class="mono">{{ describe(target) }}</span>
         <button class="x-btn" :title="t('editing.chat.wholeVideo')" @click="attach = false">×</button>
       </div>
-      <textarea ref="box" v-model="input" rows="3" :disabled="chat.busy"
-        :placeholder="t(chat.busy ? 'editing.chat.busy' : shot ? 'editing.chat.onFrame' : target ? 'editing.chat.onSelection' : 'editing.chat.onVideo')" @keydown="onKey" />
+      <textarea ref="box" v-model="input" rows="3" :disabled="busy"
+        :placeholder="t(busy ? 'editing.chat.busy' : shot ? 'editing.chat.onFrame' : target ? 'editing.chat.onSelection' : task ? 'editing.chat.reply' : 'editing.chat.onVideo')" @keydown="onKey" />
       <div class="foot">
-        <span v-if="chat.usage" class="usage mono" :title="t('editing.chat.usage')">
-          <template v-for="(u, k) in chat.usage" :key="k">{{ k === "five_hour" ? t("editing.chat.fiveHour") : k === "seven_day" ? t("editing.chat.sevenDay") : k }} {{ Math.round(u * 100) }} % </template>
+        <span v-if="usage" class="usage mono" :title="t('editing.chat.usage')">
+          <template v-for="(u, k) in usage" :key="k">{{ k === "five_hour" ? t("editing.chat.fiveHour") : k === "seven_day" ? t("editing.chat.sevenDay") : k }} {{ Math.round(u * 100) }} % </template>
         </span>
         <span class="spacer" />
-        <button v-if="chat.busy" class="btn" @click="emit('stop')">{{ t("common.stop") }}</button>
+        <button v-if="busy" class="btn" @click="emit('stop')">{{ t("common.stop") }}</button>
         <button v-else class="btn dark" :disabled="!input.trim()" @click="send()">{{ t("common.send") }}</button>
       </div>
     </div>
@@ -125,8 +119,7 @@ defineExpose({ compose, send, restart });
 <style scoped>
 .chat { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .thread { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
-.empty { font-size: 13px; color: var(--faint); line-height: 1.55; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
-.empty .link-btn { font-size: 12.5px; }
+.empty { font-size: 13px; color: var(--faint); line-height: 1.55; }
 .msg { display: flex; flex-direction: column; gap: 4px; max-width: 100%; }
 .msg.user { align-items: flex-end; }
 .msg.ai { align-items: flex-start; }

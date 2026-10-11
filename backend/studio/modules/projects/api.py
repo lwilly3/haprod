@@ -1201,13 +1201,27 @@ def capture_sources(pid: str):
 
 # --- Montage de la vidéo longue ----------------------------------------------------------
 
-def _montage_job(pid: str) -> jobs.Job | None:
-    return jobs.get(f"{pid}-montage")
+def _montage_tasks(pid: str) -> list[jobs.Job]:
+    """Les demandes faites à Daryl dans le chat du montage, une tâche (et une conversation) chacune, dans l'ordre où
+    elles ont été faites ; le worker en traite plusieurs à la fois (montage.TASK_SLOTS)."""
+    found = [j for j in jobs.list_jobs(service.MODULE) if j.kind in montage.TASK_KINDS and j.payload.get("project") == pid]
+    return sorted(found, key=lambda j: j.created_at)
+
+
+def _montage_task(pid: str, task: str) -> jobs.Job:
+    job = jobs.get(task)
+    if not job or job.kind not in montage.TASK_KINDS or job.payload.get("project") != pid:
+        raise HTTPException(404, "demande introuvable")
+    return job
+
+
+def _task_status(job: jobs.Job) -> str:
+    return job.status if job.status == "queued" or job.finished else "running"
 
 
 def _montage_busy(pid: str) -> bool:
-    job = _montage_job(pid)
-    return bool(job and not job.finished)
+    """Daryl est en train de traiter une demande (pas seulement en file)."""
+    return any(_task_status(j) == "running" for j in _montage_tasks(pid))
 
 
 def _montage_view(pid: str) -> dict:
@@ -1215,8 +1229,9 @@ def _montage_view(pid: str) -> dict:
     source = montage._source(project)
     timeline = montage.load(pid)
     montage.ensure_media(pid, project)
-    job = _montage_job(pid)
-    chat = job.state if job else {}
+    tasks = _montage_tasks(pid)
+    # l'utilisation de l'abonnement : la dernière connue
+    last = max((j for j in tasks if j.state.get("usage")), key=lambda j: j.started_at or 0, default=None)
     path = montage.export_path(pid)
     return {
         "timeline": timeline,
@@ -1231,9 +1246,10 @@ def _montage_view(pid: str) -> dict:
         "can_undo": bool(montage.history_steps(pid)),
         "export": {"rel": path.relative_to(service.project_dir(pid)).as_posix(), "name": path.name,
                    "exists": path.is_file()},
-        "chat": {"messages": chat.get("messages", []), "busy": bool(job and not job.finished),
-                 "activity": chat.get("activity"), "usage": chat.get("usage"),
-                 "error": job.error if job and job.status == "error" else None},
+        "tasks": [{"id": j.id, "status": _task_status(j), "messages": j.state.get("messages", []),
+                   "activity": j.state.get("activity"), "error": j.error if j.status == "error" else None} for j in tasks],
+        "busy": any(_task_status(j) == "running" for j in tasks),
+        "usage": last.state.get("usage") if last else None,
     }
 
 
@@ -1288,8 +1304,8 @@ class MontageChatRequest(BaseModel):
     frame: float | None = None
     # l'image telle que le client la voit dans l'aperçu (A-roll, B-roll, motion, beats) : data URL JPEG
     image: str | None = None
-    # repartir d'une discussion vierge (nouvelle session Claude, fil effacé)
-    fresh: bool = False
+    # la demande à laquelle on répond (sa conversation continue) ; absente : une nouvelle demande, mise en file
+    task: str | None = None
 
 
 def _save_view(pid: str, data_url: str) -> str:
@@ -1313,32 +1329,49 @@ def montage_chat(pid: str, req: MontageChatRequest):
     _check(pid)
     if not req.text.strip():
         raise HTTPException(400, "message vide")
-    job = _montage_job(pid)
+    job = _montage_task(pid, req.task) if req.task else None
     state = job.state if job else {"messages": []}
-    if req.fresh:
-        if _montage_busy(pid):
-            raise HTTPException(409, "le monteur est en train de modifier la timeline")
-        state = {"messages": [], "usage": state.get("usage")}
-    elif job and job.status == "error" and state["messages"] and state["messages"][-1]["role"] == "user":
+    # une demande ratée ou arrêtée avant d'être traitée : remplacée par la nouvelle
+    if job and job.status in ("error", "cancelled") and state["messages"] and state["messages"][-1]["role"] == "user":
         state["messages"].pop()
     state["messages"].append({"role": "user", "text": req.text.strip(), "selection": req.selection or None,
                               "frame": req.frame, "image": _save_view(pid, req.image) if req.image else None,
                               "at": time.time()})
+    # la file la moins chargée : plusieurs demandes sont traitées à la fois
+    slot = montage.task_slot()
+    if job and job.finished:
+        jobs.update(job.id, kind=slot)
     try:
-        service.requeue(f"{pid}-montage", "project_montage", {"project": pid}, state)
+        job = service.requeue(job.id if job else f"{pid}-montage-{uuid.uuid4().hex[:8]}", slot, {"project": pid}, state)
     except ValueError as e:
         raise HTTPException(409, str(e)) from e
     with service.editing(pid) as p:
         service.start_step(p, "montage")
-    return _montage_view(pid)
+    return {**_montage_view(pid), "task": job.id}
+
+
+class MontageTaskRequest(BaseModel):
+    task: str
 
 
 @router.post("/{pid}/montage/stop")
-def stop_montage(pid: str):
+def stop_montage(pid: str, req: MontageTaskRequest):
+    """Arrête une demande en cours, ou la retire de la file."""
     _check(pid)
-    job = _montage_job(pid)
-    if job and not job.finished:
+    job = _montage_task(pid, req.task)
+    if not job.finished:
         jobs.cancel(job)
+    return _montage_view(pid)
+
+
+@router.delete("/{pid}/montage/tasks/{task}")
+def delete_montage_task(pid: str, task: str):
+    """Retire une demande terminée de la liste (ses changements restent dans la timeline)."""
+    _check(pid)
+    job = _montage_task(pid, task)
+    if not job.finished:
+        raise HTTPException(409, "Daryl travaille sur cette demande : arrête-la d'abord")
+    jobs.delete(job.id)
     return _montage_view(pid)
 
 

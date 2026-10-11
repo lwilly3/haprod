@@ -11,7 +11,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from ...core import claude
+from ...core import claude, jobs
 from ...core.system import tool
 from ...core.tasks import TaskContext
 from ..animations import render as hyperframes
@@ -49,7 +49,9 @@ devient noire avant la fin."""
 TRANSITIONS = "\n".join(transitions.prompt_lines())
 
 
-def system_prompt(project: dict) -> str:
+def system_prompt(project: dict, work: str, ids: list[str]) -> str:
+    """`work` : le dossier de travail de la demande (relatif au projet) ; `ids` : les ids de motion qui lui sont
+    réservés."""
     return f"""\
 Tu es le monteur d'un créateur de vidéos YouTube. Il est ton client : il te demande des \
 changements dans le chat et voit ta timeline en direct dans son interface. Tu montes la vidéo \
@@ -58,19 +60,20 @@ sound design, musique, chapitres. Vise le niveau d'un monteur professionnel de c
 éducative : rythmé, lisible, jamais gratuit.
 
 # Fichiers (dossier courant = le dossier du projet)
-- montage/contexte.md : régénéré avant chaque demande. Le transcript EN TEMPS DE LA TIMELINE, \
+- {work}/contexte.md : régénéré avant chaque demande. Le transcript EN TEMPS DE LA TIMELINE, \
 les chapitres, la liste exacte des médias utilisables (B-roll, musique, sons) avec leur durée, \
 et la sélection faite par le client dans la timeline. Lis-le en premier.
-- montage/daryl/timeline.json : ta copie de travail de la timeline, que tu modifies (Edit de \
+- {work}/timeline.json : ta copie de travail de la timeline, que tu modifies (Edit de \
 préférence, ou Write du fichier entier). Le client continue de monter à la main pendant que tu \
 travailles, dans sa propre timeline (montage/timeline.json : n'y touche pas) ; le studio fusionne \
-ta copie dans la sienne à la fin de ton tour. Ne change que ce que la demande implique : ce que \
-tu laisses tel quel garde ses retouches à lui.
+ta copie dans la sienne à la fin de ton tour. D'autres de ses demandes sont peut-être traitées en \
+même temps, chacune dans sa copie, sur d'autres passages. Ne change que ce que la demande implique : \
+ce que tu laisses tel quel garde ses retouches et celles des autres demandes.
 - montage/motion/<id>.html : une composition HyperFrames par motion design (voir le contrat).
-- montage/insertions.json : pour insérer un clip dans l'A-roll (voir plus bas). Le studio l'applique \
+- {work}/insertions.json : pour insérer un clip dans l'A-roll (voir plus bas). Le studio l'applique \
 et l'efface aussitôt écrit.
 
-# La timeline (montage/daryl/timeline.json)
+# La timeline ({work}/timeline.json)
 Temps de la timeline en secondes (`at`, `dur`, `t`) ; `in`/`out` : temps dans le média.
 {{
   "aroll":   [{{"id": "a1", "in": 0, "out": 264.25, "transition": null}}, {{"id": "a2", "src": "assets/broll/extrait.mp4", "in": 0, "out": 3.9, "transition": null, "gain_db": -3}}, {{"id": "a3", "in": 264.25, "out": 754.2, "transition": null}}],
@@ -87,18 +90,19 @@ précédent (null : coupe franche). Un clip avec `src` est un autre média insé
 une archive) : il passe en plein écran AVEC SON SON, la voix du client s'arrête le temps du clip ; pas de \
 transition avec lui. `gain_db` : le volume d'un clip (−20 à +12, absent : 0) ; tu peux le changer directement.
 - Insérer un clip dans l'A-roll (« mets l'extrait X à tel moment ») : ne le fais JAMAIS à la main dans \
-ta copie (il faudrait décaler tout ce qui suit). Écris montage/insertions.json : \
+ta copie (il faudrait décaler tout ce qui suit). Écris {work}/insertions.json : \
 [{{"src": "<chemin listé dans contexte.md>", "at": <instant de la timeline, de préférence dans un silence \
 entre deux phrases>, "in": 0, "out": <durée du média>, "gain_db": 0}}]. Le studio coupe l'A-roll à `at`, \
 insère le clip et décale tout ce qui suit (zooms, B-roll, motions, sons, marqueurs, storyboard). Ensuite \
-RELIS montage/daryl/timeline.json (elle a changé) avant toute autre modification : le clip y est, avec son id ; les temps \
+RELIS {work}/timeline.json (elle a changé) avant toute autre modification : le clip y est, avec son id ; les temps \
 d'après sont décalés de sa durée. Ajoute alors ce qui l'accompagne (un whoosh à l'entrée et à la sortie, \
 par exemple) en temps de la timeline à jour.
 - zooms : recadrage progressif de l'A-roll (montée et descente de 0,4 s faites à l'export). \
 scale 1.1 à 1.4 ; x, y : décalage du centre en fraction de l'image (−0.5 à 0.5).
 - broll : plan de coupe muet qui couvre l'A-roll (la voix continue). `src` : EXACTEMENT un \
 chemin listé dans contexte.md ; in/out dans la durée du média. 2 à 6 s en général.
-- motion : `id` nouveau (m + numéro jamais utilisé), puis écris montage/motion/<id>.html. \
+- motion : `id` nouveau, pris dans les ids qui te sont réservés pour cette demande, dans l'ordre : \
+{", ".join(ids)} (les autres demandes en cours ont les leurs), puis écris montage/motion/<id>.html. \
 Durée = celle de la composition (data-duration).
 - audio : sons (role "sfx", −8 à −14 dB) et musique (role "music", −20 à −26 dB sous la voix) ; \
 quand contexte.md donne un volume (« à poser à … dB »), c'est celui-là. \
@@ -131,10 +135,10 @@ indiquée dans contexte.md et dans le message. Tiens-t'en à cette portée.
 - Les motions d'ensemble viennent du storyboard que le client a validé ; leurs animations sont créées \
 par des tâches à part. Un motion en cours de création (listé dans contexte.md) : n'y touche pas.
 - Pour une demande précise du client (« un zoom ici », « remplace ce B-roll », « corrige ce motion »), \
-fais-la directement : modifie montage/daryl/timeline.json (le client voit tes changements à la fin \
+fais-la directement : modifie {work}/timeline.json (le client voit tes changements à la fin \
 de ton tour), puis écris les compositions. Ne lance pas de création d'ensemble de toi-même : propose plutôt de passer par \
 le storyboard.
-- Ne crée ni ne modifie aucun autre fichier que montage/daryl/timeline.json, montage/insertions.json \
+- Ne crée ni ne modifie aucun autre fichier que {work}/timeline.json, {work}/insertions.json \
 et montage/motion/*.html.
 - Si un média manque (pas de B-roll adapté, pas de son), dis-le dans ta réponse plutôt que \
 d'inventer un chemin.
@@ -156,8 +160,8 @@ def _item_scope(item: dict) -> str:
     return f"la transition {fx} de {what} : ne change que ce champ, sauf demande contraire" if fx else what
 
 
-def write_context(pid: str, selection: dict | None) -> None:
-    """montage/contexte.md : ce que Claude doit savoir avant chaque demande."""
+def write_context(pid: str, selection: dict | None, path: Path) -> None:
+    """contexte.md (`path`) : ce que Claude doit savoir avant chaque demande."""
     project = service.load(pid)
     from . import runtime
 
@@ -206,7 +210,6 @@ def write_context(pid: str, selection: dict | None) -> None:
             for m in items) if items else "(aucun)"))
     parts.append("\n## Transcript (temps de la timeline)\n" + "\n".join(
         f"[{_mmss(l['start'])} → {_mmss(l['end'])}] {l['text']}" for l in lines))
-    path = montage.root(pid) / "contexte.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(parts) + "\n", encoding="utf-8")
 
@@ -219,20 +222,82 @@ def _label(block: dict) -> str:
     return f"{verb} {shown}".strip()
 
 
+# une image en pause : le passage autour d'elle (s), pour savoir si deux demandes se recoupent
+FRAME_SPAN = 1.0
+WAIT_POLL = 2.0
+
+
+def _span(pid: str, request: dict) -> list[float] | None:
+    """Le passage de la timeline sur lequel porte une demande ; None : toute la vidéo."""
+    selection = request.get("selection") or {}
+    if selection.get("range"):
+        return [float(x) for x in selection["range"]]
+    if selection.get("item"):
+        item = selection["item"]
+        timeline = montage.load(pid)
+        if item.get("track") == "aroll":
+            for c, start in zip(timeline["aroll"], montage._starts(timeline["aroll"])):
+                if c["id"] == item.get("id"):
+                    return [start, start + c["out"] - c["in"]]
+        for x in timeline.get(item.get("track")) or []:
+            if x["id"] == item.get("id"):
+                at = x.get("at", x.get("t", 0.0))
+                return [at, at + (x["dur"] if "dur" in x else x.get("out", 0.0) - x.get("in", 0.0))]
+    if request.get("frame") is not None:
+        return [float(request["frame"]) - FRAME_SPAN, float(request["frame"]) + FRAME_SPAN]
+    return None
+
+
+def _overlap(a: list[float] | None, b: list[float] | None) -> bool:
+    return a is None or b is None or (a[0] < b[1] and b[0] < a[1])
+
+
+def _wait_turn(ctx: TaskContext, pid: str) -> None:
+    """Plusieurs demandes tournent à la fois ; une demande attend que celles parties avant elle sur le même passage
+    (ou sur toute la vidéo) soient finies, pour partir de la timeline où elles sont fusionnées."""
+    me = jobs.get(ctx.job.id)
+    order = (me.started_at or 0, me.id)
+    while True:
+        before = [j for j in jobs.list_jobs(service.MODULE)
+                  if j.kind in montage.TASK_KINDS and j.payload.get("project") == pid and j.id != me.id
+                  and not j.finished and j.status != "queued" and ((j.started_at or 0), j.id) < order]
+        # « span » absent (la demande n'a pas encore dit sur quoi elle porte) : comme toute la vidéo
+        if not any(_overlap(ctx.state["span"], j.state.get("span")) for j in before):
+            return
+        ctx.state["activity"] = "attend la fin d'une demande sur le même passage"
+        ctx.save(force=True)
+        ctx.check_cancel()
+        time.sleep(WAIT_POLL)
+
+
+def _composition(pid: str, block: dict) -> str | None:
+    """La composition qu'écrit un Write ou un Edit de Daryl (son nom de fichier), sinon None."""
+    if block.get("name") not in ("Write", "Edit"):
+        return None
+    target = Path((block.get("input") or {}).get("file_path") or "")
+    if not target.is_absolute():
+        target = service.project_dir(pid) / target
+    return target.name if target.suffix == ".html" and target.parent.resolve() == montage.motion_dir(pid).resolve() else None
+
+
 def chat(ctx: TaskContext) -> None:
     state, pid = ctx.state, ctx.payload["project"]
+    # la demande : son dossier de travail (daryl/<demande>/), à part de ceux des demandes qui tournent en même temps
+    task = ctx.job.id.rsplit("-", 1)[-1]
     messages = state["messages"]
     while messages and messages[-1]["role"] == "ai":
         messages.pop()
     request = messages[-1]
+    state["span"] = _span(pid, request)
+    _wait_turn(ctx, pid)
     montage.prepare(pid)
-    path = montage.root(pid) / montage.TIMELINE_FILE
-    if not path.is_file():
+    if not (montage.root(pid) / montage.TIMELINE_FILE).is_file():
         montage.save(pid, montage.load(pid), keep_history=False)
-    write_context(pid, request.get("selection"))
     # Daryl travaille sur une copie : le client continue de monter à la main, les deux sont fusionnées à la fin
-    montage.start_work(pid)
-    motions_before = {p.name: p.stat().st_mtime for p in montage.motion_dir(pid).glob("*.html")}
+    ids = montage.start_work(pid, task)
+    work = montage.work_dir(pid, task).relative_to(service.project_dir(pid)).as_posix()
+    write_context(pid, request.get("selection"), montage.work_dir(pid, task) / "contexte.md")
+    touched: set[str] = set()
 
     reply = {"role": "ai", "text": "", "tools": [], "at": time.time()}
     messages.append(reply)
@@ -250,16 +315,15 @@ def chat(ctx: TaskContext) -> None:
         scope = f"Portée : {_item_scope(selection['item'])}.\n\n"
     if request.get("frame") is not None:
         scope += _frame_scope(pid, float(request["frame"]), request.get("image"))
-    prompt = f"Lis montage/contexte.md puis montage/daryl/timeline.json.\n\n{scope}Demande : {request['text']}"
+    prompt = f"Lis {work}/contexte.md puis {work}/timeline.json.\n\n{scope}Demande : {request['text']}"
     project = service.load(pid)
-    insertions = montage.root(pid) / montage.INSERTIONS_FILE
-    insertions.unlink(missing_ok=True)
+    insertions = montage.work_dir(pid, task) / montage.INSERTIONS_FILE
     try:
-        for event in claude.stream(prompt, service.project_dir(pid), system_prompt(project), state.get("session_id"),
-                                   None, ctx.check_cancel):
-            # une insertion demandée : appliquée tout de suite, pour que Daryl relise la timeline à jour
+        for event in claude.stream(prompt, service.project_dir(pid), system_prompt(project, work, ids),
+                                   state.get("session_id"), None, ctx.check_cancel):
+            # une insertion demandée : appliquée tout de suite, pour que Daryl relise sa copie à jour
             if insertions.is_file():
-                _insert(pid, reply)
+                _insert(pid, task, reply)
                 ctx.save(force=True)
             kind = event.get("type")
             if kind == "system" and event.get("subtype") == "init":
@@ -280,6 +344,8 @@ def chat(ctx: TaskContext) -> None:
             elif kind == "assistant":
                 for block in event["message"]["content"]:
                     if block["type"] == "tool_use":
+                        if comp := _composition(pid, block):
+                            touched.add(comp)
                         label = _label(block)
                         reply["tools"].append(label)
                         state["activity"] = label
@@ -294,10 +360,9 @@ def chat(ctx: TaskContext) -> None:
     finally:
         state["activity"] = None
         if insertions.is_file():
-            _insert(pid, reply)
-        _apply(pid)
-        changed, kept = montage.finish_work(pid, any(
-            motions_before.get(p.name) != p.stat().st_mtime for p in montage.motion_dir(pid).glob("*.html")))
+            _insert(pid, task, reply)
+        _apply(pid, task)
+        changed, kept = montage.finish_work(pid, task, touched)
         if changed:
             montage.after_change(pid)
         problems = reply.pop("problems", []) + kept
@@ -329,25 +394,25 @@ def _frame_scope(pid: str, t: float, image: str | None) -> str:
             + seen + "\n")
 
 
-def _insert(pid: str, reply: dict) -> None:
+def _insert(pid: str, task: str, reply: dict) -> None:
     """Les clips que Daryl a demandé d'insérer dans l'A-roll ; ce qui a échoué s'ajoute à sa réponse."""
-    problems = montage.apply_insertions(pid)
+    problems = montage.apply_insertions(pid, task)
     reply["tools"].append("insère un clip dans l'A-roll")
     if problems:
         reply.setdefault("problems", []).extend(problems)
 
 
-def _apply(pid: str) -> None:
+def _apply(pid: str, task: str) -> None:
     """Fin de tour : la copie écrite par Claude est nettoyée (ids, bornes, médias copiés).
     Pas pendant le tour : réécrire le fichier ferait échouer ses Edit suivants."""
     try:
-        raw = json.loads(montage.work_file(pid).read_text(encoding="utf-8"))
+        raw = json.loads(montage.work_file(pid, task).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return
     project = service.load(pid)
     cleaned = montage.clean(pid, raw, (montage._source(project) or {}).get("duration") or 0.0)
     if cleaned != raw:
-        montage._dump(montage.work_file(pid), cleaned)
+        montage._dump(montage.work_file(pid, task), cleaned)
 
 
 # --- Rendu d'un motion design --------------------------------------------------------------

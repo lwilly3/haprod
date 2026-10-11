@@ -60,7 +60,18 @@ export interface MontageView {
   motions: Record<string, MotionState>;
   can_undo: boolean;
   export: { rel: string; name: string; exists: boolean };
-  chat: { messages: MontageMessage[]; busy: boolean; activity: string | null; usage: Record<string, number> | null; error: string | null };
+  /** les demandes faites à Daryl, dans l'ordre : chacune a sa conversation ; plusieurs sont traitées à la fois */
+  tasks: MontageTask[];
+  /** Daryl traite une demande */
+  busy: boolean;
+  /** l'utilisation de l'abonnement Claude, la dernière connue */
+  usage: Record<string, number> | null;
+}
+
+/** Une demande à Daryl et sa conversation : en file, en cours, puis finie. */
+export interface MontageTask {
+  id: string; status: "queued" | "running" | "done" | "error" | "cancelled";
+  messages: MontageMessage[]; activity: string | null; error: string | null;
 }
 
 export type BeatType = "motion" | "zoom" | "broll" | "transition";

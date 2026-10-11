@@ -1,10 +1,10 @@
 /**
  * L'état du montage : la timeline (modifiée tout de suite à l'écran, enregistrée peu après),
- * le chat avec le monteur, et les médias. Le monteur travaille sur sa copie : on continue de monter
+ * les demandes au monteur, et les médias. Le monteur travaille sur sa copie : on continue de monter
  * pendant ce temps, ses changements sont fusionnés à la fin de son tour (les nôtres l'emportent).
  */
 import { computed, onUnmounted, ref } from "vue";
-import { api, post, putJson } from "../../../lib/api";
+import { api, del, post, putJson } from "../../../lib/api";
 import { toast } from "../../../lib/toast";
 import { clone, totalOf, type AvailableMedia, type MontageView, type Selection, type Shot, type Timeline } from "./types";
 
@@ -18,7 +18,7 @@ export function useMontage(pid: string) {
   /** un glisser en cours : on n'écrase rien */
   const holding = ref(false);
 
-  const busy = computed(() => !!view.value?.chat.busy);
+  const busy = computed(() => !!view.value?.busy);
   const total = computed(() => (tl.value ? totalOf(tl.value) : 0));
 
   /** la version du serveur dont vient la timeline à l'écran : une retouche faite dessus y est fusionnée si elle a changé */
@@ -102,20 +102,33 @@ export function useMontage(pid: string) {
     }
   }
 
-  /** `shot` : l'image en pause dont on parle ; `fresh` : dans une nouvelle discussion. */
-  async function send(text: string, selection: Selection | null, shot: Shot | null = null, fresh = false) {
+  /** Une demande à Daryl : la suite de la conversation `task`, sinon une nouvelle demande mise en file. `shot` :
+   * l'image en pause dont on parle. Rend la demande (null si elle n'est pas partie). */
+  async function send(text: string, selection: Selection | null, shot: Shot | null, task: string | null): Promise<string | null> {
     await flush();
     try {
-      receive(await post<MontageView>(`${base}/chat`, { text, selection, frame: shot?.t ?? null, image: shot?.image ?? null, fresh }), true);
-      return true;
+      const v = await post<MontageView & { task: string }>(`${base}/chat`,
+        { text, selection, frame: shot?.t ?? null, image: shot?.image ?? null, task });
+      receive(v, true);
+      return v.task;
     } catch (e) {
       toast((e as Error).message, true);
-      return false;
+      return null;
     }
   }
 
-  async function stop() {
-    receive(await post<MontageView>(`${base}/stop`), true);
+  /** Arrête une demande en cours, ou la retire de la file. */
+  async function stop(task: string) {
+    receive(await post<MontageView>(`${base}/stop`, { task }));
+  }
+
+  /** Retire une demande finie de la liste. */
+  async function close(task: string) {
+    try {
+      receive(await del<MontageView>(`${base}/tasks/${task}`));
+    } catch (e) {
+      toast((e as Error).message, true);
+    }
   }
 
   async function exportResolve(): Promise<{ rel: string; name: string; problems: string[] } | null> {
@@ -143,7 +156,7 @@ export function useMontage(pid: string) {
     window.removeEventListener("focus", loadAvailable);
   });
 
-  return { view, tl, available, dirty, holding, busy, total, edit, shiftBeats, save, flush, undo, send, stop, exportResolve, load, loadAvailable };
+  return { view, tl, available, dirty, holding, busy, total, edit, shiftBeats, save, flush, undo, send, stop, close, exportResolve, load, loadAvailable };
 }
 
 export type MontageState = ReturnType<typeof useMontage>;
