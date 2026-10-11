@@ -87,14 +87,25 @@ def sync(project: dict) -> bool:
     capture_job = jobs.get(project["jobs"].get("captures") or "")
     if capture_job:
         for url, result in (capture_job.state.get("done") or {}).items():
-            if a["captures"].get(url) != result:
+            current = a["captures"].get(url) or {}
+            # une image choisie à la main n'est pas écrasée par une capture d'avant
+            if current != result and not current.get("manual"):
                 a["captures"][url] = result
                 changed = True
     return changed
 
 
+def capture_queue(project: dict) -> list[str]:
+    """Les sources que le job de captures n'a pas encore traitées."""
+    job = jobs.get(project["jobs"].get("captures") or "")
+    if not job or job.finished:
+        return []
+    return [s["u"] for s in job.payload["sources"][job.state.get("next", 0):]]
+
+
 def view(project: dict) -> dict:
-    return {"downloads": [v for v in map(_download_view, project["assets"]["downloads"]) if v]}
+    return {"downloads": [v for v in map(_download_view, project["assets"]["downloads"]) if v],
+            "capturing": capture_queue(project)}
 
 
 # --- Images ------------------------------------------------------------------------------

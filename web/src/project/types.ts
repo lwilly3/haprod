@@ -84,7 +84,8 @@ export interface Runtime {
   /** la note du dernier roast terminé */
   roast_score: number | null;
   render_current: boolean;
-  assets: { downloads: AssetDownload[] };
+  /** capturing : les sources que le job de captures doit encore traiter (la première est en cours) */
+  assets: { downloads: AssetDownload[]; capturing: string[] };
   /** les modèles d'image de fal.ai ; `ready` : la clé FAL_KEY est définie */
   thumbs: { models: { id: string; label: string }[]; ready: boolean };
   /** la dernière sélection de shorts sur le transcript de la vidéo source, et ses shorts en montage */
@@ -110,7 +111,7 @@ export interface Assets {
   /** sources à capturer (url -> coché) */
   capture: Record<string, boolean>;
   /** captures faites (url -> fichier du projet, ou erreur) */
-  captures: Record<string, { rel: string | null; error: string | null }>;
+  captures: Record<string, { rel: string | null; error: string | null; manual?: boolean }>;
 }
 
 /** Une image proposée par Claude ; `added` : où elle a été rangée (« Projet · Images »). */

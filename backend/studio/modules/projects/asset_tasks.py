@@ -14,6 +14,7 @@ from urllib.parse import urlparse
 
 import certifi
 
+from ...core import jobs
 from ...core.system import browser
 from ...core.tasks import TaskContext
 from . import assets, prompts, service
@@ -116,15 +117,21 @@ def screenshot(url: str, dest: Path) -> None:
 
 
 def captures(ctx: TaskContext) -> None:
+    """Les sources de la file, dans l'ordre ; l'API peut en ajouter pendant qu'elle tourne (payload relu à chaque
+    tour, `next` : la prochaine à traiter)."""
     p, state = ctx.payload, ctx.state
     root = service.project_dir(p["project"])
     folder = Path(p["dest"])
     folder.mkdir(parents=True, exist_ok=True)
     done = state.setdefault("done", {})
-    todo = [s for s in p["sources"] if s["u"] not in done]
     ctx.set_status("capturing")
-    for i, s in enumerate(todo):
+    while True:
+        sources = (jobs.get(ctx.job.id) or ctx.job).payload["sources"]
+        i = state.setdefault("next", 0)
+        if i >= len(sources):
+            break
         ctx.check_cancel()
+        s = sources[i]
         state["activity"] = f"capture {urlparse(s['u']).netloc or s['u']}"
         ctx.save(force=True)
         dest = service.unique_path(folder, service.safe_name(f"Capture - {s['t'][:80]}.png"))
@@ -133,6 +140,7 @@ def captures(ctx: TaskContext) -> None:
             done[s["u"]] = {"rel": dest.relative_to(root).as_posix(), "error": None}
         except Exception as e:
             done[s["u"]] = {"rel": None, "error": str(e)[:200]}
-        ctx.progress = (i + 1) / len(todo)
+        state["next"] = i + 1
+        ctx.progress = (i + 1) / len(sources)
         ctx.save(force=True)
     state["activity"] = None

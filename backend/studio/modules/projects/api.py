@@ -1176,26 +1176,69 @@ def candidate(pid: str, name: str):
 
 # --- Assets : captures des sources ------------------------------------------------------
 
+class CaptureRequest(BaseModel):
+    # des sources précises (capturées à nouveau si elles l'étaient déjà) ; sinon les cochées pas encore capturées
+    urls: list[str] | None = None
+
+
+def _is_web(url: str) -> bool:
+    return url.startswith(("http://", "https://"))
+
+
 @router.post("/{pid}/assets/captures")
-def capture_sources(pid: str):
-    """Capture les sources cochées qui ne le sont pas encore (celles en erreur sont retentées)."""
+def capture_sources(pid: str, req: CaptureRequest | None = None):
+    """Capture des sources (celles en erreur sont retentées) ; en cours, le job les ajoute à sa file."""
     _check(pid)
+    urls = req.urls if req else None
     project = service.load_synced(pid, runtime.sync)
     a = project["assets"]
-    sources = [{"u": s["u"], "t": s.get("t") or s["u"]} for s in project["research"]
-               if s.get("u", "").startswith(("http://", "https://")) and a["capture"].get(s["u"])
-               and not (a["captures"].get(s["u"]) or {}).get("rel")]
+    sources = [{"u": s["u"], "t": s.get("t") or s["u"]} for s in project["research"] if _is_web(s.get("u", ""))
+               and (s["u"] in urls if urls is not None
+                    else a["capture"].get(s["u"]) and not (a["captures"].get(s["u"]) or {}).get("rel"))]
+    queued = set(assets.capture_queue(project))
+    sources = [s for s in sources if s["u"] not in queued]
     if not sources:
+        if urls and queued.issuperset(urls):
+            return _view(pid)
         raise HTTPException(400, "aucune source à capturer")
-    folder, _ = library.destination(pid, False, "images")
-    try:
-        job = service.requeue(f"{pid}-captures", "project_captures",
-                              {"project": pid, "sources": sources, "dest": str(folder)}, {"done": {}})
-    except ValueError as e:
-        raise HTTPException(409, "les captures sont déjà en cours") from e
+    with service.editing(pid) as p:
+        for s in sources:
+            p["assets"]["capture"][s["u"]] = True
+            # recapturer remplace l'image choisie à la main
+            if (p["assets"]["captures"].get(s["u"]) or {}).get("manual"):
+                del p["assets"]["captures"][s["u"]]
+    job_id = f"{pid}-captures"
+    job = jobs.get(job_id)
+    if job and not job.finished:
+        jobs.update(job_id, payload={**job.payload, "sources": job.payload["sources"] + sources})
+        job = jobs.get(job_id)
+    if not job or job.finished:
+        folder, _ = library.destination(pid, False, "images")
+        job = service.requeue(job_id, "project_captures",
+                              {"project": pid, "sources": sources, "dest": str(folder)}, {"done": {}, "next": 0})
     with service.editing(pid) as p:
         p["jobs"]["captures"] = job.id
         service.start_step(p, "assets")
+    return _view(pid)
+
+
+@router.post("/{pid}/assets/captures/upload")
+def upload_capture(pid: str, url: str = Form(...), file: UploadFile = File(...)):
+    """Une image choisie à la main pour une source, à la place de la capture."""
+    _check(pid)
+    project = service.load(pid)
+    source = next((s for s in project["research"] if s.get("u") == url), None)
+    if not source:
+        raise HTTPException(404, "source inconnue")
+    ext = Path(file.filename or "").suffix.lower()
+    if ext not in library.IMAGE_EXT or ext == ".psd":
+        raise HTTPException(400, "il faut une image (png, jpg, webp, gif, svg)")
+    folder, _ = library.destination(pid, False, "images")
+    file.filename = f"Capture - {(source.get('t') or url)[:80]}{ext}"
+    dest = _save_upload(file, folder)
+    with service.editing(pid) as p:
+        p["assets"]["captures"][url] = {"rel": dest.relative_to(service.project_dir(pid)).as_posix(),
+                                        "error": None, "manual": True}
     return _view(pid)
 
 
