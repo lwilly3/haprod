@@ -10,7 +10,7 @@ from ...core.system import tool
 
 
 def probe(path: Path) -> dict:
-    """{duration, width, height, fps, fps_num, fps_den, audio, timecode, shot_at} ; vide si ffprobe échoue."""
+    """{duration, width, height, fps, fps_num, fps_den, colorspace, audio, timecode, shot_at} ; vide si ffprobe échoue."""
     try:
         out = subprocess.run(
             [tool("ffprobe"), "-v", "error", "-print_format", "json", "-show_format", "-show_streams", str(path)],
@@ -32,7 +32,8 @@ def probe(path: Path) -> dict:
         num, _, den = (video.get("r_frame_rate") or "25/1").partition("/")
         num, den = int(num or 25), int(den or 1)
         info.update(width=video.get("width"), height=video.get("height"),
-                    fps=round(num / den, 3) if den else 25, fps_num=num, fps_den=den or 1)
+                    fps=round(num / den, 3) if den else 25, fps_num=num, fps_den=den or 1,
+                    colorspace=video.get("color_space"))
     # timecode de départ inscrit par la caméra (DJI, Sony…) : Resolve relie les médias par lui
     info["timecode"] = ((fmt.get("tags") or {}).get("timecode")
                         or next((s["tags"]["timecode"] for s in streams if (s.get("tags") or {}).get("timecode")), None))

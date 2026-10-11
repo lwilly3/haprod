@@ -38,6 +38,8 @@ RENDER_DIR = "rendu"
 KIND = "project_long_render"
 QUALITIES = {"1080p": (1920, 1080), "4k": (3840, 2160)}
 AUDIO_RATE = 48000
+# les matrices de couleur de la vidéo SD (ffprobe : color_space), converties en BT.709 comme le reste
+BT601 = {"smpte170m", "bt470bg"}
 # part de la première passe (A-roll) puis du mix des sons dans l'avancement
 AROLL_SHARE = 0.5
 MIX_SHARE = 0.05
@@ -106,9 +108,11 @@ def plan(pid: str, quality: str) -> dict:
     def clip_media(c: dict) -> dict:
         """Le fichier d'un clip de l'A-roll : la vidéo source, ou le média inséré."""
         if not c.get("src"):
-            return {"path": source["path"], "length": source_length, "audio": info.get("audio", True)}
+            return {"path": source["path"], "length": source_length, "audio": info.get("audio", True),
+                    "colorspace": info.get("colorspace")}
         found = media.probe(base / c["src"])
-        return {"path": str(base / c["src"]), "length": found.get("duration") or c["out"], "audio": found.get("audio", True)}
+        return {"path": str(base / c["src"]), "length": found.get("duration") or c["out"], "audio": found.get("audio", True),
+                "colorspace": found.get("colorspace")}
 
     aroll = [{**c, **clip_media(c)} for c in timeline["aroll"]]
     ends = lambda x: {"enter": x.get("enter"), "exit": x.get("exit")}
@@ -123,7 +127,8 @@ def plan(pid: str, quality: str) -> dict:
               for s in timeline["audio"]]
     return {"project": pid, "quality": quality, "width": width, "height": height,
             "fps_num": info.get("fps_num") or 25, "fps_den": info.get("fps_den") or 1,
-            "source": {"path": source["path"], "duration": source_length, "audio": info.get("audio", True)},
+            "source": {"path": source["path"], "duration": source_length, "audio": info.get("audio", True),
+                       "colorspace": info.get("colorspace")},
             "aroll": aroll, "zooms": timeline["zooms"], "overlays": overlays, "sounds": sounds,
             "texts": [x for x in timeline["texts"] if x["text"].strip()], "font": str(TEXT_FONT),
             "dest": str(output_file(pid, quality)), "signature": signature(pid, quality)}
@@ -339,7 +344,19 @@ def segment_args(p: dict, seg: dict, dest: Path) -> list[str]:
     if seg["fade"] is not None:
         args += ["-ss", f"{seg['fade']:.6f}", "-t", read, "-i", clip_b["path"]]
 
-    prep = f"fps={rate},setsar=1,format=yuv420p,tpad=stop_mode=clone:stop_duration=0.5,trim=end_frame={n}"
+    def prep(clip: dict) -> str:
+        """
+        Une entrée à la cadence et en couleurs BT.709 (un clip SD inséré est en BT.601) : un A-roll aux
+        propriétés uniformes, sinon ffmpeg réinitialise ses filtres en cours de passe finale et y perd des images.
+        """
+        convert = ("scale=iw:ih:in_color_matrix=bt601:out_color_matrix=bt709:out_range=tv,"
+                   if clip.get("colorspace") in BT601 else "")
+        # ramené à 0 avant la cadence : après la recherche dans la source, la première image arrive un peu après 0,
+        # fps la placerait une image plus loin, et le recollage laisserait un trou d'une image dans l'A-roll
+        return (f"setpts=PTS-STARTPTS,fps={rate},{convert}"
+                f"setparams=colorspace=bt709:color_primaries=bt709:color_trc=bt709:range=tv,"
+                f"setsar=1,format=yuv420p,tpad=stop_mode=clone:stop_duration=0.5,trim=end_frame={n}")
+
     fit = (f"scale={w}:{h}:force_original_aspect_ratio=decrease:flags=lanczos,"
            f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p")
     zoom = (zoom_filter(p["zooms"], seg["start"], fps) + ",") if seg["zoom"] else ""
@@ -354,9 +371,9 @@ def segment_args(p: dict, seg: dict, dest: Path) -> list[str]:
         return f"[{n}:a]{gain}{sound}[{label}]"
 
     if seg["fade"] is None:
-        graph = [f"[0:v]{prep},{zoom}{fit}[v]", voice(0, clip_a, "a")]
+        graph = [f"[0:v]{prep(clip_a)},{zoom}{fit}[v]", voice(0, clip_a, "a")]
     else:
-        graph = [f"[0:v]{prep}[va]", f"[1:v]{prep}[vb]",
+        graph = [f"[0:v]{prep(clip_a)}[va]", f"[1:v]{prep(clip_b)}[vb]",
                  f"[va][vb]xfade=transition={seg['fx']}:duration={float(length):.6f}:offset=0,{zoom}{fit}[v]",
                  voice(0, clip_a, "aa"), voice(1, clip_b, "ab"),
                  f"[aa][ab]acrossfade=ns={samples}:c1=tri:c2=tri,{sound}[a]"]
@@ -456,7 +473,7 @@ def chunk_args(p: dict, aroll: Path, span: tuple[int, int], dest: Path, script: 
     seek = max(0.0, t0 - 1)
     lo, hi = float((first - Fraction(1, 2)) / fps) - seek, float((last - Fraction(1, 2)) / fps) - seek
     args = [tool("ffmpeg"), "-y", "-v", "error", "-nostats", "-progress", "pipe:1",
-            "-ss", f"{seek:.6f}", "-t", f"{hi + 1:.6f}", "-i", str(aroll)]
+            "-ss", f"{seek:.6f}", "-t", f"{hi + 1:.6f}", "-reinit_filter", "0", "-i", str(aroll)]
     # puis recalé sur la cadence exacte : des horodatages arrondis font perdre une image à l'encodage
     graph = [f"[0:v]trim=start={max(lo, 0):.6f}:end={hi:.6f},setpts=N*{p['fps_den']}/{p['fps_num']}/TB[base]"]
     video = "[base]"
