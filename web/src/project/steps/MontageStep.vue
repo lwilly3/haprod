@@ -153,7 +153,7 @@ async function comment(text?: string) {
   chat.value?.compose(text ?? "");
 }
 
-// --- storyboard : les beats cochés pas encore faits, en pointillés sur leur piste et en slide sur l'aperçu ;
+// --- storyboard : les beats cochés pas encore faits, en pointillés sur la piste des beats et en slide sur l'aperçu ;
 // on crée leur animation un par un (pour tester vite) ou tous d'un coup ; zooms et B-roll vidéo se posent tels quels.
 // On en pose aussi à la main (M) : un motion à sa consigne vide, qu'on tire sur son passage et qu'on écrit sur sa slide
 const SB = useStoryboard(project.value.id);
@@ -161,7 +161,6 @@ const pending = computed(() => (SB.view.value?.board?.beats ?? [])
   .filter((b) => b.on && !SB.view.value?.composed[b.id]));
 const ghosts = computed(() => pending.value.map((b) => ({
   id: b.id, at: b.at, dur: b.dur, on: b.on, label: b.show || tr(`editing.storyboard.types.${b.type}`), color: TYPE_COLOR[b.type],
-  track: b.type === "zoom" ? "zooms" as const : b.type === "broll" && b.src && !isImage(b.src) ? "broll" as const : "motion" as const,
 })));
 /** le beat sélectionné sur la timeline (sa fiche remplace l'inspecteur) */
 const beatSel = ref<string | null>(null);

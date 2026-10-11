@@ -5,7 +5,8 @@
  * rogner (avec aimantation), la lame coupe ; glisser sur une zone vide sélectionne une plage.
  * Seule la partie visible est dessinée : vignettes et forme d'onde suivent le zoom.
  * Un média glissé depuis l'inspecteur s'insère dans l'A-roll s'il est lâché sur sa piste, sinon il se pose au-dessus.
- * Les beats du storyboard pas encore faits (en pointillés sur leur piste) se glissent et se tirent aussi :
+ * Les beats du storyboard pas encore faits, en pointillés sur leur piste à eux (au-dessus du motion : un beat peut
+ * couvrir un plan déjà fait, pour le refaire), se glissent et se tirent aussi :
  * leurs bords s'aimantent aux mots (le début un peu avant un mot, la fin un peu après).
  */
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
@@ -21,8 +22,8 @@ const props = defineProps<{
   tl: Timeline; total: number; t: number; tool: "select" | "blade";
   sourceDuration: number; analysis: MontageView["analysis"]; peaks: number[] | null;
   media: MontageView["media"]; motions: MontageView["motions"]; playing: boolean;
-  /** les beats du storyboard, en pointillés sur leur piste (motion, zooms ou B-roll), à leur couleur */
-  ghosts?: { id: string; at: number; dur: number; label: string; on: boolean; track: "motion" | "zooms" | "broll"; color: string }[];
+  /** les beats du storyboard pas encore faits, en pointillés sur leur piste, à la couleur de leur type */
+  ghosts?: { id: string; at: number; dur: number; label: string; on: boolean; color: string }[];
   /** le beat sélectionné */
   beatSel?: string | null;
   /** les mots de la timeline [début, fin], et l'avance / la traîne d'un beat sur ses mots */
@@ -42,6 +43,7 @@ const LABEL_W = 92;
 const ROWS = [
   { key: "chapters", h: 22 },
   { key: "texts", h: 24 },
+  { key: "beats", h: 26 },
   { key: "motion", h: 30 },
   { key: "zooms", h: 22 },
   { key: "broll", h: 34 },
@@ -582,7 +584,7 @@ function motionState(id: string) {
 
         <!-- storyboard : les beats proposés, sur leur piste -->
         <div v-for="v in ghostsV" :key="`g-${v.it.id}`" class="ghost" :class="{ off: !v.it.on, on: beatSel === v.it.id }"
-          :style="{ top: `${tops[v.it.track] + 2}px`, height: `${ROWS.find((r) => r.key === v.it.track)!.h - 4}px`, left: `${x(v.a)}px`,
+          :style="{ top: `${tops.beats + 2}px`, height: `${rowH.beats - 4}px`, left: `${x(v.a)}px`,
                     width: `${Math.max(3, x(v.b - v.a))}px`, '--c': v.it.color }"
           :title="v.it.label" @pointerdown="downGhost($event, v.it)">
           <i class="edge l" @pointerdown="downGhost($event, v.it, 'left')" />

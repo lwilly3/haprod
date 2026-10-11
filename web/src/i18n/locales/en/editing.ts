@@ -33,6 +33,7 @@ export default {
     markers: "Marker",
   },
   lanes: {
+    beats: "Beats",
     chapters: "Chapters",
     texts: "Texts",
     motion: "Motion",
