@@ -28,14 +28,23 @@ def _load_tasks() -> dict[str, Task]:
     return tasks
 
 
-def _execute(job: jobs.Job, task: Task) -> None:
+def _log(message: str) -> None:
+    """Une ligne de log, à l'heure : pour savoir quand un job a démarré, fini ou planté."""
+    print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {message}", flush=True)
+
+
+def _execute(job: jobs.Job, task: Task, queue: str) -> None:
     ctx = TaskContext(job)
+    start = time.time()
+    end = lambda status: _log(f"[{queue}] {job.kind} {job.id} : {status} en {time.time() - start:.0f} s")
     try:
         task.run(ctx)
     except Cancelled:
         ctx.save(force=True)
         jobs.update(job.id, status="cancelled", finished_at=time.time())
+        end("annulé")
     except Exception as e:  # noqa: BLE001  l'erreur est affichee dans l'UI
+        end("erreur")
         traceback.print_exc()
         ctx.save(force=True)
         jobs.update(job.id, status="error", error=str(e), finished_at=time.time())
@@ -43,6 +52,7 @@ def _execute(job: jobs.Job, task: Task) -> None:
         ctx.progress = 1.0
         ctx.save(force=True)
         jobs.update(job.id, status="done", finished_at=time.time())
+        end("terminé")
 
 
 def _consume(queue: str, tasks: dict[str, Task]) -> None:
@@ -56,8 +66,8 @@ def _consume(queue: str, tasks: dict[str, Task]) -> None:
         if job is None:
             time.sleep(IDLE_POLL)
             continue
-        print(f"[{queue}] {job.kind} {job.id}")
-        _execute(job, tasks[job.kind])
+        _log(f"[{queue}] {job.kind} {job.id}")
+        _execute(job, tasks[job.kind], queue)
 
 
 def _heartbeat(queues: list[str]) -> None:
@@ -74,13 +84,13 @@ def main() -> None:
     jobs.init()
     requeued = jobs.requeue_interrupted()
     if requeued:
-        print(f"{requeued} job(s) interrompu(s) remis en file.")
+        _log(f"{requeued} job(s) interrompu(s) remis en file.")
     by_queue: dict[str, dict[str, Task]] = defaultdict(dict)
     for kind, task in _load_tasks().items():
         by_queue[task.queue][kind] = task
     for queue, tasks in by_queue.items():
         threading.Thread(target=_consume, args=(queue, tasks), daemon=True, name=queue).start()
-    print(f"Worker pret · files : {', '.join(by_queue)}")
+    _log(f"Worker pret · files : {', '.join(by_queue)}")
     _heartbeat(list(by_queue))
 
 
