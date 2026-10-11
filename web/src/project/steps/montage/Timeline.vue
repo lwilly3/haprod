@@ -57,7 +57,22 @@ const tops = (() => {
   let y = RULER;
   return Object.fromEntries(ROWS.map((r) => { const o = y; y += r.h + 2; return [r.key, o]; })) as Record<RowKey, number>;
 })();
-const height = RULER + ROWS.reduce((n, r) => n + r.h + 2, 0);
+// les sons qui se chevauchent passent sur des sous-pistes : la piste des sons (la dernière) grandit d'autant
+const SFX_SUB = 20;
+const sfxLanes = computed(() => {
+  const lane = new Map<string, number>();
+  const ends: number[] = [];
+  for (const s of props.tl.audio.filter((s) => s.role === "sfx").sort((a, b) => a.at - b.at)) {
+    let k = ends.findIndex((e) => e <= s.at);
+    if (k < 0) k = ends.push(0) - 1;
+    ends[k] = s.at + s.out - s.in;
+    lane.set(s.id, k);
+  }
+  return { lane, count: Math.max(1, ends.length) };
+});
+const sfxH = computed(() => sfxLanes.value.count * SFX_SUB + 4);
+const rowHeight = (key: RowKey) => (key === "sfx" ? sfxH.value : rowH[key]);
+const height = computed(() => RULER + ROWS.reduce((n, r) => n + rowHeight(r.key) + 2, 0));
 
 // --- zoom et défilement
 const scroller = ref<HTMLElement>();
@@ -533,7 +548,7 @@ function motionState(id: string) {
   <div class="tl" :class="{ blade: tool === 'blade' }">
     <div class="labels" :style="{ width: `${LABEL_W}px`, height: `${height}px` }">
       <div class="corner" :style="{ height: `${RULER}px` }" />
-      <div v-for="r in ROWS" :key="r.key" class="lab" :style="{ top: `${tops[r.key]}px`, height: `${r.h}px` }">{{ tr(`editing.lanes.${r.key}`) }}</div>
+      <div v-for="r in ROWS" :key="r.key" class="lab" :style="{ top: `${tops[r.key]}px`, height: `${rowHeight(r.key)}px` }">{{ tr(`editing.lanes.${r.key}`) }}</div>
     </div>
     <div ref="scroller" class="scroller" :style="{ height: `${height + 12}px` }"
       @wheel="onWheel" @scroll="scrollX = ($event.target as HTMLElement).scrollLeft">
@@ -549,7 +564,7 @@ function motionState(id: string) {
         </div>
 
         <!-- fonds des pistes -->
-        <div v-for="r in ROWS" :key="r.key" class="lane" :class="r.key" :style="{ top: `${tops[r.key]}px`, height: `${r.h}px`, width: `${x(total)}px` }" />
+        <div v-for="r in ROWS" :key="r.key" class="lane" :class="r.key" :style="{ top: `${tops[r.key]}px`, height: `${rowHeight(r.key)}px`, width: `${x(total)}px` }" />
 
         <!-- chapitres -->
         <div v-for="v in chaptersV" :key="v.m.id" class="chapter" :class="{ on: isSel('markers', v.m.id) }"
@@ -647,7 +662,7 @@ function motionState(id: string) {
           <i class="edge r" @pointerdown="down($event, 'audio', v.it.id, 'right')" />
         </div>
         <div v-for="v in sfxV" :key="v.it.id" class="item sfx" :class="{ on: isSel('audio', v.it.id) }"
-          :style="{ top: `${tops.sfx + 2}px`, height: `${rowH.sfx - 4}px`, left: `${x(v.a)}px`, width: `${Math.max(4, x(v.b - v.a))}px` }"
+          :style="{ top: `${tops.sfx + 2 + (sfxLanes.lane.get(v.it.id) ?? 0) * SFX_SUB}px`, height: `${SFX_SUB - 2}px`, left: `${x(v.a)}px`, width: `${Math.max(4, x(v.b - v.a))}px` }"
           :title="`${nameOf(v.it.src)} · ${v.it.gain_db} dB`" @pointerdown="down($event, 'audio', v.it.id)" @dblclick="goTo(v.a)">
           <i class="edge l" @pointerdown="down($event, 'audio', v.it.id, 'left')" />
           <span>{{ nameOf(v.it.src) }}</span>
