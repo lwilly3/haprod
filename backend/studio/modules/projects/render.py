@@ -474,14 +474,25 @@ def final_args(p: dict, aroll: Path, dest: Path, script: Path) -> list[str]:
         graph.append(f"{video}[t{n}]overlay=x={round((x['x'] - 0.5) * w)}:y={round((x['y'] - 0.5) * h)}:"
                      f"eof_action=pass:format=auto[w{n}]")
         video = f"[w{n}]"
+    # un fichier son n'est ouvert qu'une fois, puis découpé dans le graphe : un même whoosh placé des dizaines de
+    # fois ferait sinon autant d'entrées, et la ligne de commande dépasserait la limite de Windows (32 767 caractères)
+    uses: dict[str, list[dict]] = {}
     for s in p["sounds"]:
-        info = media.probe(Path(s["path"]))
-        if not info.get("audio"):
+        uses.setdefault(s["path"], []).append(s)
+    for path, group in uses.items():
+        if not media.probe(Path(path)).get("audio"):
             continue
-        args += ["-ss", f"{s['in']:.6f}", "-t", f"{s['out'] - s['in']:.6f}", "-i", s["path"]]
-        graph.append(f"[{index}:a]aresample={AUDIO_RATE},aformat=sample_fmts=fltp:channel_layouts=stereo,"
-                     f"volume={s['gain_db']}dB,adelay=delays={round(s['at'] * 1000)}:all=1[s{index}]")
-        sounds.append(f"[s{index}]")
+        args += ["-i", path]
+        sources = [f"[{index}:a]"]
+        if len(group) > 1:
+            sources = [f"[a{index}k{k}]" for k in range(len(group))]
+            graph.append(f"[{index}:a]asplit={len(group)}{''.join(sources)}")
+        for source, s in zip(sources, group):
+            label = f"[s{len(sounds)}]"
+            graph.append(f"{source}atrim=start={s['in']:.6f}:duration={s['out'] - s['in']:.6f},asetpts=PTS-STARTPTS,"
+                         f"aresample={AUDIO_RATE},aformat=sample_fmts=fltp:channel_layouts=stereo,"
+                         f"volume={s['gain_db']}dB,adelay=delays={round(s['at'] * 1000)}:all=1{label}")
+            sounds.append(label)
         index += 1
     graph.append(f"{video}format=yuv420p[vout]")
     if len(sounds) > 1:
