@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "youtube-scriptwriting",
+  "owner": "cdeistopened",
+  "repo": "skill-stack",
+  "path": ".claude/skills/youtube-scriptwriting",
+  "branch": "main",
+  "sha": "55c1b84b2e57ce3b5354518be924b36df4f911bd",
+  "source": "manual"
+}
