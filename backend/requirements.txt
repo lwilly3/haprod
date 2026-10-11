@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+python-multipart
+watchfiles
+yt-dlp
+# certificats pour télécharger les images trouvées (étape Assets)
+certifi
+faster-whisper>=1.2
+# DLL CUDA pour faire tourner Whisper sur le GPU (inutile en CPU)
+nvidia-cublas-cu12
+nvidia-cudnn-cu12==9.*
+# publication YouTube (API YouTube Data v3, OAuth)
+google-api-python-client
+google-auth-oauthlib
+google-auth-httplib2

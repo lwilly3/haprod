@@ -1,0 +1,49 @@
+/*
+ * Charte commune des slides : couleurs, typos, briques de base.
+ * Chaque slide la charge (<link rel="stylesheet" href="../style.css">) et ajoute ses
+ * propres styles dans un <style> local. Fond transparent : la slide se pose sur la vidéo.
+ */
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=block");
+
+:root {
+  --card: #1c1b1b;
+  --card-2: #2a2928;
+  --line: #4a4846;
+  --text: #f4f1ea;
+  --muted: #a8a49c;
+  --accent: #f0b03a;
+  --accent-ink: #1c1b1b;
+  --radius: 22px;
+  --font: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
+
+#stage {
+  position: relative; overflow: hidden;
+  font-family: var(--font); color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+#stage.youtube { width: 1920px; height: 1080px; }
+#stage.short { width: 1080px; height: 1920px; }
+
+/* --- briques --- */
+.card {
+  background: var(--card); border-radius: var(--radius);
+  padding: 44px 52px; box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+}
+.kicker {
+  font-family: var(--mono); font-size: 26px; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--muted);
+}
+.title { font-size: 56px; font-weight: 700; line-height: 1.1; letter-spacing: -.01em; }
+.big { font-size: 140px; font-weight: 700; line-height: .95; letter-spacing: -.03em; color: var(--accent); }
+.body { font-size: 32px; line-height: 1.35; color: var(--muted); }
+.accent { color: var(--accent); }
+.node {
+  background: var(--card-2); border-radius: 12px; padding: 18px 28px;
+  font-size: 30px; font-weight: 600; text-align: center; white-space: nowrap;
+}
+.node.hot { background: var(--accent); color: var(--accent-ink); }
+.rule { border-left: 4px solid var(--line); padding-left: 26px; }

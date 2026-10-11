@@ -1,0 +1,70 @@
+<!doctype html>
+<!--
+  EXEMPLE (format youtube) : une slide qui a plusieurs états, avec des transitions
+  internes. La même carte raconte trois époques : à chaque fois que la voix change
+  d'époque, le contenu sort par le haut, le suivant arrive par le bas, et le repère
+  de progression avance. Temps 0 = début de la slide.
+-->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../style.css">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+  .era-card { position: absolute; right: 110px; top: 300px; width: 640px; height: 420px; box-sizing: border-box; }
+  .eras { position: relative; height: 230px; margin-top: 34px; overflow: hidden; }
+  .era { position: absolute; inset: 0; }
+  .era .kicker { color: var(--accent); font-size: 24px; margin-bottom: 14px; }
+  .era .title { font-size: 50px; }
+  .progress { position: absolute; left: 52px; right: 52px; bottom: 40px; height: 4px; background: var(--card-2); border-radius: 2px; }
+  .progress .bar { height: 100%; width: 100%; background: var(--accent); border-radius: 2px; transform-origin: left center; }
+  .dots { position: absolute; left: 52px; right: 52px; bottom: 30px; display: flex; justify-content: space-between; }
+  .dots i { width: 24px; height: 24px; border-radius: 50%; background: var(--card-2); border: 4px solid var(--card); }
+</style>
+</head>
+<body>
+<div id="stage" class="youtube" data-composition-id="exemple-chronologie" data-duration="10.5" data-hero="2.5">
+  <div class="card era-card">
+    <div class="kicker">Avant les LLM</div>
+    <div class="eras">
+      <div class="era rule e1"><div class="kicker">Années 2010</div><div class="title">Data science, le nouvel Eldorado</div></div>
+      <div class="era rule e2"><div class="kicker">2022</div><div class="title">ChatGPT change la donne</div></div>
+      <div class="era rule e3"><div class="kicker">Aujourd'hui</div><div class="title">Les agents codent avec nous</div></div>
+    </div>
+    <div class="progress"><div class="bar"></div></div>
+    <div class="dots"><i class="d1"></i><i class="d2"></i><i class="d3"></i></div>
+  </div>
+</div>
+<script>
+  window.__timelines = window.__timelines || {};
+  const tl = gsap.timeline({ paused: true });
+  // la couleur d'accent de la charte : GSAP anime des couleurs, pas des var(--…)
+  const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+
+  gsap.set(".era-card, .era", { autoAlpha: 0 });
+  gsap.set(".progress .bar", { scaleX: 0 });
+
+  tl.fromTo(".era-card", { x: 60 }, { x: 0, duration: 0.7, ease: "power3.out" }, 0)
+    .to(".era-card", { autoAlpha: 1, duration: 0.4 }, 0);
+
+  // entrée d'une époque : le texte monte en place, le point de progression s'allume
+  const enter = (i, at) => tl
+    .fromTo(`.e${i}`, { y: 70 }, { y: 0, duration: 0.6, ease: "power3.out" }, at)
+    .to(`.e${i}`, { autoAlpha: 1, duration: 0.3 }, at)
+    .to(".progress .bar", { scaleX: (i - 1) / 2, duration: 0.6, ease: "power2.inOut" }, at)
+    .to(`.d${i}`, { backgroundColor: accent, duration: 0.3 }, at + 0.3);
+  // sortie : l'époque précédente part par le haut, juste avant la suivante
+  const leave = (i, at) => tl.to(`.e${i}`, { y: -70, autoAlpha: 0, duration: 0.45, ease: "power2.in" }, at);
+
+  enter(1, 0.4);
+  leave(1, 3.8);
+  enter(2, 4.2);
+  leave(2, 6.8);
+  enter(3, 7.2);
+
+  tl.to(".era-card", { x: 40, autoAlpha: 0, duration: 0.4, ease: "power2.in" }, 10.1);
+
+  window.__timelines["exemple-chronologie"] = tl;
+</script>
+</body>
+</html>

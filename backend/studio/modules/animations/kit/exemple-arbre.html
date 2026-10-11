@@ -1,0 +1,79 @@
+<!doctype html>
+<!--
+  EXEMPLE (format youtube) : un concept illustré, pas une pastille de texte.
+  Arbre de décision qui se construit au rythme de la voix : chaque question apparaît
+  quand elle est dite, les branches se dessinent, puis le chemin qui mène à « spam »
+  s'allume pour conclure. Temps 0 = début de la slide.
+-->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../style.css">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+  .tree-card { position: absolute; left: 110px; top: 200px; width: 900px; height: 640px; }
+  .tree { position: absolute; inset: 0; }
+  .tree .node { position: absolute; }
+  .tree svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .tree path { fill: none; stroke: var(--line); stroke-width: 3; stroke-dasharray: 1; stroke-dashoffset: 1; }
+  .tree path.lit { stroke: var(--accent); stroke-width: 5; }
+</style>
+</head>
+<body>
+<div id="stage" class="youtube" data-composition-id="exemple-arbre" data-duration="9" data-hero="6.8">
+  <div class="card tree-card">
+    <div class="kicker">Arbre de décision</div>
+    <div class="tree">
+      <svg viewBox="0 0 900 640">
+        <path class="b1" pathLength="1" d="M450 235 V280 H220 V330" />
+        <path class="b1" pathLength="1" d="M450 235 V280 H620 V330" />
+        <path class="b2" pathLength="1" d="M620 395 V440 H520 V490" />
+        <path class="b2" pathLength="1" d="M620 395 V440 H740 V490" />
+        <!-- le chemin de la conclusion, redessiné en couleur à la fin -->
+        <path class="lit" pathLength="1" d="M450 235 V280 H620 V330 M620 395 V440 H740 V490" />
+      </svg>
+      <div class="node n-root" style="left:450px; top:200px">lien suspect ?</div>
+      <div class="node hot n-spam1" style="left:220px; top:362px">spam</div>
+      <div class="node n-sender" style="left:620px; top:362px">expéditeur connu ?</div>
+      <div class="node n-legit" style="left:520px; top:522px">légitime</div>
+      <div class="node hot n-spam2" style="left:740px; top:522px">spam</div>
+    </div>
+  </div>
+</div>
+<script>
+  window.__timelines = window.__timelines || {};
+  const tl = gsap.timeline({ paused: true });
+  const nodes = ".tree .node";
+
+  // état de départ, posé une fois : tout est caché, centré sur sa position
+  gsap.set(nodes, { xPercent: -50, yPercent: -50, autoAlpha: 0 });
+  gsap.set(".tree-card, .kicker", { autoAlpha: 0 });
+
+  tl.fromTo(".tree-card", { y: 40 }, { y: 0, duration: 0.7, ease: "power3.out" }, 0)
+    .to(".tree-card", { autoAlpha: 1, duration: 0.4 }, 0)
+    .to(".kicker", { autoAlpha: 1, duration: 0.4 }, 0.3);
+
+  // une question, ses deux branches, puis les réponses, sur les beats de la voix
+  const pop = (sel, at) => tl
+    .fromTo(sel, { scale: 0.6 }, { scale: 1, duration: 0.5, ease: "back.out(2)" }, at)
+    .to(sel, { autoAlpha: 1, duration: 0.25 }, at);
+
+  pop(".n-root", 0.8);
+  tl.to(".b1", { strokeDashoffset: 0, duration: 0.6, ease: "power2.inOut", stagger: 0.1 }, 1.6);
+  pop(".n-spam1", 2.1);
+  pop(".n-sender", 3.2);
+  tl.to(".b2", { strokeDashoffset: 0, duration: 0.6, ease: "power2.inOut", stagger: 0.1 }, 4.1);
+  pop(".n-legit", 4.6);
+  pop(".n-spam2", 5.0);
+
+  // conclusion : le chemin s'allume, la feuille finale pulse
+  tl.to(".lit", { strokeDashoffset: 0, duration: 0.9, ease: "power2.inOut" }, 6.0)
+    .to(".n-spam2", { scale: 1.12, duration: 0.25, yoyo: true, repeat: 1, ease: "sine.inOut" }, 6.8);
+
+  // sortie
+  tl.to(".tree-card", { y: -24, autoAlpha: 0, duration: 0.4, ease: "power2.in" }, 8.6);
+
+  window.__timelines["exemple-arbre"] = tl;
+</script>
+</body>
+</html>
