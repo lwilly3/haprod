@@ -17,7 +17,6 @@ export const ALL_STEPS: Step[] = [
   step("roast", "pre", true),
   step("tournage", "tour", true),
   step("derush", "post", true),
-  step("assets", "post", true),
   step("transcript", "post", true),
   step("storyboard", "long", true),
   step("montage", "long", true),

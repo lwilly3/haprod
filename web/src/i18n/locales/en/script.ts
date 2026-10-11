@@ -95,7 +95,7 @@ export default {
     search: "Search files",
     pickHint: "Click a file to add it to the shot.",
     dragHint: "Drag a file onto the text: it completes the passage’s shot, or creates one on the paragraph.",
-    empty: "No media yet: import clips in Rough cut, gather assets in Sourcing, or drop files in {link}.",
+    empty: "No media yet: import clips in Rough cut, or add media in {link}.",
     mediaLink: "Media",
     library: "Library · {label}",
     refresh: "Refresh",

@@ -15,7 +15,6 @@ const SCREENS: Record<string, ReturnType<typeof defineAsyncComponent>> = {
   roast: defineAsyncComponent(() => import("./steps/RoastStep.vue")),
   tournage: defineAsyncComponent(() => import("./steps/TournageStep.vue")),
   derush: defineAsyncComponent(() => import("./steps/DerushStep.vue")),
-  assets: defineAsyncComponent(() => import("./steps/AssetsStep.vue")),
   transcript: defineAsyncComponent(() => import("./steps/SourceStep.vue")),
   storyboard: defineAsyncComponent(() => import("./steps/StoryboardStep.vue")),
   montage: defineAsyncComponent(() => import("./steps/MontageStep.vue")),

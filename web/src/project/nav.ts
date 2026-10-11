@@ -26,10 +26,6 @@ export function stepSub(p: Project, id: string): string {
     case "roast": return p.runtime.roast_score != null ? `${p.runtime.roast_score.toLocaleString(locale())}/10` : "";
     case "tournage": return p.runtime.plans.total ? t("nav.sub.shots", { done: p.runtime.plans.done, total: p.runtime.plans.total }) : "";
     case "derush": return p.rushes.length ? t("nav.sub.rushes", p.rushes.length) : "";
-    case "assets": {
-      const n = p.runtime.assets.downloads.filter((d) => d.status === "done").length;
-      return n ? t("nav.sub.videos", n) : "";
-    }
     case "transcript": return p.source ? (p.source.kind === "import" ? t("nav.sub.imported") : t("nav.sub.roughCut")) : "";
     case "selection": return p.runtime.shorts.count ? t("nav.sub.shorts", p.runtime.shorts.count) : "";
     case "smontage": return p.runtime.shorts.montages ? `${p.runtime.shorts.montages}/${p.runtime.shorts.count}` : "";

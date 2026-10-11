@@ -6,11 +6,11 @@
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { api, post } from "../../../lib/api";
-import { usePref } from "../../../lib/composables";
-import { toast } from "../../../lib/toast";
-import { store } from "../../store";
-import type { ImagesState } from "../../types";
+import { api, post } from "../../lib/api";
+import { usePref } from "../../lib/composables";
+import { toast } from "../../lib/toast";
+import { store } from "../store";
+import type { ImagesState } from "../types";
 import CheckBox from "./CheckBox.vue";
 import DestPicker from "./DestPicker.vue";
 

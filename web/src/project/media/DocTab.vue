@@ -6,10 +6,10 @@
  */
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { toast } from "../../../lib/toast";
-import { upload } from "../../../lib/upload";
-import { act, receive, running, store, update } from "../../store";
-import type { Project, ResearchSource } from "../../types";
+import { toast } from "../../lib/toast";
+import { upload } from "../../lib/upload";
+import { act, receive, running, store, update } from "../store";
+import type { Project, ResearchSource } from "../types";
 import CheckBox from "./CheckBox.vue";
 
 const { t } = useI18n();

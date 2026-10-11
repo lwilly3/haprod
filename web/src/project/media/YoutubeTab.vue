@@ -7,13 +7,13 @@
  */
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import Seg from "../../../components/Seg.vue";
-import { usePref } from "../../../lib/composables";
-import { mmss, mss, mssd, parseTc } from "../../../lib/format";
-import { toast } from "../../../lib/toast";
+import Seg from "../../components/Seg.vue";
+import { usePref } from "../../lib/composables";
+import { mmss, mss, mssd, parseTc } from "../../lib/format";
+import { toast } from "../../lib/toast";
 import YoutubePlayer from "./YoutubePlayer.vue";
-import { act, store } from "../../store";
-import type { AssetDownload } from "../../types";
+import { act, store } from "../store";
+import type { AssetDownload } from "../types";
 import CheckBox from "./CheckBox.vue";
 import DestPicker from "./DestPicker.vue";
 

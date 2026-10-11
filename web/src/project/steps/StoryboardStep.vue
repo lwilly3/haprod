@@ -438,7 +438,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
                   @input="change(b, 'search', ($event.target as HTMLInputElement).value)" @blur="SB.flush()">
                 <span class="find-links">
                   <button class="link-btn" @click="copySearch(b)">{{ tr("editing.storyboard.broll.copy") }}</button>
-                  <RouterLink :to="`/p/${project.id}/assets`">{{ tr("editing.storyboard.broll.goAssets") }}</RouterLink>
+                  <RouterLink :to="`/p/${project.id}/ressources?add=youtube`">{{ tr("editing.storyboard.broll.goMedia") }}</RouterLink>
                 </span>
               </div>
               <div v-if="isImage(b.src)">

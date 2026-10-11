@@ -346,7 +346,7 @@ defineExpose({ capture });
             </optgroup>
           </select>
           <button class="btn sm" @click.stop="copySearch(beat)">{{ tr("editing.storyboard.broll.copy") }}</button>
-          <RouterLink class="btn sm" :to="`/p/${route.params.pid}/assets`">{{ tr("editing.storyboard.broll.goAssets") }}</RouterLink>
+          <RouterLink class="btn sm" :to="`/p/${route.params.pid}/ressources?add=youtube`">{{ tr("editing.storyboard.broll.goMedia") }}</RouterLink>
         </span>
       </div>
       <div v-else-if="beat" class="slide" :class="[beat.type === 'transition' ? 'full' : beat.place, beat.type, { off: !beat.on, img: isImage(beat.src) }]">

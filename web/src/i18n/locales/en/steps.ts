@@ -6,7 +6,6 @@ export default {
   roast: "Roasting",
   tournage: "Shoot",
   derush: "Rough cut",
-  assets: "Sourcing",
   transcript: "Source video",
   storyboard: "Storyboard",
   montage: "Editing",

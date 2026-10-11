@@ -95,7 +95,7 @@ export default {
     search: "Cherche un fichier",
     pickHint: "Clique un fichier pour l’ajouter au plan.",
     dragHint: "Glisse un fichier sur le texte : il complète le plan du passage, ou en crée un sur le paragraphe.",
-    empty: "Aucun média pour l’instant : importe des rushes au dérush, récupère des médias au sourcing ou dépose des fichiers dans {link}.",
+    empty: "Aucun média pour l’instant : importe des rushes au dérush, ou ajoute des médias dans {link}.",
     mediaLink: "Médias",
     library: "Bibliothèque · {label}",
     refresh: "Actualiser",

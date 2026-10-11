@@ -1,14 +1,16 @@
 <script setup lang="ts">
-/** Tout ce que contient le dossier du projet, rangé par catégorie ; on peut y déposer des fichiers. */
+/** Tout ce que contient le dossier du projet, rangé par catégorie ; « Ajouter des médias » (ou un glisser-déposer) l'enrichit. */
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import MediaLightbox from "../components/MediaLightbox.vue";
 import Thumb from "../components/Thumb.vue";
 import { api, post } from "../lib/api";
+import { usePref } from "../lib/composables";
 import { duration as fmtDuration } from "../lib/format";
 import { toast } from "../lib/toast";
 import { droppedFiles, upload } from "../lib/upload";
+import AddMediaModal, { ADD_TABS, type AddTab } from "./media/AddMediaModal.vue";
 import { open, store } from "./store";
 
 interface Item { name: string; rel: string; kind: string; duration: number | null; size: number }
@@ -41,15 +43,36 @@ watch(pid, async (id) => {
   }
 }, { immediate: true });
 
+// --- la popup « Ajouter des médias » ; ?add=youtube l'ouvre sur un onglet (liens du storyboard)
+const addTab = usePref<AddTab>("media.addTab", "files");
+const linked = route.query.add as AddTab | undefined;
+if (linked && ADD_TABS.includes(linked)) addTab.value = linked;
+const adding = ref(!!linked);
+
+function closeAdd() {
+  adding.value = false;
+  // la page est rendue par chemin complet : retirer ?add la recharge
+  if (route.query.add) router.replace({ query: {} });
+  else load();
+}
+
+// un téléchargement YouTube qui se termine arrive dans la liste
+const downloaded = computed(() => store.project?.runtime.assets.downloads.filter((d) => d.finished).length ?? 0);
+watch(downloaded, (n, before) => { if (n > before) load(); });
+
 const total = computed(() => groups.value.reduce((a, g) => a + g.items.length, 0));
 const items = computed(() => tab.value === "all"
   ? groups.value.flatMap((g) => g.items.map((x) => ({ ...x, k: g.k })))
   : (groups.value.find((g) => g.k === tab.value)?.items ?? []).map((x) => ({ ...x, k: x.kind })));
 
-async function onDrop(e: DragEvent) {
+function onDrop(e: DragEvent) {
   over.value = false;
+  if (adding.value) return;
   const files = droppedFiles(e);
-  if (!files.length) return;
+  if (files.length) uploadFiles(files);
+}
+
+async function uploadFiles(files: File[]) {
   uploading.value = 0;
   try {
     groups.value = (await upload<{ groups: Group[] }>(`/api/projects/${pid.value}/resources/upload`, files, "files", {},
@@ -94,18 +117,18 @@ async function toLibrary(item: Item, category: string) {
 </script>
 
 <template>
-  <div class="page">
+  <div class="page" :class="{ over }" @dragover.prevent="over = !adding" @dragleave.self="over = false" @drop.prevent="onDrop">
     <div class="titles">
       <span class="eyebrow">{{ store.project?.title }}</span>
       <span class="h1">{{ t("media.title") }}</span>
     </div>
-    <div class="tabs">
-      <button :class="{ on: tab === 'all' }" @click="tab = 'all'">{{ t("common.all") }}<span class="n">{{ total }}</span></button>
-      <button v-for="g in groups" :key="g.k" :class="{ on: tab === g.k }" @click="tab = g.k">{{ g.k }}<span class="n">{{ g.items.length }}</span></button>
-    </div>
-    <div class="drop-zone" :class="{ over }" @dragover.prevent="over = true" @dragleave="over = false" @drop.prevent="onDrop">
-      <template v-if="uploading != null">{{ t("media.uploading", { pct: uploading }) }}</template>
-      <template v-else>{{ t("media.drop") }}</template>
+    <div class="tab-bar">
+      <div class="tabs">
+        <button :class="{ on: tab === 'all' }" @click="tab = 'all'">{{ t("common.all") }}<span class="n">{{ total }}</span></button>
+        <button v-for="g in groups" :key="g.k" :class="{ on: tab === g.k }" @click="tab = g.k">{{ g.k }}<span class="n">{{ g.items.length }}</span></button>
+      </div>
+      <span v-if="uploading != null && !adding" class="mono faint uploading">{{ t("media.uploading", { pct: uploading }) }}</span>
+      <button class="btn dark add" @click="adding = true">{{ t("media.add.open") }}</button>
     </div>
     <div class="table">
       <div class="row head eyebrow"><span /><span>{{ t("common.name") }}</span><span>{{ t("common.type") }}</span><span>{{ t("common.duration") }}</span><span /></div>
@@ -123,6 +146,7 @@ async function toLibrary(item: Item, category: string) {
       </div>
       <span v-if="!items.length" class="nothing">{{ t("common.nothingYet") }}</span>
     </div>
+    <AddMediaModal v-if="adding && store.project?.id === pid" v-model:tab="addTab" :uploading="uploading" @files="uploadFiles" @close="closeAdd" />
     <MediaLightbox v-model="zoom" :items="zoomable">
       <template #actions="{ item }"><button class="link-btn" @click="reveal(item.rel)">{{ t("common.showInExplorer") }}</button></template>
     </MediaLightbox>
@@ -133,7 +157,11 @@ async function toLibrary(item: Item, category: string) {
 .page { flex: 1; overflow: auto; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px; }
 .titles { display: flex; flex-direction: column; gap: 4px; }
 .h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.015em; }
-.drop-zone { padding: 18px; }
+.page.over { outline: 2px dashed var(--ink); outline-offset: -8px; }
+.tab-bar { display: flex; align-items: flex-end; gap: 16px; border-bottom: 1px solid var(--line); }
+.tab-bar .tabs { flex: 1; border-bottom: none; }
+.uploading { font-size: 12px; margin-bottom: 16px; }
+.add { margin-bottom: 8px; }
 .table { display: flex; flex-direction: column; }
 .row {
   display: grid; grid-template-columns: 72px minmax(0, 1fr) 160px 90px 130px; gap: 16px; align-items: center;

@@ -24,7 +24,6 @@ export default {
     words: "no words | {n} word | {n} words",
     shots: "{done}/{total} shots",
     rushes: "no clips | {n} clip | {n} clips",
-    videos: "no videos | {n} video | {n} videos",
     imported: "imported",
     roughCut: "rough cut",
     shorts: "no shorts | {n} short | {n} shorts",
