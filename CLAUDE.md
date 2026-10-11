@@ -1,15 +1,9 @@
-# Règles du projet
+# Project rules
 
 ## Commits
 
-- Commits conventionnels : chaque libellé est préfixé par son type (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `test:`, `perf:`, `style:`, `build:`, `ci:`), avec un scope optionnel (`feat(web): …`).
-- Commits atomiques : un commit = un changement cohérent. Ne pas mélanger plusieurs sujets dans un même commit.
-- Libellés et messages de commit en anglais.
-- Pas de ligne `Co-Authored-By: Claude` (ni autre mention de Claude) dans les commits.
+- Conventional commits: each message is prefixed with its type (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `test:`, `perf:`, `style:`, `build:`, `ci:`), with an optional scope (`feat(web): …`).
+- Atomic commits: one commit = one coherent change. Don't mix several topics in the same commit.
+- Commit subjects and messages in English.
+- No `Co-Authored-By: Claude` line (nor any other mention of Claude) in commits.
 
-## Ce qui est versionné
-
-Uniquement notre travail. Ne sont jamais commités :
-
-- `editing-os-starter/` : kit tiers de référence ;
-- `data/` : fichiers de travail (projets, médias, base…), y compris la bibliothèque d'assets communs `data/library/`.
