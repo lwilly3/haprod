@@ -6,21 +6,25 @@ Deux passes :
    enchaîné autour d'une coupe), à son volume, recadrée par les zooms comme dans l'aperçu, encodée à part en qualité haute ;
    les morceaux sont recollés sans réencodage ;
 2. par-dessus, le B-roll puis les motions (.mov avec transparence), puis les textes écrits à la main
-   (dessinés par ffmpeg, dans la police de l'aperçu), et sous la voix les sons et la musique : un seul
-   encodage final.
+   (dessinés par ffmpeg, dans la police de l'aperçu) : encodés une fois, par morceaux d'une minute coupés
+   entre deux plans ; sous la voix, les sons et la musique, mixés à part sur toute la durée ; le tout recollé
+   sans réencodage de l'image.
 
 Tout tourne à la cadence de la vidéo source et les bornes des morceaux tombent sur des images :
 rien ne glisse d'un morceau à l'autre.
 
   rendu/<qualité>.mp4      le dernier rendu de chaque qualité
-  rendu/.tmp-<job>/        les morceaux, effacés à la fin
+  rendu/.tmp-<job>/        les morceaux et le mix, effacés à la fin
 """
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
 import subprocess
+import threading
+import time
 from fractions import Fraction
 from pathlib import Path
 from typing import Callable
@@ -34,8 +38,13 @@ RENDER_DIR = "rendu"
 KIND = "project_long_render"
 QUALITIES = {"1080p": (1920, 1080), "4k": (3840, 2160)}
 AUDIO_RATE = 48000
-# part de la première passe (A-roll) dans l'avancement
+# part de la première passe (A-roll) puis du mix des sons dans l'avancement
 AROLL_SHARE = 0.5
+MIX_SHARE = 0.05
+# la passe finale par morceaux de cette durée (s), à peu près : chacun n'ouvre que les médias qui le concernent
+CHUNK_SECONDS = 60
+# ffmpeg arrêté s'il n'avance plus depuis ce temps (s) : un job en erreur plutôt qu'un job qui tourne à vide
+STALL_SECONDS = 300
 # ce que `ffmpeg -progress` écrit : tout le reste est un message d'erreur
 # les textes : l'écriture manuscrite de Windows, celle de l'aperçu (font-family « Ink Free »), avec un contour
 # noir (fraction de la taille du texte) et un fondu à l'entrée et à la sortie
@@ -329,6 +338,7 @@ def segment_args(p: dict, seg: dict, dest: Path) -> list[str]:
             "-ss", f"{seg['src']:.6f}", "-t", read, "-i", clip_a["path"]]
     if seg["fade"] is not None:
         args += ["-ss", f"{seg['fade']:.6f}", "-t", read, "-i", clip_b["path"]]
+
     prep = f"fps={rate},setsar=1,format=yuv420p,tpad=stop_mode=clone:stop_duration=0.5,trim=end_frame={n}"
     fit = (f"scale={w}:{h}:force_original_aspect_ratio=decrease:flags=lanczos,"
            f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p")
@@ -402,13 +412,54 @@ def overlay_groups(overlays: list[dict], fps: Fraction) -> list[list[dict]]:
     return groups
 
 
-def final_args(p: dict, aroll: Path, dest: Path, script: Path) -> list[str]:
-    """Le B-roll, les motions et les sons par-dessus l'A-roll, encodés une fois pour toutes."""
+def _group_span(group: list[dict]) -> tuple[float, float]:
+    """Le temps qu'occupe un groupe de plans sur la timeline, prolongations comprises."""
+    return group[0]["at"] - group[0]["pre"], max(o["at"] + o["len"] + o["post"] for o in group)
+
+
+def chunks(p: dict, total: int) -> list[tuple[int, int]]:
+    """
+    La passe finale en morceaux d'environ CHUNK_SECONDS, bornes en images de la timeline, coupés là où rien
+    n'est posé sur l'A-roll (ni plan, ni texte) : chaque morceau n'ouvre que les quelques médias qui le
+    concernent. En un seul bloc, des centaines d'entrées font gonfler ffmpeg jusqu'à se bloquer.
+    """
+    fps = Fraction(p["fps_num"], p["fps_den"])
+    spans = [_group_span(g) for g in overlay_groups(p["overlays"], fps)]
+    spans += [(x["at"], x["at"] + x["dur"]) for x in p.get("texts") or []]
+    # une image de marge de part et d'autre : une coupe tombe au plus près sur le bord d'un plan
+    busy = sorted((math.floor(a * fps) - 1, math.ceil(b * fps) + 1) for a, b in spans)
+    size = round(CHUNK_SECONDS * fps)
+    out, start = [], 0
+    while start < total:
+        cut = start + size
+        for a, b in busy:
+            if a < cut < b:
+                cut = b
+        if total - cut < size / 2:
+            cut = total
+        out.append((start, cut))
+        start = cut
+    return out
+
+
+def chunk_args(p: dict, aroll: Path, span: tuple[int, int], dest: Path, script: Path) -> list[str]:
+    """
+    Un morceau de la passe finale : le B-roll, les motions et les textes par-dessus l'A-roll, sans le son
+    (mixé à part, sur toute la durée : mix_args).
+    """
     fps = Fraction(p["fps_num"], p["fps_den"])
     rate = f"{p['fps_num']}/{p['fps_den']}"
     w, h = p["width"], p["height"]
-    args = [tool("ffmpeg"), "-y", "-v", "error", "-nostats", "-progress", "pipe:1", "-i", str(aroll)]
-    graph, video, sounds = [], "[0:v]", ["[0:a]"]
+    first, last = span
+    t0, frames = float(first / fps), last - first
+    # lu un peu avant, puis coupé à la demi-image près : l'A-roll est horodaté à la milliseconde
+    seek = max(0.0, t0 - 1)
+    lo, hi = float((first - Fraction(1, 2)) / fps) - seek, float((last - Fraction(1, 2)) / fps) - seek
+    args = [tool("ffmpeg"), "-y", "-v", "error", "-nostats", "-progress", "pipe:1",
+            "-ss", f"{seek:.6f}", "-t", f"{hi + 1:.6f}", "-i", str(aroll)]
+    # puis recalé sur la cadence exacte : des horodatages arrondis font perdre une image à l'encodage
+    graph = [f"[0:v]trim=start={max(lo, 0):.6f}:end={hi:.6f},setpts=N*{p['fps_den']}/{p['fps_num']}/TB[base]"]
+    video = "[base]"
     index = 1
     # xfade veut deux entrées de même format, même cadence, même base de temps
     norm = f"settb=expr={p['fps_den']}/{p['fps_num']},fps={rate}"
@@ -422,7 +473,9 @@ def final_args(p: dict, aroll: Path, dest: Path, script: Path) -> list[str]:
         return f"[c{clear}]"
 
     for g, group in enumerate(overlay_groups(p["overlays"], fps)):
-        group = [o for o in group if media.probe(Path(o["path"])).get("width")]
+        if not first <= round(_group_span(group)[0] * fps) < last:
+            continue
+        group = [{**o, "at": o["at"] - t0} for o in group if media.probe(Path(o["path"])).get("width")]
         if not group:
             continue
         plain = len(group) == 1 and not group[0]["enter"] and not group[0]["exit"]
@@ -454,26 +507,38 @@ def final_args(p: dict, aroll: Path, dest: Path, script: Path) -> list[str]:
                     stream, length = f"[x{index}]", offset + total
             index += 1
         if not plain:
-            first, last = group[0], group[-1]
-            if first["enter"]:
-                d = first["enter"]["dur"]
-                graph.append(f"{transparent(d)}{stream}xfade=transition={first['enter']['fx']}:"
+            head, tail = group[0], group[-1]
+            if head["enter"]:
+                d = head["enter"]["dur"]
+                graph.append(f"{transparent(d)}{stream}xfade=transition={head['enter']['fx']}:"
                              f"duration={d:.6f}:offset=0[e{g}]")
                 stream = f"[e{g}]"
-            if last["exit"]:
-                d = last["exit"]["dur"]
-                graph.append(f"{stream}{transparent(d)}xfade=transition={last['exit']['fx']}:"
+            if tail["exit"]:
+                d = tail["exit"]["dur"]
+                graph.append(f"{stream}{transparent(d)}xfade=transition={tail['exit']['fx']}:"
                              f"duration={d:.6f}:offset={length - d:.6f}[q{g}]")
                 stream = f"[q{g}]"
             graph.append(f"{stream}setpts=PTS-STARTPTS+{start:.6f}/TB[o{g}]")
         graph.append(f"{video}[o{g}]overlay=eof_action=pass:format=auto[v{g}]")
         video = f"[v{g}]"
     for n, x in enumerate(p.get("texts") or []):
-        graph.append(text_layer(x, n, w, h, rate, p["font"], script.parent))
+        if not first <= round(x["at"] * fps) < last:
+            continue
+        graph.append(text_layer({**x, "at": x["at"] - t0}, n, w, h, rate, p["font"], script.parent))
         # le texte est dessiné au centre d'un calque transparent de la taille de l'image, qu'on décale à sa place
         graph.append(f"{video}[t{n}]overlay=x={round((x['x'] - 0.5) * w)}:y={round((x['y'] - 0.5) * h)}:"
                      f"eof_action=pass:format=auto[w{n}]")
         video = f"[w{n}]"
+    graph.append(f"{video}format=yuv420p[vout]")
+    script.write_text(";\n".join(graph), encoding="utf-8")
+    return args + ["-filter_complex_script", str(script), "-map", "[vout]", "-frames:v", str(frames), "-r", rate,
+                   "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p", str(dest)]
+
+
+def mix_args(p: dict, aroll: Path, dest: Path, script: Path) -> list[str]:
+    """Les sons et la musique sous la voix de l'A-roll, sur toute la durée, en une passe (audio seul : rapide)."""
+    args = [tool("ffmpeg"), "-y", "-v", "error", "-nostats", "-progress", "pipe:1", "-i", str(aroll)]
+    graph, sounds, index = [], ["[0:a]"], 1
     # un fichier son n'est ouvert qu'une fois, puis découpé dans le graphe : un même whoosh placé des dizaines de
     # fois ferait sinon autant d'entrées, et la ligne de commande dépasserait la limite de Windows (32 767 caractères)
     uses: dict[str, list[dict]] = {}
@@ -494,15 +559,22 @@ def final_args(p: dict, aroll: Path, dest: Path, script: Path) -> list[str]:
                          f"volume={s['gain_db']}dB,adelay=delays={round(s['at'] * 1000)}:all=1{label}")
             sounds.append(label)
         index += 1
-    graph.append(f"{video}format=yuv420p[vout]")
     if len(sounds) > 1:
         graph.append(f"{''.join(sounds)}amix=inputs={len(sounds)}:duration=first:normalize=0:dropout_transition=0[aout]")
     else:
         graph.append("[0:a]anull[aout]")
     script.write_text(";\n".join(graph), encoding="utf-8")
-    return args + ["-filter_complex_script", str(script), "-map", "[vout]", "-map", "[aout]", "-r", rate,
-                   "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p",
-                   "-c:a", "aac", "-b:a", "320k", "-ar", str(AUDIO_RATE), "-movflags", "+faststart", str(dest)]
+    # en flottant : ce qui dépasse 0 dB n'est écrêté qu'à l'encodage final
+    return args + ["-filter_complex_script", str(script), "-map", "[aout]", "-c:a", "pcm_f32le",
+                   "-ar", str(AUDIO_RATE), str(dest)]
+
+
+def mux_args(listing: Path, mix: Path, dest: Path) -> list[str]:
+    """Les morceaux recollés sans réencodage, avec le son mixé : le .mp4 final."""
+    return [tool("ffmpeg"), "-y", "-v", "error", "-nostats", "-progress", "pipe:1",
+            "-f", "concat", "-safe", "0", "-i", str(listing), "-i", str(mix), "-map", "0:v", "-map", "1:a",
+            "-c:v", "copy", "-c:a", "aac", "-b:a", "320k", "-ar", str(AUDIO_RATE), "-movflags", "+faststart",
+            str(dest)]
 
 
 def _filter_path(path: Path) -> str:
@@ -532,26 +604,52 @@ def text_layer(x: dict, n: int, w: int, h: int, rate: str, font: str, folder: Pa
 
 
 def _run(args: list[str], on_time: Callable[[float], None], check_cancel: Callable[[], None]) -> None:
-    """ffmpeg avec son avancement (-progress) ; arrêté net si le job est annulé."""
+    """
+    ffmpeg avec son avancement (-progress) ; arrêté net si le job est annulé, ou s'il n'avance plus depuis
+    STALL_SECONDS (il continue d'écrire son avancement, figé : on surveille le temps produit).
+    """
     proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             text=True, encoding="utf-8", errors="replace")
     tail: list[str] = []
+    moved = time.monotonic()
+    stalled = threading.Event()
+
+    def watch() -> None:
+        while proc.poll() is None:
+            if time.monotonic() - moved > STALL_SECONDS:
+                stalled.set()
+                proc.kill()
+                return
+            time.sleep(5)
+
+    threading.Thread(target=watch, daemon=True).start()
     try:
+        done = -1
         for line in proc.stdout:
             check_cancel()
             line = line.strip()
             key, _, value = line.partition("=")
             if key == "out_time_us" and value.isdigit():
+                if int(value) > done:
+                    done, moved = int(value), time.monotonic()
                 on_time(int(value) / 1e6)
             elif line and key not in PROGRESS_KEYS and not key.startswith("stream_"):
                 # le reste : les messages d'erreur de ffmpeg
                 tail = (tail + [line])[-10:]
+        if stalled.is_set():
+            raise RuntimeError(f"ffmpeg n'avance plus depuis {STALL_SECONDS // 60} min : arrêté")
         if proc.wait() != 0:
             raise RuntimeError("ffmpeg : " + " | ".join(tail)[-400:])
     finally:
         if proc.poll() is None:
             proc.kill()
             proc.wait()
+
+
+def _listing(path: Path, files: list[Path]) -> Path:
+    """La liste des morceaux à recoller, pour le démuxeur concat de ffmpeg."""
+    path.write_text("".join(f"file '{f.as_posix()}'\n" for f in files), encoding="utf-8")
+    return path
 
 
 def run(ctx: TaskContext) -> None:
@@ -585,16 +683,30 @@ def run(ctx: TaskContext) -> None:
 
             _run(segment_args(p, seg, file), on_time, ctx.check_cancel)
             files.append(file)
-        listing = tmp / "aroll.txt"
-        listing.write_text("".join(f"file '{f.as_posix()}'\n" for f in files), encoding="utf-8")
+        listing = _listing(tmp / "aroll.txt", files)
         aroll = tmp / "aroll.mkv"
         progress(AROLL_SHARE, "assemblage de l'A-roll")
         _run([tool("ffmpeg"), "-y", "-v", "error", "-nostats", "-progress", "pipe:1", "-f", "concat", "-safe", "0",
               "-i", str(listing), "-c", "copy", str(aroll)], lambda t: None, ctx.check_cancel)
+        mix = tmp / "mix.wav"
+        _run(mix_args(p, aroll, mix, tmp / "mix.txt"),
+             lambda t: progress(AROLL_SHARE + min(t / duration, 1.0) * MIX_SHARE, "mix des sons"), ctx.check_cancel)
+        parts = chunks(p, total)
+        done_share = AROLL_SHARE + MIX_SHARE
+        files = []
+        for i, span in enumerate(parts):
+            file = tmp / f"final-{i:04d}.mkv"
+            done = span[0] / fps
+
+            def on_time(t: float, done=done) -> None:
+                progress(done_share + min(float(done) + t, duration) / duration * (1 - done_share),
+                         f"B-roll, motions et textes · morceau {i + 1}/{len(parts)}")
+
+            _run(chunk_args(p, aroll, span, file, tmp / f"final-{i:04d}.txt"), on_time, ctx.check_cancel)
+            files.append(file)
         partial = tmp / "final.mp4"
-        _run(final_args(p, aroll, partial, tmp / "final.txt"),
-             lambda t: progress(AROLL_SHARE + min(t / duration, 1.0) * (1 - AROLL_SHARE), "B-roll, motions et son"),
-             ctx.check_cancel)
+        progress(0.99, "assemblage final")
+        _run(mux_args(_listing(tmp / "final.txt", files), mix, partial), lambda t: None, ctx.check_cancel)
         partial.replace(dest)
         ctx.state["stage"] = "terminé"
     finally:
