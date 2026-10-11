@@ -36,7 +36,6 @@ into Pre-production, Production, Post-production (Long-form and Shorts) and Publ
 | Roasting | Roasting time: score, verdict, estimated retention and remarks to fix                                       |
 | Shoot | Shots, shooting setups and a teleprompter                                                                   |
 | Rough cut | Import footage; it is transcribed and silences and bad takes are cut. Export to DaVinci, Premiere or `.mp4` |
-| Sourcing | Download clips, find images with Daryl, screenshot your sources                                             |
 | Source video | The video to edit (reworked import or the rough cut) and its transcript                                     |
 | Editing | Timeline (zooms, B-roll, motion design, on-screen text, sounds, chapters), by hand or with Daryl. FCPXML export |
 | Clips | Daryl suggests passages to turn into shorts                                                             |
@@ -160,7 +159,7 @@ backend/studio/
                      library.py (resources, library) · migrate.py (migration of older data)
                      script.py (block-based script) · roast.py (Roasting step: runs, remarks)
                      thumbs.py / thumb_tasks.py (Thumbnail step)
-                     assets.py / asset_tasks.py (Sourcing step: downloads, images, screenshots)
+                     assets.py / asset_tasks.py (adding media: downloads, images, screenshots)
                      montage.py / montage_tasks.py / timeline.py (editing, motions, FCPXML)
                      render.py (final render of the long-form video, ffmpeg)
                      publish.py (Details and Upload: metadata, checks, YouTube upload)
