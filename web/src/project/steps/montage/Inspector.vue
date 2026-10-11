@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
  * À côté de l'aperçu : l'élément sélectionné (réglages, Commenter, Supprimer), la plage sélectionnée
- * (à confier au monteur), ou sinon de quoi ajouter au curseur (beat, zoom, texte, B-roll, son, chapitre). Une vidéo peut aussi
- * s'insérer dans l'A-roll (bouton, ou glissée sur la piste A-roll de la timeline).
+ * (à confier au monteur), ou sinon de quoi ajouter au curseur (beat, zoom, texte, chapitre, et par la popup des médias :
+ * rush, B-roll, son, musique). Une vidéo peut aussi s'insérer dans l'A-roll (depuis la popup, ou glissée sur sa piste).
  */
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
@@ -12,10 +12,11 @@ import type { Fx } from "../../../lib/transitions";
 import { post } from "../../../lib/api";
 import { duration as fmtDur } from "../../../lib/format";
 import { toast } from "../../../lib/toast";
-import { addMedia as addMediaTo, addText as addTextTo, isVideo, MEDIA_DRAG, remove } from "./ops";
+import MediaPicker from "./MediaPicker.vue";
+import { addMedia as addMediaTo, addText as addTextTo, remove } from "./ops";
 import {
   fxSpan, newId, prevJoined, spanOf, tcd, trackLabel,
-  type AvailableMedia, type ArollClip, type Broll, type Marker, type MontageView, type Motion, type Selection, type Sound, type TextNote, type Timeline, type Zoom,
+  type AvailableMedia, type ArollClip, type Broll, type MediaTab, type Marker, type MontageView, type Motion, type Selection, type Sound, type TextNote, type Timeline, type Zoom,
 } from "./types";
 
 const props = defineProps<{
@@ -89,13 +90,10 @@ const motionState = computed(() => (item.value?.track === "motion" ? props.view.
 
 // --- ajouter au curseur
 const at = computed(() => Math.min(props.t, Math.max(0, props.total - 0.5)));
-const query = ref("");
-const tab = ref<"broll" | "sfx" | "musique">("broll");
-const TABS = computed(() => [["broll", tr("editing.inspector.tabBroll")], ["sfx", tr("editing.inspector.tabSfx")], ["musique", tr("editing.inspector.tabMusic")]] as const);
-const list = computed(() => {
-  const q = query.value.trim().toLowerCase();
-  return props.available.filter((m) => m.category === tab.value && (!q || m.name.toLowerCase().includes(q))).slice(0, 40);
-});
+/** l'onglet sur lequel la popup des médias est ouverte ; null : fermée */
+const picker = ref<MediaTab | null>(null);
+const MEDIA_BUTTONS = computed(() => [["rush", tr("editing.inspector.addRush")], ["broll", tr("editing.inspector.addBroll")],
+  ["sfx", tr("editing.inspector.addSfx")], ["musique", tr("editing.inspector.addMusic")]] as const);
 
 function addZoom(scale: number) {
   let id = "";
@@ -113,10 +111,6 @@ function addMedia(m: AvailableMedia) {
   let added = null as ReturnType<typeof addMediaTo> | null;
   emit("edit", (tl) => { added = addMediaTo(tl, m, at.value); });
   if (added) sel.value = { item: added };
-}
-function dragMedia(e: DragEvent, m: AvailableMedia) {
-  e.dataTransfer?.setData(MEDIA_DRAG, JSON.stringify(m));
-  if (e.dataTransfer) e.dataTransfer.effectAllowed = "copy";
 }
 function addChapter() {
   let id = "";
@@ -306,25 +300,13 @@ const SOUND_ROLES = computed(() => [["sfx", tr("editing.inspector.sound")], ["mu
           <button class="btn sm" :title="tr('editing.inspector.addBeatTitle')" @click="emit('beat')">{{ tr("editing.inspector.addBeat") }}</button>
           <button class="btn sm" @click="addChapter">{{ tr("editing.inspector.addChapter") }}</button>
         </div>
-        <div class="media">
-          <div class="row">
-            <Seg v-model="tab" :options="TABS" size="sm" />
-            <input v-model="query" class="input search" :placeholder="tr('editing.inspector.filter')">
-          </div>
-          <div class="list">
-            <div v-for="m in list" :key="m.src" class="m" draggable="true" :title="`${m.src}${m.duration ? ` · ${fmtDur(m.duration)}` : ''}
-${tr('editing.inspector.dragHint')}`"
-              @click="addMedia(m)" @dragstart="dragMedia($event, m)">
-              <span class="n">+ {{ m.name }}</span><span class="mono d">{{ m.duration ? fmtDur(m.duration) : "" }}</span><span class="w">{{ m.where }}</span>
-              <button v-if="isVideo(m)" class="to-aroll" :title="tr('editing.inspector.insertArollTitle', { tc: tcd(t) })"
-                @click.stop="emit('insert', m)">{{ tr("editing.inspector.insertAroll") }}</button>
-            </div>
-            <span v-if="!list.length" class="hint">{{ tr("editing.inspector.emptyMedia") }}</span>
-          </div>
+        <div class="row">
+          <button v-for="[k, label] in MEDIA_BUTTONS" :key="k" class="btn sm" @click="picker = k">{{ label }}</button>
         </div>
       </fieldset>
       <p class="hint">{{ tr("editing.inspector.motionHint") }}</p>
     </template>
+    <MediaPicker v-model="picker" :available="available" :t="t" @add="addMedia" @insert="(m) => emit('insert', m)" />
   </div>
 </template>
 
@@ -353,15 +335,4 @@ fieldset { border: none; margin: 0; padding: 0; display: flex; flex-direction: c
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { border: 1px solid var(--line-strong); border-radius: 3px; background: #fff; padding: 5px 9px; font-size: 12.5px; cursor: pointer; }
 .chip:hover { border-color: var(--ink); }
-.media { display: flex; flex-direction: column; gap: 8px; }
-.input.search { flex: 1; min-width: 100px; height: 28px; font-size: 12.5px; }
-.list { display: flex; flex-direction: column; max-height: 170px; overflow-y: auto; border: 1px solid var(--line-soft); border-radius: 3px; }
-.m { display: flex; align-items: baseline; gap: 8px; border: none; background: #fff; padding: 6px 8px; text-align: left; cursor: pointer; border-bottom: 1px solid var(--line-soft); }
-.m:hover { background: var(--bg-soft); }
-.m .n { flex: 1; min-width: 0; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.m .d { font-size: 11px; color: var(--faint); }
-.m .w { font-size: 10.5px; color: var(--off); }
-.m[draggable="true"] { cursor: grab; }
-.to-aroll { border: 1px solid var(--line-strong); border-radius: 3px; background: #fff; padding: 1px 6px; font-size: 10.5px; cursor: pointer; white-space: nowrap; }
-.to-aroll:hover { border-color: var(--ink); }
 </style>

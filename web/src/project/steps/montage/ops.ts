@@ -67,8 +67,9 @@ export function insertAroll(tl: Timeline, t: number, clip: { src: string; in: nu
 /** Ajoute un média au-dessus de l'A-roll à l'instant `at` : un B-roll (muet), une musique ou un son. */
 export function addMedia(tl: Timeline, m: AvailableMedia, at: number): { track: "broll" | "audio"; id: string } {
   const total = totalOf(tl);
-  const len = Math.min(m.duration ?? 4, m.category === "broll" ? 4 : m.category === "musique" ? Math.max(5, total - at) : 3);
-  if (m.category === "broll") {
+  const visual = m.category === "broll" || m.category === "rush";
+  const len = Math.min(m.duration ?? 4, visual ? 4 : m.category === "musique" ? Math.max(5, total - at) : 3);
+  if (visual) {
     const id = newId(tl, "b");
     tl.broll.push({ id, src: m.src, at: round(at), in: 0, out: round(len) });
     return { track: "broll", id };
@@ -88,7 +89,7 @@ export function addText(tl: Timeline, at: number): string {
 }
 
 /** Une vidéo, qu'on peut insérer dans l'A-roll (pas un son ni une image). */
-export const isVideo = (m: AvailableMedia) => m.category === "broll" && /\.(mp4|mov|m4v|mkv|webm|avi|mts)$/i.test(m.src);
+export const isVideo = (m: AvailableMedia) => (m.category === "broll" || m.category === "rush") && /\.(mp4|mov|m4v|mkv|webm|avi|mts)$/i.test(m.src);
 
 /** Le type MIME d'un média glissé depuis l'inspecteur vers la timeline. */
 export const MEDIA_DRAG = "application/x-montage-media";

@@ -145,11 +145,15 @@ export interface KitAnimation {
 
 /** Un média utilisable : du projet (assets/…) ou de la bibliothèque (library/…). */
 export interface AvailableMedia {
-  src: string; name: string; category: "broll" | "musique" | "sfx"; where: string; kind: string;
+  src: string; name: string; category: "rush" | "broll" | "musique" | "sfx"; where: string; kind: string;
   duration: number | null; url: string;
+  /** ce que montre ou fait un fichier de la bibliothèque */
+  description?: string;
   /** le volume auquel la bibliothèque veut ce son (dB) ; absent : le défaut du studio */
   gain_db?: number;
 }
+/** Un onglet de la popup des médias : tous, ou une catégorie. */
+export type MediaTab = "all" | AvailableMedia["category"];
 
 /** Libellé d'une piste, dans la langue de l'interface (à appeler au rendu). */
 export const trackLabel = (track: Track): string => t(`editing.tracks.${track}`);

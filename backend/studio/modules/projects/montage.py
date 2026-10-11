@@ -1076,9 +1076,15 @@ MEDIA_CATEGORIES = ("broll", "musique", "sfx")
 
 
 def available(pid: str) -> list[dict]:
-    """B-roll, musique et sons : ceux du projet, puis ceux de la bibliothèque commune."""
+    """Rushes, B-roll, musique et sons : ceux du projet, puis ceux de la bibliothèque commune."""
     base = service.project_dir(pid)
     items = []
+    # les rushes copiés dans le projet : à insérer dans l'A-roll (ou à poser en B-roll)
+    for path in library._files(base / service.RUSHES_DIR):
+        if path.suffix.lower() in library.VIDEO_EXT:
+            items.append({"src": path.relative_to(base).as_posix(), "name": path.name, "category": "rush",
+                          "where": "rushes", "kind": "Vidéo", "duration": library.duration(path),
+                          "url": f"/api/projects/{pid}/files/{path.relative_to(base).as_posix()}"})
     for category in MEDIA_CATEGORIES:
         for path in library._files(base / service.ASSETS_DIR / category):
             if path.suffix.lower() in library.TIMED:
@@ -1090,6 +1096,14 @@ def available(pid: str) -> list[dict]:
         if path.suffix.lower() in library.VIDEO_EXT:
             items.append({"src": path.relative_to(base).as_posix(), "name": path.name, "category": "broll",
                           "where": "projet", "kind": "Vidéo", "duration": library.duration(path),
+                          "url": f"/api/projects/{pid}/files/{path.relative_to(base).as_posix()}"})
+    # les fichiers ajoutés au projet (Ressources) : une vidéo y sert de B-roll, un son de sound design
+    for path in library._files(base / service.RESOURCES_DIR):
+        ext = path.suffix.lower()
+        if ext in library.TIMED:
+            items.append({"src": path.relative_to(base).as_posix(), "name": path.name,
+                          "category": "broll" if ext in library.VIDEO_EXT else "sfx",
+                          "where": "ajoutés", "kind": library.kind_of(path), "duration": library.duration(path),
                           "url": f"/api/projects/{pid}/files/{path.relative_to(base).as_posix()}"})
     described = library.descriptions()
     for category in MEDIA_CATEGORIES:
