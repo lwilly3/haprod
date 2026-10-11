@@ -1,10 +1,10 @@
 # Studio
 
-A local studio to produce YouTube videos from idea to publication: angle, titles, thumbnails,
+A local studio to produce YouTube videos (or whatever you want) from idea to publication: angle, titles, thumbnails,
 script, shooting, rough cut, editing, shorts, rendering and upload, all in one interface.
-Daryl, the studio's assistant does most of the writing and editing work;
-everything else runs on your machine (Whisper, ffmpeg, HyperFrames). The interface is available in
-English and French; Daryl writes in your channel's language (both in Settings).
+
+A lot of stuff runs on your machine (Whisper, ffmpeg, HyperFrames) but you can also plug in other tools (Gladia, Eleven Labs). The interface is available in
+English and French.
 
 ## A personal tool, shared as is
 
@@ -19,11 +19,11 @@ a **personal tool**:
   flexible overall, and it may give you ideas for your own workflow.
 
 It is built on **Windows** and for a single user: no accounts, no remote server, all state lives in
-`data/`. It should work on macOS and Linux too, but I don't test it there.
+`data/`. It should work on macOS and Linux too (?), but I don't test it there.
 
 ## Projects
 
-Everything starts from a **project**: one video, from idea to publication. Its folder
+Everything starts from a **project** from idea to publication. Its folder
 (`data/projects/<id>/`) keeps everything it produces, and `project.json` its state. The steps, grouped
 into Pre-production, Production, Post-production (Long-form and Shorts) and Publishing:
 
@@ -45,9 +45,7 @@ into Pre-production, Production, Post-production (Long-form and Shorts) and Publ
 | Details | Title, description, tags, chapters and A/B test for each video                                              |
 | Upload | Uploads each video to YouTube once its checks pass                                                          |
 
-The Motion design, Sound design and Captions steps are hidden: motion and sound design happen in the
-Editing chat, captions in Shorts → Editing. The **Library** (`data/library/`) is shared by all
-projects (B-roll, music, sound design, images, logos, people, places).
+You can add motion and sound design in the editing chat. There is a **Library** (`data/library/`) to reuse your own resources (images, videos, sounds, templates) across projects.
 
 ## Requirements
 
@@ -55,7 +53,7 @@ projects (B-roll, music, sound design, images, logos, people, places).
 - **Python 3.12**
 - **Node.js** and **pnpm**
 - **ffmpeg** in the PATH (`winget install ffmpeg`)
-- **[Claude Code](https://claude.com/claude-code)** installed and logged in (`claude auth login`)
+- **[Claude Code](https://claude.com/claude-code)** installed and logged in (`claude auth login`). I suspect it can works with other LLMs, but I only test it with Claude Code.
 - Optional: an NVIDIA GPU for Whisper (otherwise it runs on the CPU, slower)
 - Optional: a [fal.ai](https://fal.ai) key to generate thumbnails
 - Optional: a [ytwatch](https://ytwatch.hakanai.io) account for channel stats
