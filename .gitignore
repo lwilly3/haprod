@@ -1,0 +1,27 @@
+# données locales : projets, médias, base, comptes
+/data/
+
+# environnements et dépendances
+/.venv/
+__pycache__/
+node_modules/
+/web/dist/
+
+# certificats HTTPS du prompteur
+/web/.certs/
+
+# IDE
+/.idea/
+/.run/
+*.iml
+
+# divers
+*.stackdump
+.DS_Store
+Thumbs.db
+
+# maquette Claude Design (non versionnée)
+/design/
+
+# kit tiers de référence (non versionné)
+/editing-os-starter/
