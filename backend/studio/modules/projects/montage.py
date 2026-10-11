@@ -42,8 +42,8 @@ qui passe avec son propre son. `gain_db` d'un clip de l'A-roll : son volume (abs
 pour un média de la bibliothèque commune (copié dans le projet à l'enregistrement).
 """
 import hashlib
-import json
 import html
+import json
 import os
 import re
 import shutil
@@ -64,9 +64,9 @@ TIMELINE_FILE = "timeline.json"
 INSERTIONS_FILE = "insertions.json"
 MOTION_DIR = "motion"
 RENDERS_DIR = "renders"
-HISTORY_DIR = ".history"
 # les médias posés dans les compositions, copiés à côté d'elles (le rendu ne lit que montage/motion/)
 MEDIA_DIR = "media"
+HISTORY_DIR = ".history"
 CACHE_DIR = ".cache"
 HISTORY_MAX = 60
 # les copies de travail de Daryl, une par demande en cours (daryl/<demande>/) ; dans chacune, WORK_BASE : la timeline
@@ -785,9 +785,6 @@ def after_change(pid: str) -> None:
 
 # --- Motion design : rendu des compositions en .mov avec transparence ------------------------
 
-def motion_signature(pid: str, item: dict) -> str | None:
-    comp = motion_dir(pid) / f"{item['id']}.html"
-    if not comp.is_file():
 # un média posé dans une composition : <video src="media/m3-x.mp4" data-from="library/broll/x.mp4">
 _MEDIA_TAG = re.compile(r"<(?:video|img|audio|source)\b[^>]*>", re.I)
 
@@ -830,6 +827,9 @@ def bring_media(pid: str, comp: str) -> list[str]:
     return missing
 
 
+def motion_signature(pid: str, item: dict) -> str | None:
+    comp = motion_dir(pid) / f"{item['id']}.html"
+    if not comp.is_file():
         return None
     body = comp.read_bytes() + json.dumps([item["dur"]]).encode()
     style = motion_dir(pid) / "style.css"
