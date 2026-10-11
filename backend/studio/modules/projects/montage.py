@@ -64,6 +64,9 @@ TIMELINE_FILE = "timeline.json"
 INSERTIONS_FILE = "insertions.json"
 MOTION_DIR = "motion"
 RENDERS_DIR = "renders"
+# la page qui rend un motion (montage_tasks._index) entre dans sa signature : à monter quand elle change,
+# les motions déjà rendus se refont
+MOTION_PAGE_VERSION = 2
 # les médias posés dans les compositions, copiés à côté d'elles (le rendu ne lit que montage/motion/)
 MEDIA_DIR = "media"
 HISTORY_DIR = ".history"
@@ -831,7 +834,7 @@ def motion_signature(pid: str, item: dict) -> str | None:
     comp = motion_dir(pid) / f"{item['id']}.html"
     if not comp.is_file():
         return None
-    body = comp.read_bytes() + json.dumps([item["dur"]]).encode()
+    body = comp.read_bytes() + json.dumps([item["dur"], MOTION_PAGE_VERSION]).encode()
     style = motion_dir(pid) / "style.css"
     if style.is_file():
         body += style.read_bytes()

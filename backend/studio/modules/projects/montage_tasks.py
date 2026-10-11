@@ -441,8 +441,13 @@ def _apply(pid: str, task: str) -> None:
 
 # --- Rendu d'un motion design --------------------------------------------------------------
 
-def _index(directory: Path, comp: str, duration: float) -> None:
-    (directory / "index.html").write_text(f"""<!doctype html>
+def _index(directory: Path, comp: str, duration: float) -> Path:
+    """
+    La page qui rend un motion, propre à lui : un index.html commun à tous les motions a déjà donné à un motion
+    le rendu d'un autre. Une modification ici : monter montage.MOTION_PAGE_VERSION.
+    """
+    page = directory / f"render-{comp}.html"
+    page.write_text(f"""<!doctype html>
 <html lang="{language()}">
 <head>
 <meta charset="utf-8">
@@ -450,7 +455,10 @@ def _index(directory: Path, comp: str, duration: float) -> None:
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
 <style>
 html, body {{ margin: 0; padding: 0; background: transparent; overflow: hidden; }}
-.layer {{ position: absolute; inset: 0; font-family: "Space Grotesk", "Inter", system-ui, sans-serif; }}
+/* HyperFrames retire l'id="stage" du motion en l'intégrant : la règle #stage de style.css (police, couleur
+   du texte) ne s'applique plus. Le calque la remplace, avec les variables de la charte. */
+.layer {{ position: absolute; inset: 0; font-family: var(--font, "Space Grotesk", "Inter", system-ui, sans-serif);
+         color: var(--text, #f4f1ea); -webkit-font-smoothing: antialiased; }}
 .fonts-charte-mono {{ font-family: "JetBrains Mono"; }}
 </style>
 </head>
@@ -467,6 +475,7 @@ html, body {{ margin: 0; padding: 0; background: transparent; overflow: hidden; 
 </body>
 </html>
 """, encoding="utf-8")
+    return page
 
 
 def render_motion(ctx: TaskContext) -> None:
@@ -477,7 +486,7 @@ def render_motion(ctx: TaskContext) -> None:
     missing = montage.bring_media(pid, f"{item_id}.html")
     if missing:
         raise RuntimeError("; ".join(missing) + " : indique son src dans data-from")
-    _index(directory, item_id, p["duration"])
+    page = _index(directory, item_id, p["duration"])
     ctx.set_status("rendering")
 
     def on_progress(value: float, stage: str) -> None:
@@ -486,10 +495,13 @@ def render_motion(ctx: TaskContext) -> None:
         ctx.save()
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    extra = ["--format", "mov"]
+    extra = ["--format", "mov", "--composition", page.name]
     if p.get("width", 1920) >= 3840:
         extra += ["--resolution", "landscape-4k"]
-    hyperframes.render(directory, output, on_progress, ctx.check_cancel, extra)
+    try:
+        hyperframes.render(directory, output, on_progress, ctx.check_cancel, extra)
+    finally:
+        page.unlink(missing_ok=True)
     # les rendus précédents de ce motion ne servent plus
     for old in output.parent.glob(f"{item_id}-*.mov"):
         if old != output:
