@@ -61,7 +61,11 @@ pendant les phrases d'avant) : tant qu'il parle d'autre chose, le cadre reste su
 environ 75 % de l'entrée. Pas d'oscillation décorative (ni repeat: -1 ni yoyo). Avant le moment fort, \
 0,3 à 0,75 s d'immobilité.
 - La timeline doit couvrir toute la durée : ajoute `tl.to({}, {duration: <dur>}, 0)`, sinon l'image \
-devient noire avant la fin."""
+devient noire avant la fin.
+- Une vidéo ou une image de contexte.md dans la composition : `src="media/<id>-<nom court sans espace>.<ext>"` \
+et `data-from="<son src exact listé dans contexte.md>"`, sur la balise elle-même (<video>, <img>). Le studio \
+copie le fichier à cet endroit ; tu ne peux pas copier de fichier toi-même. Une vidéo : `muted`, avec \
+data-start / data-duration (et data-media-start pour partir plus loin dans le média)."""
 
 TRANSITIONS = "\n".join(transitions.prompt_lines())
 
@@ -380,6 +384,9 @@ def chat(ctx: TaskContext) -> None:
             _insert(pid, task, reply)
         _apply(pid, task)
         changed, kept = montage.finish_work(pid, task, touched)
+        # les médias de ses compositions, copiés à côté d'elles avant l'aperçu et le rendu
+        for comp in sorted(touched):
+            kept += montage.bring_media(pid, comp)
         if changed:
             montage.after_change(pid)
         problems = reply.pop("problems", []) + kept
@@ -467,6 +474,9 @@ def render_motion(ctx: TaskContext) -> None:
     pid, item_id, sig = p["project"], p["motion"], p["signature"]
     directory = montage.motion_dir(pid)
     output = montage.motion_render_file(pid, item_id, sig)
+    missing = montage.bring_media(pid, f"{item_id}.html")
+    if missing:
+        raise RuntimeError("; ".join(missing) + " : indique son src dans data-from")
     _index(directory, item_id, p["duration"])
     ctx.set_status("rendering")
 

@@ -42,6 +42,7 @@ pour un média de la bibliothèque commune (copié dans le projet à l'enregistr
 """
 import hashlib
 import json
+import html
 import os
 import re
 import shutil
@@ -63,6 +64,8 @@ INSERTIONS_FILE = "insertions.json"
 MOTION_DIR = "motion"
 RENDERS_DIR = "renders"
 HISTORY_DIR = ".history"
+# les médias posés dans les compositions, copiés à côté d'elles (le rendu ne lit que montage/motion/)
+MEDIA_DIR = "media"
 CACHE_DIR = ".cache"
 HISTORY_MAX = 60
 # les copies de travail de Daryl, une par demande en cours (daryl/<demande>/) ; dans chacune, WORK_BASE : la timeline
@@ -782,6 +785,48 @@ def after_change(pid: str) -> None:
 def motion_signature(pid: str, item: dict) -> str | None:
     comp = motion_dir(pid) / f"{item['id']}.html"
     if not comp.is_file():
+# un média posé dans une composition : <video src="media/m3-x.mp4" data-from="library/broll/x.mp4">
+_MEDIA_TAG = re.compile(r"<(?:video|img|audio|source)\b[^>]*>", re.I)
+
+
+def _attr(tag: str, name: str) -> str:
+    found = re.search(rf"""\s{name}\s*=\s*(?:"([^"]*)"|'([^']*)')""", tag, re.I)
+    return html.unescape(found.group(1) or found.group(2) or "").strip() if found else ""
+
+
+def _media_origin(pid: str, src: str) -> Path | None:
+    """Le fichier d'un média listé dans contexte.md (« library/… » ou un chemin du projet)."""
+    src = src.replace("\\", "/").strip().lstrip("/")
+    if not src or ".." in src.split("/"):
+        return None
+    if src.startswith("library/"):
+        path = library.LIBRARY_DIR / src[len("library/"):]
+    else:
+        path = service.project_dir(pid) / src
+    return path if path.is_file() else None
+
+
+def bring_media(pid: str, comp: str) -> list[str]:
+    """Copie à côté de la composition (montage/motion/media/) les médias qu'elle pose, depuis le projet ou la
+    bibliothèque : le rendu ne lit que ce dossier. Rend ce qui manque toujours."""
+    path = motion_dir(pid) / comp
+    if not path.is_file():
+        return []
+    missing = []
+    for tag in _MEDIA_TAG.findall(path.read_text(encoding="utf-8")):
+        src = _attr(tag, "src").split("?")[0].split("#")[0]
+        if not src.startswith(f"{MEDIA_DIR}/") or ".." in src.split("/"):
+            continue
+        dest = motion_dir(pid) / src
+        origin = _media_origin(pid, _attr(tag, "data-from"))
+        if origin and (not dest.is_file() or dest.stat().st_size != origin.stat().st_size):
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(origin, dest)
+        if not dest.is_file():
+            missing.append(f"{path.stem} : média introuvable ({_attr(tag, 'data-from') or src})")
+    return missing
+
+
         return None
     body = comp.read_bytes() + json.dumps([item["dur"]]).encode()
     style = motion_dir(pid) / "style.css"
