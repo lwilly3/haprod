@@ -53,6 +53,7 @@ onBeforeUnmount(() => { props.player.video.value = null; });
 
 const t = computed(() => props.player.t.value);
 const playing = computed(() => props.player.playing.value);
+const step = (s: number) => props.player.seek(Math.max(0, Math.min(t.value + s, props.player.total.value)));
 
 // --- volume de l'A-roll : celui du clip sous la tête de lecture. Par Web Audio, pour pouvoir monter au-dessus de
 // 0 dB ; branché à la première lecture (le navigateur n'accepte le son qu'après un geste)
@@ -388,7 +389,9 @@ defineExpose({ capture });
     <div class="bar">
       <button class="btn ctl" :title="tr('editing.preview.start')" @click="player.seek(0)">⏮</button>
       <button class="btn ctl" :title="tr('editing.preview.back5')" @click="player.seek(t - 5)">−5 s</button>
+      <button class="btn ctl" :title="tr('editing.preview.back1')" @click="step(-1)">−1 s</button>
       <button class="btn dark play" :title="tr('editing.preview.playPause')" @click="player.toggle()">{{ playing ? "❚❚" : "▶" }}</button>
+      <button class="btn ctl" :title="tr('editing.preview.fwd1')" @click="step(1)">+1 s</button>
       <button class="btn ctl" :title="tr('editing.preview.fwd5')" @click="player.seek(t + 5)">+5 s</button>
       <span class="mono now">{{ tcd(t) }}</span><span class="mono dim">/ {{ mmss(player.total.value) }}</span>
       <span class="spacer" />

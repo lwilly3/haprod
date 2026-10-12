@@ -290,6 +290,8 @@ export default {
     back5: "−5 s (J)",
     playPause: "Play / pause (Space)",
     fwd5: "+5 s (L)",
+    back1: "−1 s (Shift+←)",
+    fwd1: "+1 s (Shift+→)",
     report: "Discuss this frame",
     reportTitle: "Talk to Daryl about this frame (timecode and image attached), in a new conversation",
   },

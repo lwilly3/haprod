@@ -290,6 +290,8 @@ export default {
     back5: "−5 s (J)",
     playPause: "Lecture / pause (Espace)",
     fwd5: "+5 s (L)",
+    back1: "−1 s (Maj+←)",
+    fwd1: "+1 s (Maj+→)",
     report: "Discuter de cette image",
     reportTitle: "Parler à Daryl de cette image (timecode et image joints), dans une nouvelle discussion",
   },
