@@ -73,6 +73,7 @@ export default {
     removeConfirm: "Retirer ?",
     removeTitle: "Retirer ce rush du projet (et de toutes les timelines)",
     append: "Ajouter ce rush entier à la fin de la timeline ouverte",
+    dragMany: "{n} rushes",
     importing: "Import {p} %",
   },
   timelines: {

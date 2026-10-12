@@ -86,8 +86,20 @@ function dragRush(e: DragEvent, id: string) {
   setDrag(e, ids.map((rush) => ({ rush })));
 }
 function setDrag(e: DragEvent, items: MediaItem[]) {
-  e.dataTransfer?.setData(MEDIA_TYPE, JSON.stringify(items));
-  if (e.dataTransfer) e.dataTransfer.effectAllowed = "copy";
+  const dt = e.dataTransfer;
+  if (!dt) return;
+  dt.setData(MEDIA_TYPE, JSON.stringify(items));
+  dt.effectAllowed = "copy";
+  // une étiquette en bas à droite du curseur plutôt que la vignette entière : le point d'insertion reste visible
+  const first = items[0];
+  const label = items.length > 1 ? t("derush.pool.dragMany", { n: items.length })
+    : first.tl ? d.nameOf(first.tl) : project.value.rushes.find((r) => r.id === first.rush)?.name ?? "";
+  const chip = document.createElement("div");
+  chip.className = "drag-chip";
+  chip.textContent = label;
+  document.body.appendChild(chip);
+  dt.setDragImage(chip, 0, 0);
+  setTimeout(() => chip.remove());
 }
 
 // --- timelines ---------------------------------------------------------------------------
@@ -258,4 +270,14 @@ function onDrop(e: DragEvent) {
 .name { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .name.mono { font-size: 11.5px; }
 .time { font-size: 10.5px; color: var(--faint); margin-top: -3px; }
+</style>
+
+<style>
+/* l'image du glisser vers la timeline : hors écran, avec une marge transparente qui la décale du curseur */
+.drag-chip {
+  position: fixed; top: -1000px; left: 0; max-width: 220px; padding: 3px 8px;
+  border-left: 16px solid transparent; border-top: 18px solid transparent; background-clip: padding-box;
+  background-color: var(--ink); color: #fff; font-family: var(--mono); font-size: 11px; border-radius: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 </style>

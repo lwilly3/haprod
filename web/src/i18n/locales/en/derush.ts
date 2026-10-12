@@ -73,6 +73,7 @@ export default {
     removeConfirm: "Remove?",
     removeTitle: "Remove this clip from the project (and from every timeline)",
     append: "Add this whole clip at the end of the open timeline",
+    dragMany: "{n} clips",
     importing: "Importing {p}%",
   },
   timelines: {
