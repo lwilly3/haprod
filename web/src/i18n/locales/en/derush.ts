@@ -41,6 +41,8 @@ export default {
   player: {
     restart: "Back to start",
     playPause: "Play / pause",
+    back1: "−1 s (Shift+←)",
+    fwd1: "+1 s (Shift+→)",
   },
   legend: {
     speech: "Speech",

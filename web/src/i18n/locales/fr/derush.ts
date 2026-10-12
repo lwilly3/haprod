@@ -41,6 +41,8 @@ export default {
   player: {
     restart: "Revenir au début",
     playPause: "Lecture / pause",
+    back1: "−1 s (Maj+←)",
+    fwd1: "+1 s (Maj+→)",
   },
   legend: {
     speech: "Parole",

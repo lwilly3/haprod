@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/** Le lecteur sombre : vidéo 16/9, sous-titre de la phrase en cours, début / lecture / temps. */
+/** Le lecteur sombre : vidéo 16/9, sous-titre de la phrase en cours, début / ±1 s / lecture / temps. */
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { mmss } from "../../../lib/format";
@@ -11,6 +11,7 @@ const props = defineProps<{ player: Playlist; height: number; caption?: string }
 const el = ref<HTMLVideoElement | null>(null);
 onMounted(() => { props.player.video.value = el.value; });
 onBeforeUnmount(() => { props.player.video.value = null; });
+const step = (s: number) => props.player.seek(Math.max(0, Math.min(props.player.t.value + s, props.player.rawTotal.value)));
 </script>
 
 <template>
@@ -23,7 +24,9 @@ onBeforeUnmount(() => { props.player.video.value = null; });
     </div>
     <div class="bar">
       <button class="ctl" :title="t('derush.player.restart')" @click="player.restart()">⏮</button>
+      <button class="ctl wide" :title="t('derush.player.back1')" @click="step(-1)">−1 s</button>
       <button class="ctl play" :title="t('derush.player.playPause')" @click="player.toggle()">{{ player.playing.value ? "❚❚" : "▶" }}</button>
+      <button class="ctl wide" :title="t('derush.player.fwd1')" @click="step(1)">+1 s</button>
       <span class="time now">{{ mmss(player.elapsed.value) }}</span>
       <span class="time dim">/ {{ mmss(player.total.value) }}</span>
       <div class="spacer" />
@@ -54,6 +57,7 @@ video { width: 100%; height: 100%; object-fit: contain; display: block; cursor: 
   color: #fff; font-size: 13px; cursor: pointer;
 }
 .ctl:hover { background: var(--ink-2); }
+.ctl.wide { width: auto; padding: 0 8px; font-family: var(--mono); font-size: 12px; }
 .ctl.play { width: 42px; background: #fff; color: var(--ink); }
 .time { font-family: var(--mono); font-size: 13px; color: #fff; }
 .time.now { padding-left: 6px; }
