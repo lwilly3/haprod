@@ -755,8 +755,15 @@ function motionState(id: string) {
 .fx span { padding: 0 6px; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
 .fx.on { border-color: var(--red); box-shadow: 0 0 0 1.5px var(--red); }
 .edge { position: absolute; top: 0; bottom: 0; width: 6px; cursor: ew-resize; z-index: 3; }
-.edge.l { left: 0; }
-.edge.r { right: 0; }
+/* comme dans Filmora : [ rogne le début du clip sous la souris, ] sa fin (entre deux clips collés, on voit lequel) */
+.edge.l {
+  left: 0;
+  cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M16 4H12V20H16M8 12H2M4 10L2 12L4 14' stroke='white' stroke-width='4'/><path d='M16 4H12V20H16M8 12H2M4 10L2 12L4 14' stroke='black' stroke-width='2'/></svg>") 12 12, w-resize;
+}
+.edge.r {
+  right: 0;
+  cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M8 4H12V20H8M16 12H22M20 10L22 12L20 14' stroke='white' stroke-width='4'/><path d='M8 4H12V20H8M16 12H22M20 10L22 12L20 14' stroke='black' stroke-width='2'/></svg>") 12 12, e-resize;
+}
 .blade .edge { cursor: crosshair; }
 .clip .edge:hover, .item .edge:hover { background: rgba(229, 72, 77, .5); }
 
