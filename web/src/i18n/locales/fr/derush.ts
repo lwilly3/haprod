@@ -138,7 +138,7 @@ export default {
     splitKey: "Couper le bout sous la tête de lecture (Ctrl + B ou S)",
     undo: "Annuler (Ctrl + Z)",
     redo: "Refaire (Ctrl + Y)",
-    zoomIn: "Zoomer (+)",
+    zoomIn: "Zoomer (+) · Alt+molette",
     zoomOut: "Dézoomer (−)",
     fit: "Ajuster",
   },
@@ -146,5 +146,5 @@ export default {
     trim: "Tire pour rogner ou rallonger (Alt : sans aimantation)",
     nested: "Timeline imbriquée « {name} » · double-clic pour l’ouvrir",
   },
-  shortcuts: "Glisse un bout pour le déplacer · tire ses bords pour le rogner · B lame, A sélection · Suppr supprimer · S couper ici · ← → image (Maj : seconde) · ↑ ↓ bout préc. / suiv. · I / O plage · Ctrl + Z annuler · Ctrl + molette zoom",
+  shortcuts: "Glisse un bout pour le déplacer · tire ses bords pour le rogner · B lame, A sélection · Suppr supprimer · S couper ici · ← → image (Maj : seconde) · ↑ ↓ bout préc. / suiv. · I / O plage · Ctrl + Z annuler · Ctrl + molette déplacer la tête · Alt + molette zoom",
 };

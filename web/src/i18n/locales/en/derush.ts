@@ -138,7 +138,7 @@ export default {
     splitKey: "Split the piece under the playhead (Ctrl + B or S)",
     undo: "Undo (Ctrl + Z)",
     redo: "Redo (Ctrl + Y)",
-    zoomIn: "Zoom in (+)",
+    zoomIn: "Zoom in (+) · Alt+scroll",
     zoomOut: "Zoom out (−)",
     fit: "Fit",
   },
@@ -146,5 +146,5 @@ export default {
     trim: "Drag to trim or extend (Alt: no snapping)",
     nested: "Nested timeline “{name}” · double-click to open it",
   },
-  shortcuts: "Drag a piece to move it · drag its edges to trim · B blade, A select · Delete remove · S split here · ← → frame (Shift: second) · ↑ ↓ prev. / next piece · I / O range · Ctrl + Z undo · Ctrl + wheel zoom",
+  shortcuts: "Drag a piece to move it · drag its edges to trim · B blade, A select · Delete remove · S split here · ← → frame (Shift: second) · ↑ ↓ prev. / next piece · I / O range · Ctrl + Z undo · Ctrl + wheel move playhead · Alt + wheel zoom",
 };

@@ -3,7 +3,9 @@
  * La timeline du dérush, façon logiciel de montage : des bouts de rushes bout à bout (V1) et leur son (A1).
  * On attrape un bout pour le déplacer, on tire ses bords pour le rogner ou le rallonger (aimanté aux
  * phrases et aux mots, Alt pour s'en passer), la lame le coupe en deux. Glisser sur A1 sélectionne une plage.
- * Ctrl + molette zoome autour de la souris, la molette fait défiler. Dans chaque bout, une bande marque
+ * Alt + molette zoome sur la tête de lecture, Ctrl + molette la déplace (elle reste au milieu de l'écran, comme dans
+ * Filmora ; la molette seule fait défiler la page). Tirée sur la règle, la tête s'aimante aux coupes (Alt : sans aimant).
+ * Dans chaque bout, une bande marque
  * la parole (les trous sont des silences, les pointillés du son non transcrit) ; zoomé, le texte des phrases s'affiche.
  * Une timeline imbriquée est un seul bloc (double-clic : on l'ouvre). On y dépose rushes et timelines de la médiathèque.
  */
@@ -59,9 +61,10 @@ function setZoom(next: number, anchor: number, anchorPx: number) {
     if (scroller.value) scroller.value.scrollLeft = Math.max(0, anchor * pps.value - anchorPx);
   });
 }
+// comme dans Filmora : on zoome sur la tête de lecture, qui reste au milieu de l'écran (près d'un bout de la
+// timeline, elle s'en écarte le temps qu'il faut)
 function zoomBy(factor: number) {
-  const at = props.player.t.value;
-  setZoom(pps.value * factor, at, Math.max(0, Math.min(viewW.value, x(at) - scrollX.value)));
+  setZoom(pps.value * factor, props.player.t.value, viewW.value / 2);
 }
 function fit() {
   setZoom(minPps.value, 0, 0);
@@ -69,14 +72,16 @@ function fit() {
 defineExpose({ zoomBy, fit });
 
 function onWheel(e: WheelEvent) {
-  if (e.ctrlKey || e.metaKey) {
+  // la molette seule fait défiler la page
+  if (e.altKey) {
     e.preventDefault();
-    const rect = scroller.value!.getBoundingClientRect();
-    const px = e.clientX - rect.left;
-    setZoom(pps.value * Math.pow(1.0015, -e.deltaY), (scrollX.value + px) / pps.value, px);
-  } else if (!e.shiftKey && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+    zoomBy(Math.pow(1.0015, -e.deltaY));
+  } else if ((e.ctrlKey || e.metaKey) && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+    // on se déplace avec la tête de lecture, qui reste au milieu de l'écran
     e.preventDefault();
-    scroller.value!.scrollLeft += e.deltaY;
+    const t = Math.max(0, Math.min(props.player.t.value + e.deltaY / pps.value, total.value));
+    props.player.seek(t);
+    scroller.value!.scrollLeft = Math.max(0, x(t) - viewW.value / 2);
   }
 }
 
@@ -89,13 +94,13 @@ onMounted(() => {
 onUnmounted(() => ro.disconnect());
 watch(total, (n, old) => { if (!old && n) nextTick(fit); else if (pps.value < minPps.value) pps.value = minPps.value; });
 
-// la tête de lecture reste visible : pendant la lecture on tourne la page, après un saut on la ramène
+// la tête reste visible : en lecture on tourne la page quand elle sort de l'écran ; un saut (flèches, bout
+// suivant, ±1 s…) hors de l'écran la ramène au centre
 watch(headX, (px) => {
   const el = scroller.value;
   if (!el || drag) return;
-  if (px > scrollX.value + viewW.value - 30 || px < scrollX.value) {
-    el.scrollLeft = Math.max(0, props.player.playing.value ? px - 60 : px - viewW.value / 3);
-  }
+  if (px <= scrollX.value + viewW.value - 30 && px >= scrollX.value) return;
+  el.scrollLeft = Math.max(0, props.player.playing.value ? px - 60 : px - viewW.value / 2);
 });
 
 // --- règle
@@ -178,7 +183,7 @@ const timeAt = (e: PointerEvent | MouseEvent) => {
 };
 
 type Drag =
-  | { kind: "scrub" }
+  | { kind: "scrub"; pts: number[] }
   | { kind: "range"; a: number; moved: boolean }
   | { kind: "clip"; id: string; d0: number; moved: boolean; additive: boolean }
   | { kind: "trim"; i: number; side: "in" | "out"; edge: number; d0: number; to: number; pts: number[]; min: number; max: number };
@@ -193,8 +198,9 @@ function capture(e: PointerEvent) {
 function downRuler(e: PointerEvent) {
   if (e.button !== 0) return;
   e.stopPropagation();
-  drag = { kind: "scrub" };
-  props.player.seek(timeAt(e));
+  // la tête tirée sur la règle s'aimante aux coupes (sans sa propre position, où elle resterait collée)
+  drag = { kind: "scrub", pts: [0, total.value, ...starts.value].filter((p) => p !== props.player.t.value) };
+  props.player.seek(e.altKey ? timeAt(e) : snap(timeAt(e), drag.pts));
   capture(e);
 }
 
@@ -249,7 +255,7 @@ function onMove(e: PointerEvent) {
   if (!drag) return;
   const d = timeAt(e);
   if (drag.kind === "scrub") {
-    props.player.seek(d);
+    props.player.seek(e.altKey ? d : snap(d, drag.pts));
   } else if (drag.kind === "range") {
     if (!drag.moved && Math.abs(d - drag.a) * pps.value < 4) return;
     drag.moved = true;
@@ -419,8 +425,15 @@ const shortName = (n: string) => n.replace(/\.[^.]+$/, "");
 .mark.voice { background: transparent; border-bottom: 4px dotted rgba(255, 255, 255, .7); }
 .mark em { display: block; font-style: normal; font-size: 10px; line-height: 1.25; color: #fff; padding: 2px 4px; white-space: normal; max-height: 26px; overflow: hidden; }
 .edge { position: absolute; top: 0; bottom: 0; width: 8px; cursor: ew-resize; z-index: 4; }
-.edge.l { left: 0; }
-.edge.r { right: 0; }
+/* comme dans Filmora : [ rogne le début du bout sous la souris, ] sa fin (entre deux bouts collés, on voit lequel) */
+.edge.l {
+  left: 0;
+  cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M16 4H12V20H16M8 12H2M4 10L2 12L4 14' stroke='white' stroke-width='4'/><path d='M16 4H12V20H16M8 12H2M4 10L2 12L4 14' stroke='black' stroke-width='2'/></svg>") 12 12, w-resize;
+}
+.edge.r {
+  right: 0;
+  cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M8 4H12V20H8M16 12H22M20 10L22 12L20 14' stroke='white' stroke-width='4'/><path d='M8 4H12V20H8M16 12H22M20 10L22 12L20 14' stroke='black' stroke-width='2'/></svg>") 12 12, e-resize;
+}
 .edge:hover { background: rgba(229, 72, 77, .55); }
 .blade .edge { display: none; }
 .drop-at { position: absolute; width: 3px; margin-left: -1.5px; background: #3B82C4; border-radius: 2px; z-index: 7; pointer-events: none; }
