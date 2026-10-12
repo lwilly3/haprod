@@ -290,6 +290,10 @@ async function exportMp4() {
   if (await act(`/derush/export.mp4${tlQuery.value}`)) toast(t("derush.export.mp4Started", { d: mmss(kept.value) }));
 }
 
+async function cancelMp4() {
+  if (await act("/derush/export.mp4", undefined, "DELETE")) toast(t("derush.export.mp4Cancelled"));
+}
+
 async function validate() {
   if (await act("/steps/derush", { done: true })) router.push(`/p/${project.value.id}/transcript`);
 }
@@ -383,6 +387,7 @@ async function validate() {
       <span v-if="running('render')" class="render">
         {{ t("derush.rendering", { name: renderName, p: renderPct }) }}
         <span class="progress bar-sm"><div :style="{ width: `${renderPct}%` }" /></span>
+        <button class="btn sm" @click="cancelMp4">{{ t("common.cancel") }}</button>
       </span>
       <span v-else-if="failed('render')" class="render error" :title="failed('render') ?? ''">{{ t("derush.renderFailed") }}</span>
       <span v-else-if="render?.status === 'done'" class="render">

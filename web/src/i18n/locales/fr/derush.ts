@@ -35,6 +35,7 @@ export default {
     mp4Desc: "Le dérush rendu en un seul fichier, {d}.",
     xmlDone: "Timeline exportée · {d}",
     mp4Started: "Export vidéo lancé · {d}",
+    mp4Cancelled: "Export vidéo annulé",
   },
   validate: "Valider le dérush →",
   unreadable: "Dérush illisible : {e}",

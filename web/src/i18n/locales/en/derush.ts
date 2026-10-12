@@ -35,6 +35,7 @@ export default {
     mp4Desc: "The rough cut rendered as a single file, {d}.",
     xmlDone: "Timeline exported · {d}",
     mp4Started: "Video export started · {d}",
+    mp4Cancelled: "Video export cancelled",
   },
   validate: "Approve rough cut →",
   unreadable: "Couldn’t read the rough cut: {e}",

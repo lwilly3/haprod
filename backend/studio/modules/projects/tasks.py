@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import uuid
 from pathlib import Path
+from typing import Callable
 from urllib.parse import urlparse
 
 from ...core import claude, jobs
@@ -228,11 +229,14 @@ def copy(ctx: TaskContext) -> None:
         ctx.save(force=True)
 
 
-def _render_part(r: dict, dest: Path, fmt: dict) -> None:
+def _render_part(r: dict, dest: Path, fmt: dict, on_time: Callable[[float], None],
+                 check_cancel: Callable[[], None]) -> None:
+    """Une plage réencodée ; ffmpeg arrêté net si le job est annulé (une plage peut être un rush entier)."""
     w, h, fps = fmt["width"], fmt["height"], fmt["fps"]
     duration = r["end"] - r["start"]
     vf = f"scale={w}:{h}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,fps={fps},format=yuv420p"
-    args = [tool("ffmpeg"), "-y", "-v", "error", "-ss", f"{r['start']:.3f}", "-t", f"{duration:.3f}", "-i", r["path"]]
+    args = [tool("ffmpeg"), "-y", "-v", "error", "-nostats", "-progress", "pipe:1",
+            "-ss", f"{r['start']:.3f}", "-t", f"{duration:.3f}", "-i", r["path"]]
     if not r.get("audio", True):
         # sans piste son, la concaténation casserait : on en fabrique une silencieuse
         args += ["-f", "lavfi", "-t", f"{duration:.3f}", "-i", "anullsrc=r=48000:cl=stereo", "-map", "0:v:0", "-map", "1:a:0"]
@@ -240,9 +244,7 @@ def _render_part(r: dict, dest: Path, fmt: dict) -> None:
         args += ["-map", "0:v:0", "-map", "0:a:0"]
     args += ["-vf", vf, "-c:v", "libx264", "-preset", "veryfast", "-crf", "18",
              "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2", str(dest)]
-    proc = subprocess.run(args, capture_output=True, text=True, encoding="utf-8", errors="replace")
-    if proc.returncode != 0:
-        raise RuntimeError(f"ffmpeg : {proc.stderr.strip()[-300:]}")
+    long_render._run(args, on_time, check_cancel)
 
 
 def render(ctx: TaskContext) -> None:
@@ -255,7 +257,12 @@ def render(ctx: TaskContext) -> None:
         parts = []
         for i, r in enumerate(ranges):
             part = Path(tmp) / f"part{i:04d}.mp4"
-            _render_part(r, part, fmt)
+
+            def on_time(t: float, before: float = done, length: float = r["end"] - r["start"]) -> None:
+                ctx.progress = (before + min(t, length)) / total * 0.97
+                ctx.save()
+
+            _render_part(r, part, fmt, on_time, ctx.check_cancel)
             parts.append(part)
             done += r["end"] - r["start"]
             ctx.progress = done / total * 0.97

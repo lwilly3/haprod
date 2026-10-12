@@ -979,6 +979,19 @@ def export_mp4(pid: str, tl: str | None = None):
     return _view(pid)
 
 
+@router.delete("/{pid}/derush/export.mp4")
+def cancel_mp4(pid: str):
+    _check(pid)
+    project = service.load(pid)
+    job = jobs.get(project["jobs"].get("render") or "")
+    source = project.get("source") or {}
+    if job and source.get("pending") and source.get("render", job.id) == job.id:
+        raise HTTPException(400, "ce rendu est la vidéo source des étapes suivantes")
+    if job and not job.finished:
+        jobs.cancel(job)
+    return _view(pid)
+
+
 @router.get("/{pid}/derush/export.mp4")
 def download_mp4(pid: str, tl: str | None = None):
     _check(pid)
