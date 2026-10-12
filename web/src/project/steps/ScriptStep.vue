@@ -202,6 +202,35 @@ function replacePassage(passage: string, text: string): void {
   toast(t("script.toasts.replaced"));
 }
 
+// --- versions (V1, V2…) ----------------------------------------------------------------
+
+const drafts = computed(() => script.drafts.value);
+const draft = computed(() => drafts.value.find((d) => d.active) ?? null);
+
+/** Avant de changer de version, ce qui est en cours de frappe rejoint la version actuelle. */
+function switchDraft(id: string): void {
+  editor.value?.flush();
+  active.value = null;
+  script.activateDraft(id);
+}
+
+function forkDraft(): void {
+  editor.value?.flush();
+  script.forkDraft();
+}
+
+function renameDraft(): void {
+  if (!draft.value) return;
+  const name = prompt(t("script.drafts.renamePrompt"), draft.value.name)?.trim();
+  if (name && name !== draft.value.name) script.renameDraft(draft.value.id, name);
+}
+
+function deleteDraft(): void {
+  if (!draft.value) return;
+  active.value = null;
+  script.deleteDraft(draft.value.id);
+}
+
 function writeScript(): void {
   act("/script/write");
 }
@@ -307,6 +336,17 @@ function setNote(i: number, n: string): void {
               {{ t("script.writing") }}<template v-if="project.runtime.jobs.script?.activity"> · {{ project.runtime.jobs.script.activity }}</template>
             </span>
             <span v-else class="eyebrow hint">{{ t("script.hint") }}</span>
+            <div v-if="draft" class="drafts">
+              <select class="select" :value="draft.id" :disabled="writing" :title="t('script.drafts.switchTitle')"
+                @change="switchDraft(($event.target as HTMLSelectElement).value)">
+                <option v-for="d in drafts" :key="d.id" :value="d.id">
+                  {{ t("script.drafts.option", { name: d.name, words: d.words }) }}</option>
+              </select>
+              <button class="btn sm" :disabled="writing" :title="t('script.drafts.forkTitle')" @click="forkDraft">
+                {{ t("script.drafts.fork") }}</button>
+              <button class="btn sm" :title="t('script.drafts.renameTitle')" @click="renameDraft">{{ t("script.drafts.rename") }}</button>
+              <ConfirmX v-if="drafts.length > 1 && !writing" :title="t('script.drafts.deleteTitle')" @confirm="deleteDraft" />
+            </div>
             <button class="btn sm" @click="editor?.selectAll()">{{ t("script.selectAll") }}</button>
             <button class="btn sm" @click="copy(md, t('script.scriptCopied'))">{{ t("script.copyMarkdown") }}</button>
             <button class="btn sm" @click="download">{{ t("script.exportMd") }}</button>
@@ -479,6 +519,8 @@ function setNote(i: number, n: string): void {
 .center { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .toolbar .btn.sm { height: 30px; }
+.drafts { display: flex; align-items: center; gap: 6px; padding-right: 8px; border-right: 1px solid var(--line); }
+.drafts .select { height: 30px; font-size: 12.5px; }
 .hint { flex: 1 1 200px; min-width: 0; }
 .writing { flex: 1 1 200px; min-width: 0; font-size: 12px; color: var(--red-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sheet-scroll { flex: 1; min-height: 0; overflow-y: auto; background: var(--bg-softer); border: 1px solid var(--line); border-radius: 6px; }

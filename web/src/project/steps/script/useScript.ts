@@ -1,6 +1,6 @@
 /** Le script du projet en blocs et ses plans (script.json côté serveur) : chargement et enregistrement automatique. */
 import { onBeforeUnmount, onMounted, ref, shallowRef } from "vue";
-import { api, putJson } from "../../../lib/api";
+import { api, del, patchJson, post, putJson } from "../../../lib/api";
 import { t } from "../../../i18n";
 import { toast } from "../../../lib/toast";
 import { refresh, store } from "../../store";
@@ -10,6 +10,9 @@ import type { SaveState } from "./doc";
 /** Un bloc du texte : paragraphe, titre, citation, liste… avec son Markdown. L'id ne change pas à l'édition. */
 export interface Block { id: string; md: string }
 
+/** Une version du script (V1, V2…) ; seule l'active est éditée, les autres attendent côté serveur. */
+export interface Draft { id: string; name: string; created: number; active: boolean; words: number }
+
 export function useScript(onSaved?: () => void) {
   const url = `/api/projects/${store.project!.id}/script`;
   /** null tant que le script n'est pas chargé */
@@ -18,6 +21,7 @@ export function useScript(onSaved?: () => void) {
   const setups = shallowRef<Setup[]>([]);
   /** le setup de chaque section : id du bloc titre → id du setup */
   const sections = shallowRef<Record<string, string>>({});
+  const drafts = shallowRef<Draft[]>([]);
   /** change à chaque chargement depuis le serveur : l'éditeur repart de ces blocs */
   const version = ref(0);
   const state = ref<SaveState>("saved");
@@ -30,11 +34,14 @@ export function useScript(onSaved?: () => void) {
 
   async function load(): Promise<void> {
     try {
-      const data = await api<{ blocks: Block[]; plans: Plan[]; setups: Setup[]; sections: Record<string, string> }>(url);
+      const data = await api<{
+        blocks: Block[]; plans: Plan[]; setups: Setup[]; sections: Record<string, string>; drafts: Draft[];
+      }>(url);
       blocks.value = data.blocks;
       plans.value = data.plans;
       setups.value = data.setups;
       sections.value = data.sections;
+      drafts.value = data.drafts;
       dirty = plansDirty = false;
       state.value = "saved";
       version.value++;
@@ -125,6 +132,28 @@ export function useScript(onSaved?: () => void) {
     }
   }
 
+  /**
+   * Une opération sur les versions : ce qui attend d'être enregistré l'est d'abord (dans la version
+   * en cours), puis on relit le script, qui a pu changer de version.
+   */
+  async function onDrafts(request: () => Promise<{ drafts: Draft[] }>): Promise<void> {
+    await Promise.all([save(), savePlans(), saveSetups()]);
+    try {
+      drafts.value = (await request()).drafts;
+    } catch (e) {
+      toast(t("script.toasts.draftError", { error: (e as Error).message }), true);
+      return;
+    }
+    await load();
+    refresh().catch(() => {});
+  }
+
+  const draftUrl = (id: string) => `${url}/drafts/${id}`;
+  const forkDraft = () => onDrafts(() => post(`${url}/drafts`));
+  const activateDraft = (id: string) => onDrafts(() => post(`${draftUrl(id)}/activate`));
+  const renameDraft = (id: string, name: string) => onDrafts(() => patchJson(draftUrl(id), { name }));
+  const deleteDraft = (id: string) => onDrafts(() => del(draftUrl(id)));
+
   onMounted(load);
   onBeforeUnmount(() => {
     save();
@@ -132,7 +161,8 @@ export function useScript(onSaved?: () => void) {
     saveSetups();
   });
   return {
-    blocks, plans, setups, sections, version, state, load, set, save, setPlans, updatePlan, removePlan, setSetups,
+    blocks, plans, setups, sections, drafts, version, state, load, set, save, setPlans, updatePlan, removePlan, setSetups,
+    forkDraft, activateDraft, renameDraft, deleteDraft,
   };
 }
 

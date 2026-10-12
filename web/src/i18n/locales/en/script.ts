@@ -20,6 +20,16 @@ export default {
   chosenAngle: "Chosen angle",
   rewriteLink: "Rewrite from the angle",
   rewriteConfirm: "Rewrite the script from the chosen angle? The current version will be replaced.",
+  drafts: {
+    option: "{name} · {words} words",
+    switchTitle: "Script version: the others are kept as they are, plans included",
+    fork: "+ Version",
+    forkTitle: "Start from a copy of this version (text, plans, setups); this one stays available",
+    rename: "Rename",
+    renameTitle: "Rename this version",
+    renamePrompt: "Version name",
+    deleteTitle: "Delete this version",
+  },
   save: { saved: "saved automatically", saving: "saving…", error: "save failed" },
   research: {
     placeholder: "Paste a link or a source title",
@@ -40,6 +50,7 @@ export default {
     scriptLoadError: "Couldn’t load the script: {error}",
     plansSaveError: "Couldn’t save shots: {error}",
     setupsSaveError: "Couldn’t save setups: {error}",
+    draftError: "Couldn’t update script versions: {error}",
   },
   editor: {
     addTitle: "A shot on this whole paragraph (for a specific passage, select it)",

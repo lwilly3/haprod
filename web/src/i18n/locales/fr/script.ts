@@ -20,6 +20,16 @@ export default {
   chosenAngle: "Angle retenu",
   rewriteLink: "Réécrire depuis l’angle",
   rewriteConfirm: "Réécrire le script depuis l’angle retenu ? La version actuelle sera remplacée.",
+  drafts: {
+    option: "{name} · {words} mots",
+    switchTitle: "Version du script : les autres sont gardées telles quelles, plans compris",
+    fork: "+ Version",
+    forkTitle: "Repartir d’une copie de cette version (texte, plans, setups) ; celle-ci reste disponible",
+    rename: "Renommer",
+    renameTitle: "Renommer cette version",
+    renamePrompt: "Nom de la version",
+    deleteTitle: "Supprimer cette version",
+  },
   save: { saved: "enregistré automatiquement", saving: "enregistrement…", error: "échec de l’enregistrement" },
   research: {
     placeholder: "Colle un lien ou un titre de source",
@@ -40,6 +50,7 @@ export default {
     scriptLoadError: "Lecture du script impossible : {error}",
     plansSaveError: "Enregistrement des plans impossible : {error}",
     setupsSaveError: "Enregistrement des setups impossible : {error}",
+    draftError: "Opération sur les versions impossible : {error}",
   },
   editor: {
     addTitle: "Un plan sur tout ce paragraphe (pour un passage précis : sélectionne-le)",
