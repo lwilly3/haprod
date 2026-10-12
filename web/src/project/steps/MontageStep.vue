@@ -7,7 +7,7 @@
  *
  * Raccourcis (conventions de Resolve) : Espace lecture, J/K/L, ←/→ image par image (Maj : 1 s),
  * ↑/↓ coupe précédente / suivante, A sélection, B lame, Ctrl+B couper à la tête, Suppr supprimer,
- * M beat (posé à la tête de lecture, à tirer sur son passage), I/O plage, Alt+X effacer la plage, Ctrl+molette ou +/− zoom, Maj+Z ajuster, Ctrl+Z annuler.
+ * M beat (posé à la tête de lecture, à tirer sur son passage), I/O plage, Alt+X effacer la plage, Alt+molette ou +/− zoom, Ctrl+molette déplacer la tête, Maj+Z ajuster, Ctrl+Z annuler.
  */
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";

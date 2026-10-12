@@ -1,8 +1,9 @@
 <script setup lang="ts">
 /**
- * La timeline du montage, façon DaVinci Resolve : Ctrl + molette zoome autour de la tête de lecture, la molette
- * fait défiler, Maj + Z ajuste à la fenêtre. On glisse les éléments, on tire leurs bords pour les
- * rogner (avec aimantation), la lame coupe ; glisser sur une zone vide sélectionne une plage.
+ * La timeline du montage, façon DaVinci Resolve : Alt + molette zoome sur la tête de lecture, Ctrl + molette la
+ * déplace (elle reste au milieu de l'écran, comme dans Filmora ; la molette seule fait défiler la page),
+ * Maj + Z ajuste à la fenêtre. On glisse les éléments, on tire leurs bords pour les rogner (avec aimantation),
+ * la lame coupe ; glisser sur une zone vide sélectionne une plage.
  * Seule la partie visible est dessinée : vignettes et forme d'onde suivent le zoom.
  * Un média glissé depuis l'inspecteur s'insère dans l'A-roll s'il est lâché sur sa piste, sinon il se pose au-dessus.
  * Les beats du storyboard pas encore faits, en pointillés sur leur piste à eux (au-dessus du motion : un beat peut
@@ -95,10 +96,10 @@ function setZoom(next: number, anchor: number, anchorPx: number) {
     if (scroller.value) scroller.value.scrollLeft = Math.max(0, anchor * pps.value - anchorPx);
   });
 }
-// la tête de lecture garde sa place à l'écran ; hors champ, on la ramène au centre
+// comme dans Filmora : on zoome sur la tête de lecture, qui reste au milieu de l'écran (près d'un bout de la
+// timeline, elle s'en écarte le temps qu'il faut)
 function zoomBy(factor: number, anchor = props.t) {
-  const px = x(anchor) - scrollX.value;
-  setZoom(pps.value * factor, anchor, px >= 0 && px <= viewW.value ? px : viewW.value / 2);
+  setZoom(pps.value * factor, anchor, viewW.value / 2);
 }
 function fit() {
   setZoom(minPps.value, 0, 0);
@@ -106,12 +107,16 @@ function fit() {
 defineExpose({ zoomBy, fit });
 
 function onWheel(e: WheelEvent) {
-  if (e.ctrlKey || e.metaKey) {
+  // la molette seule fait défiler la page (pour atteindre les pistes du bas)
+  if (e.altKey) {
     e.preventDefault();
     zoomBy(Math.pow(1.0015, -e.deltaY));
-  } else if (!e.shiftKey && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+  } else if ((e.ctrlKey || e.metaKey) && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+    // on se déplace avec la tête de lecture, qui reste au milieu de l'écran
     e.preventDefault();
-    scroller.value!.scrollLeft += e.deltaY;
+    const t = Math.max(0, Math.min(props.t + e.deltaY / pps.value, props.total));
+    emit("seek", t);
+    scroller.value!.scrollLeft = Math.max(0, x(t) - viewW.value / 2);
   }
 }
 
@@ -124,12 +129,14 @@ onMounted(() => {
 onUnmounted(() => ro.disconnect());
 watch(() => props.total, (n, old) => { if (!old && n) nextTick(fit); else if (pps.value < minPps.value) pps.value = minPps.value; });
 
-// la lecture reste visible : on tourne la page quand la tête sort de l'écran
+// la tête reste visible : en lecture on tourne la page quand elle sort de l'écran ; un saut (flèches, coupe
+// suivante, ±5 s…) hors de l'écran la ramène au centre
 watch(() => props.t, (t) => {
   const el = scroller.value;
-  if (!el || !props.playing) return;
+  if (!el || scrub) return;
   const px = x(t);
-  if (px > scrollX.value + viewW.value - 30 || px < scrollX.value) el.scrollLeft = Math.max(0, px - 60);
+  if (px <= scrollX.value + viewW.value - 30 && px >= scrollX.value) return;
+  el.scrollLeft = Math.max(0, props.playing ? px - 60 : px - viewW.value / 2);
 });
 
 // --- règle
