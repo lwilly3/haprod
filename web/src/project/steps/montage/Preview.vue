@@ -16,6 +16,7 @@ import type { Playlist } from "../derush/usePlaylist";
 import SlideFrame from "../shorts/SlideFrame.vue";
 import { fxFrame, layersAt } from "../../../lib/transitions";
 import LayerVideo from "./LayerVideo.vue";
+import { releaseMedia } from "../../../lib/media";
 import {
   clipStarts, isImage, tcd, TEXT_BORDER, TEXT_FADE, TEXT_FONT, type AnimState, type Beat, type MontageView, type TextNote, type Timeline, type Visual,
 } from "./types";
@@ -49,7 +50,7 @@ async function copySearch(b: Beat) {
 
 const el = ref<HTMLVideoElement | null>(null);
 onMounted(() => { props.player.video.value = el.value; });
-onBeforeUnmount(() => { props.player.video.value = null; });
+onBeforeUnmount(() => { props.player.video.value = null; releaseMedia(el.value); });
 
 const t = computed(() => props.player.t.value);
 const playing = computed(() => props.player.playing.value);
@@ -221,7 +222,7 @@ watch([t, playing], () => {
       let a = players.get(s.id);
       // a.src est absolue et encodée (espaces → %20) : on compare avec l'adresse résolue de la même façon
       if (!a || a.src !== new URL(url, location.href).href) {
-        a?.pause();
+        releaseMedia(a);
         a = new Audio(url);
         players.set(s.id, a);
       }
@@ -231,9 +232,9 @@ watch([t, playing], () => {
       if (a.paused) a.play().catch(() => {});
     }
   }
-  for (const [id, a] of players) if (!active.has(id)) { a.pause(); players.delete(id); }
+  for (const [id, a] of players) if (!active.has(id)) { releaseMedia(a); players.delete(id); }
 });
-onUnmounted(() => { for (const a of players.values()) a.pause(); players.clear(); });
+onUnmounted(() => { for (const a of players.values()) releaseMedia(a); players.clear(); });
 
 // un beat posé dont l'animation n'est pas écrite reste une slide, qu'on peut relancer ; un zoom ou un B-roll
 // vidéo se voit déjà, une étiquette dit qu'il reste à poser
