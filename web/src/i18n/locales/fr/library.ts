@@ -33,7 +33,9 @@ export default {
     tokens: {
       card: "Fond des cartes", "card-2": "Fond secondaire", line: "Traits", text: "Texte", muted: "Texte discret",
       accent: "Accent", "accent-ink": "Texte sur l’accent", radius: "Arrondi", font: "Police", mono: "Police mono",
+      texture: "Matière",
     },
+    textures: { lisse: "Lisse", papier: "Papier découpé (stop motion)" },
   },
   tiers: { tier1: "Plein écran", tier2: "Surcouche", transition: "Transitions", social: "Reels 9:16", custom: "Spéciales" },
   description: "Description",

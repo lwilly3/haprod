@@ -117,7 +117,7 @@ def remove_animation(name: str):
 @router.get("/library/kit/design")
 def get_design():
     return {"design": kit.design(), "defaults": kit.defaults(), "colors": kit.COLORS, "fonts": kit.FONTS,
-            "presets": kit.PRESETS}
+            "textures": kit.TEXTURES, "presets": kit.PRESETS}
 
 
 @router.put("/library/kit/design")

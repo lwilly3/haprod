@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Le design system du kit : couleurs, arrondi, polices. Chaque réglage régénère style.css, que
+ * Le design system du kit : couleurs, arrondi, polices, matière. Chaque réglage régénère style.css, que
  * toutes les animations du kit lisent : aucune animation n'est à refaire.
  * Point de départ au choix : une ambiance toute faite, ou les couleurs d'une image de tournage.
  */
@@ -11,7 +11,7 @@ import { themesFromImage } from "../../lib/palette";
 import { toast } from "../../lib/toast";
 
 type Design = Record<string, string | number>;
-interface DesignView { design: Design; defaults: Design; colors: string[]; fonts: string[]; presets: Design[] }
+interface DesignView { design: Design; defaults: Design; colors: string[]; fonts: string[]; textures: string[]; presets: Design[] }
 
 const emit = defineEmits<{ saved: [] }>();
 const { t } = useI18n();
@@ -100,6 +100,12 @@ async function readPhoto(e: Event) {
         <input class="input" :value="view.design[k]" list="kit-fonts" @change="set(k, ($event.target as HTMLInputElement).value)">
         <span>{{ t(`library.design.tokens.${k}`) }}</span>
       </label>
+      <label class="field" :class="{ changed: changed('texture') }">
+        <select class="input" :value="view.design.texture" @change="set('texture', ($event.target as HTMLSelectElement).value)">
+          <option v-for="k in view.textures" :key="k" :value="k">{{ t(`library.design.textures.${k}`) }}</option>
+        </select>
+        <span>{{ t("library.design.tokens.texture") }}</span>
+      </label>
     </div>
     <!-- des polices Google courantes ; n'importe quel nom de Google Fonts marche -->
     <datalist id="kit-fonts">
@@ -125,4 +131,5 @@ async function readPhoto(e: Event) {
 .field input[type="color"] { width: 30px; height: 30px; padding: 0; border: 1px solid var(--line-strong); border-radius: 4px; background: none; cursor: pointer; }
 .field input[type="range"] { width: 110px; }
 .field.font .input { width: 170px; height: 32px; }
+.field select.input { height: 32px; }
 </style>

@@ -1,0 +1,51 @@
+
+/* --- matière : papier découpé ---
+ * Les cartes et les pastilles sont des feuilles de papier posées sur la vidéo : grain, bords coupés
+ * à la main, ombre courte. La découpe de la feuille vit à peine (4 poses par seconde, un clin d'œil
+ * au stop motion) ; le texte posé dessus reste net et immobile.
+ * La feuille est dessinée par ::before (et son ombre par ::after) : dans une animation, ne pas
+ * donner de background à .card ou .node, ne pas utiliser leurs ::before/::after.
+ */
+:root {
+  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='512' height='512'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .3 0 0 0 0 .24 0 0 0 0 .18 .3 0 0 0 -.06'/%3E%3C/filter%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.008 .03' numOctaves='2' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .4 0 0 0 0 .32 0 0 0 0 .22 .1 0 0 0 -.03'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+
+.card, .node { position: relative; isolation: isolate; background: none; box-shadow: none; border-radius: 0; }
+.node.hot { background: none; }
+
+.card::before, .node::before, .card::after, .node::after {
+  content: ""; position: absolute; pointer-events: none;
+  animation: kit-paper-boil .75s steps(1, end) 240 both;
+}
+.card::before, .node::before { inset: 0; z-index: -1; background: var(--paper-grain), var(--card); }
+.node::before { background: var(--paper-grain), var(--card-2); }
+.node.hot::before { background: var(--paper-grain), var(--accent); }
+/* l'ombre : la même découpe, décalée, posée sous la feuille */
+.card::after, .node::after { inset: 7px -5px -9px 5px; z-index: -2; background: rgba(0, 0, 0, .22); }
+.node::after { inset: 3px -2px -4px 2px; background: rgba(0, 0, 0, .18); }
+
+/* chaque feuille vit à son rythme : pas toutes ensemble */
+.node:nth-child(3n+1)::before, .node:nth-child(3n+1)::after { animation-delay: -.25s; }
+.node:nth-child(3n+2)::before, .node:nth-child(3n+2)::after { animation-delay: -.5s; }
+
+/* trois poses, à peine différentes : la feuille garde sa place et son inclinaison, seuls quelques
+   points de la découpe bougent d'un ou deux pixels (assez pour qu'elle vive, pas pour qu'elle tremble) */
+@keyframes kit-paper-boil {
+  0% {
+    rotate: -.2deg;
+    clip-path: polygon(3px 4px, 31% 1px, 64% 3px, calc(100% - 2px) 1px, 100% 36%, calc(100% - 3px) 71%,
+      calc(100% - 1px) calc(100% - 3px), 67% 100%, 34% calc(100% - 4px), 2px calc(100% - 1px), 0 63%, 3px 30%);
+  }
+  33.333% {
+    rotate: -.17deg;
+    clip-path: polygon(2px 3px, 31% 2px, 64% 2px, calc(100% - 3px) 2px, 100% 36%, calc(100% - 2px) 71%,
+      calc(100% - 1px) calc(100% - 2px), 67% calc(100% - 1px), 34% calc(100% - 3px), 3px calc(100% - 1px), 1px 63%, 3px 30%);
+  }
+  66.666% {
+    rotate: -.22deg;
+    clip-path: polygon(3px 3px, 31% 1px, 64% 4px, calc(100% - 2px) 2px, calc(100% - 1px) 36%, calc(100% - 3px) 71%,
+      100% calc(100% - 3px), 67% calc(100% - 1px), 34% calc(100% - 4px), 2px 100%, 0 63%, 2px 30%);
+  }
+}
+
+svg path, svg line, svg polyline { stroke-linecap: round; stroke-linejoin: round; }

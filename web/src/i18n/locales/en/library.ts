@@ -33,7 +33,9 @@ export default {
     tokens: {
       card: "Card background", "card-2": "Secondary background", line: "Lines", text: "Text", muted: "Muted text",
       accent: "Accent", "accent-ink": "Text on accent", radius: "Corner radius", font: "Font", mono: "Mono font",
+      texture: "Material",
     },
+    textures: { lisse: "Smooth", papier: "Cut paper (stop motion)" },
   },
   tiers: { tier1: "Full screen", tier2: "Overlay", transition: "Transitions", social: "Reels 9:16", custom: "Special" },
   description: "Description",
