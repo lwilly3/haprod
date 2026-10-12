@@ -863,6 +863,19 @@ def rush_media(pid: str, rush_id: str):
     return FileResponse(rush["path"])
 
 
+@router.get("/{pid}/rushes/{rush_id}/thumb")
+def rush_thumb(pid: str, rush_id: str):
+    """La vignette du rush dans la médiathèque : une image prise au début, calculée une fois puis gardée."""
+    _check(pid)
+    rush = next((r for r in service.load(pid)["rushes"] if r["id"] == rush_id), None)
+    if not rush or not Path(rush["path"]).is_file():
+        raise HTTPException(404, "rush introuvable")
+    try:
+        return FileResponse(runtime.rush_thumb(pid, rush), headers={"Cache-Control": "max-age=86400"})
+    except RuntimeError as e:
+        raise HTTPException(500, str(e)) from e
+
+
 @router.get("/{pid}/rushes/{rush_id}/peaks")
 def rush_peaks(pid: str, rush_id: str):
     """La forme d'onde du rush (une crête 0-100 par 1/RUSH_PEAKS_RATE s), calculée une fois puis gardée."""

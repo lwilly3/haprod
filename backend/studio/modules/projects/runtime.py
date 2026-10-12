@@ -231,6 +231,25 @@ def rush_levels(pid: str, rush: dict) -> list[int]:
     return levels
 
 
+def rush_thumb(pid: str, rush: dict) -> Path:
+    """Une image du rush, un peu après le début (la première est souvent noire ou floue)."""
+    path = Path(rush["path"])
+    key = hashlib.sha1(f"{path}:{path.stat().st_mtime}".encode()).hexdigest()[:10]
+    dest = project_dir(pid) / service.DERUSH_DIR / f"thumb-{rush['id']}-{key}.jpg"
+    if dest.is_file():
+        return dest
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    at = min(1.0, (rush.get("duration") or 0) / 3)
+    proc = subprocess.run([tool("ffmpeg"), "-y", "-v", "error", "-ss", f"{at:.2f}", "-i", str(path), "-frames:v", "1",
+                           "-vf", "scale=320:-2", "-q:v", "5", str(dest)], capture_output=True)
+    if proc.returncode != 0 or not dest.is_file():
+        raise RuntimeError(f"ffmpeg : {proc.stderr.decode(errors='replace')[-300:]}")
+    for old in dest.parent.glob(f"thumb-{rush['id']}-*.jpg"):
+        if old != dest:
+            old.unlink(missing_ok=True)
+    return dest
+
+
 def rush_peaks(pid: str, rush: dict) -> list[int]:
     """La forme d'onde à afficher (0-100) : rapportée au haut de la voix, pas au pic le plus fort,
     pour qu'un claquement isolé n'écrase pas tout le reste."""
