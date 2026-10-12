@@ -926,52 +926,68 @@ def start_auto_derush(pid: str, req: AutoDerushRequest):
     return _view(pid)
 
 
-@router.get("/{pid}/derush/export.xml")
-def export_xml(pid: str):
-    _check(pid)
-    project = service.load(pid)
-    found = runtime.ranges(project)
+def _export_name(project: dict, tid: str) -> str:
+    """Le nom des fichiers exportés d'une timeline : « derush » pour la globale, son nom pour les autres."""
+    if tid == project["derush"]["main"]:
+        return "derush"
+    return service.safe_name((runtime.timeline(project, tid) or {}).get("name") or tid)
+
+
+def _export_timeline(project: dict, tl: str | None) -> tuple[list[dict], str]:
+    """Les plages de la timeline à exporter (la globale par défaut), et son nom de fichier."""
+    tid = tl or project["derush"]["main"]
+    if runtime.timeline(project, tid) is None:
+        raise HTTPException(404, "timeline inconnue")
+    found = runtime.ranges(project, tid)
     if not found:
         raise HTTPException(400, "rien à exporter")
-    body = derush.timeline_xml(project, found, f"{project['title']} — dérush")
-    dest = service.project_dir(pid) / service.DERUSH_DIR / "derush.xml"
+    return found, _export_name(project, tid)
+
+
+@router.get("/{pid}/derush/export.xml")
+def export_xml(pid: str, tl: str | None = None):
+    _check(pid)
+    project = service.load(pid)
+    found, name = _export_timeline(project, tl)
+    body = derush.timeline_xml(project, found, f"{project['title']} — {name}")
+    dest = service.project_dir(pid) / service.DERUSH_DIR / f"{name}.xml"
     dest.write_text(body, encoding="utf-8")
     return Response(body, media_type="application/xml", headers={
-        "Content-Disposition": f"attachment; filename*=UTF-8''{quote(service.safe_name(project['title']) + '-derush.xml')}"})
+        "Content-Disposition": f"attachment; filename*=UTF-8''{quote(service.safe_name(project['title']) + f'-{name}.xml')}"})
 
 
 @router.get("/{pid}/derush/export.fcpxml")
-def export_fcpxml(pid: str):
+def export_fcpxml(pid: str, tl: str | None = None):
     _check(pid)
     project = service.load(pid)
-    found = runtime.ranges(project)
-    if not found:
-        raise HTTPException(400, "rien à exporter")
-    body = timeline.fcpxml(timeline.from_ranges(project, found), f"{project['title']} — dérush")
-    dest = service.project_dir(pid) / service.DERUSH_DIR / "derush.fcpxml"
+    found, name = _export_timeline(project, tl)
+    body = timeline.fcpxml(timeline.from_ranges(project, found), f"{project['title']} — {name}")
+    dest = service.project_dir(pid) / service.DERUSH_DIR / f"{name}.fcpxml"
     dest.write_text(body, encoding="utf-8")
     return Response(body, media_type="application/xml", headers={
-        "Content-Disposition": f"attachment; filename*=UTF-8''{quote(service.safe_name(project['title']) + '-derush.fcpxml')}"})
+        "Content-Disposition": f"attachment; filename*=UTF-8''{quote(service.safe_name(project['title']) + f'-{name}.fcpxml')}"})
 
 
 @router.post("/{pid}/derush/export.mp4")
-def export_mp4(pid: str):
+def export_mp4(pid: str, tl: str | None = None):
     _check(pid)
     with service.editing(pid) as project:
         try:
-            runtime.start_render(project)
+            runtime.start_render(project, tl)
         except ValueError as e:
             raise HTTPException(400, str(e)) from e
     return _view(pid)
 
 
 @router.get("/{pid}/derush/export.mp4")
-def download_mp4(pid: str):
+def download_mp4(pid: str, tl: str | None = None):
     _check(pid)
-    path = service.project_dir(pid) / service.DERUSH_DIR / "derush.mp4"
+    project = service.load(pid)
+    tid = tl or project["derush"]["main"]
+    path = runtime.render_path(project, tid)
     if not path.is_file():
         raise HTTPException(404, "pas encore exporté")
-    return FileResponse(path, filename="derush.mp4")
+    return FileResponse(path, filename=f"{_export_name(project, tid)}.mp4")
 
 
 # --- Vidéo source ---------------------------------------------------------------------

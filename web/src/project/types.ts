@@ -83,7 +83,9 @@ export interface Runtime {
   plans: { total: number; done: number };
   /** la note du dernier roast terminé */
   roast_score: number | null;
+  /** le dernier export .mp4 du dérush correspond-il encore à sa timeline (`render_timeline`) ? */
   render_current: boolean;
+  render_timeline: string | null;
   /** capturing : les sources que le job de captures doit encore traiter (la première est en cours) */
   assets: { downloads: AssetDownload[]; capturing: string[] };
   /** les modèles d'image de fal.ai ; `ready` : la clé FAL_KEY est définie */

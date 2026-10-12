@@ -22,7 +22,7 @@ export default {
   transcribing: "Transcription en cours · {p} %",
   intro: "Les rushes sont lus bout à bout dans la timeline. Génère le transcript pour afficher le texte, repérer les vides et les prises ratées.",
   generate: "Générer le transcript",
-  rendering: "Rendu · {p} %",
+  rendering: "Rendu de {name} · {p} %",
   renderFailed: "Rendu échoué",
   cutsChanged: " · coupes modifiées depuis",
   export: {

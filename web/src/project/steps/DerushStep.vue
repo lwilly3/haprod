@@ -274,6 +274,11 @@ onUnmounted(() => document.removeEventListener("pointerdown", closeMenu));
 
 const render = computed(() => project.value.runtime.jobs.render ?? null);
 const renderPct = computed(() => Math.round((render.value?.progress ?? 0) * 100));
+/** La timeline du dernier export .mp4 : pas forcément celle qui est ouverte. */
+const renderTl = computed(() => project.value.runtime.render_timeline ?? derush.mainId.value);
+const renderName = computed(() => (renderTl.value === derush.mainId.value ? "derush" : derush.nameOf(renderTl.value)));
+/** Les exports portent sur la timeline ouverte. */
+const tlQuery = computed(() => `?tl=${encodeURIComponent(derush.current.value)}`);
 
 function exportXml() {
   exportOpen.value = false;
@@ -282,7 +287,7 @@ function exportXml() {
 
 async function exportMp4() {
   exportOpen.value = false;
-  if (await act("/derush/export.mp4")) toast(t("derush.export.mp4Started", { d: mmss(kept.value) }));
+  if (await act(`/derush/export.mp4${tlQuery.value}`)) toast(t("derush.export.mp4Started", { d: mmss(kept.value) }));
 }
 
 async function validate() {
@@ -376,22 +381,22 @@ async function validate() {
     <div class="footer">
       <span class="keys" :title="t('derush.shortcuts')">{{ t("derush.shortcuts") }}</span>
       <span v-if="running('render')" class="render">
-        {{ t("derush.rendering", { p: renderPct }) }}
+        {{ t("derush.rendering", { name: renderName, p: renderPct }) }}
         <span class="progress bar-sm"><div :style="{ width: `${renderPct}%` }" /></span>
       </span>
       <span v-else-if="failed('render')" class="render error" :title="failed('render') ?? ''">{{ t("derush.renderFailed") }}</span>
       <span v-else-if="render?.status === 'done'" class="render">
-        <a :href="`${base}/derush/export.mp4`" download>derush.mp4</a>
+        <a :href="`${base}/derush/export.mp4?tl=${encodeURIComponent(renderTl)}`" download>{{ renderName }}.mp4</a>
         <template v-if="!project.runtime.render_current">{{ t("derush.cutsChanged") }}</template>
       </span>
       <div ref="menu" class="menu-wrap">
         <button class="btn md export" @click="exportOpen = !exportOpen">{{ t("derush.export.button") }}</button>
         <div v-if="exportOpen" class="menu">
-          <a class="opt" :href="`${base}/derush/export.fcpxml`" download @click="exportXml">
+          <a class="opt" :href="`${base}/derush/export.fcpxml${tlQuery}`" download @click="exportXml">
             <span class="opt-t">{{ t("derush.export.resolve") }}</span>
             <span class="opt-d">{{ t("derush.export.resolveDesc") }}</span>
           </a>
-          <a class="opt" :href="`${base}/derush/export.xml`" download @click="exportXml">
+          <a class="opt" :href="`${base}/derush/export.xml${tlQuery}`" download @click="exportXml">
             <span class="opt-t">{{ t("derush.export.premiere") }}</span>
             <span class="opt-d">{{ t("derush.export.premiereDesc") }}</span>
           </a>

@@ -64,8 +64,9 @@ def sync(project: dict) -> bool:
                 add_rushes(project, paths)
             else:
                 set_source(project, "import", paths[0])
-    render_job = jobs.get(project["jobs"].get("render") or "")
     source = project.get("source")
+    # le rendu de la globale lancé pour la source : le dernier export peut en être un autre, d'une autre timeline
+    render_job = jobs.get((source or {}).get("render") or project["jobs"].get("render") or "")
     if render_job and render_job.status == "done" and source and source.get("pending"):
         dest = Path(render_job.payload["dest"])
         info = media.probe(dest)
@@ -351,16 +352,17 @@ def flatten(project: dict, tid: str, seen: frozenset = frozenset()) -> list[dict
     return out
 
 
-def clips(project: dict) -> list[dict]:
-    """La timeline globale du dérush, dépliée : des bouts de rushes {id, rush, in, out}, dans l'ordre de lecture."""
-    return flatten(project, project["derush"]["main"])
+def clips(project: dict, tid: str | None = None) -> list[dict]:
+    """Une timeline du dérush (la globale par défaut), dépliée : des bouts de rushes {id, rush, in, out},
+    dans l'ordre de lecture."""
+    return flatten(project, tid or project["derush"]["main"])
 
 
-def ranges(project: dict) -> list[dict]:
+def ranges(project: dict, tid: str | None = None) -> list[dict]:
     """Les plages lues, dans l'ordre, fusionnées quand deux bouts se suivent dans un même rush."""
     rushes = {r["id"]: r for r in project["rushes"]}
     out: list[dict] = []
-    for c in clips(project):
+    for c in clips(project, tid):
         if c["out"] - c["in"] <= 0.01:
             continue
         last = out[-1] if out else None
@@ -381,28 +383,45 @@ def render_signature(found: list[dict]) -> str:
     return hashlib.sha1(json.dumps([[r["path"], r["start"], r["end"]] for r in found]).encode()).hexdigest()[:12]
 
 
-def start_render(project: dict) -> jobs.Job:
-    found = ranges(project)
+def render_timeline(job: jobs.Job, project: dict) -> str:
+    """La timeline rendue par un job d'export (les anciens n'ont rendu que la globale)."""
+    return job.payload.get("timeline") or project["derush"]["main"]
+
+
+def render_path(project: dict, tid: str) -> Path:
+    """Le .mp4 d'une timeline : derush.mp4 pour la globale, la source des étapes suivantes ; un fichier à part
+    pour les autres, pour ne pas l'écraser."""
+    name = "derush.mp4" if tid == project["derush"]["main"] else f"derush-{tid}.mp4"
+    return project_dir(project["id"]) / service.DERUSH_DIR / name
+
+
+def start_render(project: dict, tid: str | None = None) -> jobs.Job:
+    tid = tid or project["derush"]["main"]
+    if timeline(project, tid) is None:
+        raise ValueError("timeline inconnue")
+    found = ranges(project, tid)
     if not found:
         raise ValueError("rien à exporter : tout est coupé")
+    # un nouvel export de la même timeline remplace celui en cours ; celui d'une autre timeline va jusqu'au bout
     current = jobs.get(project["jobs"].get("render") or "")
-    if current and not current.finished:
+    if current and not current.finished and render_timeline(current, project) == tid:
         jobs.cancel(current)
     first = next(r for r in project["rushes"] if r["id"] == found[0]["rush"])
     fmt = {"width": first.get("width") or 1920, "height": first.get("height") or 1080, "fps": first.get("fps") or 25}
-    dest = project_dir(project["id"]) / service.DERUSH_DIR / "derush.mp4"
     job = jobs.create(service.MODULE, "project_render",
-                      {"project": project["id"], "ranges": found, "format": fmt, "dest": str(dest),
-                       "signature": render_signature(found)}, {})
+                      {"project": project["id"], "timeline": tid, "ranges": found, "format": fmt,
+                       "dest": str(render_path(project, tid)), "signature": render_signature(found)}, {})
     project["jobs"]["render"] = job.id
     return job
 
 
-def render_current(project: dict) -> bool:
-    """Le .mp4 exporté correspond-il encore au dérush ?"""
+def render_current(project: dict, tid: str | None = None) -> bool:
+    """Le dernier .mp4 exporté correspond-il encore à sa timeline (ou à `tid`, si donnée) ?"""
     job = jobs.get(project["jobs"].get("render") or "")
-    return bool(job and job.status == "done" and Path(job.payload["dest"]).is_file()
-                and job.payload["signature"] == render_signature(ranges(project)))
+    if not (job and job.status == "done" and Path(job.payload["dest"]).is_file()):
+        return False
+    rendered = render_timeline(job, project)
+    return (tid or rendered) == rendered and job.payload["signature"] == render_signature(ranges(project, rendered))
 
 
 # --- Vidéo source --------------------------------------------------------------------
@@ -434,12 +453,13 @@ def set_source(project: dict, kind: str, path: Path | None) -> None:
     service.start_step(project, "transcript")
     has_derush = bool(project["rushes"]) and analysis(project)["ready"]
     if kind == "derush":
-        pending = not render_current(project)
-        if pending:
-            start_render(project)
-        dest = project_dir(project["id"]) / service.DERUSH_DIR / "derush.mp4"
+        main = project["derush"]["main"]
+        pending = not render_current(project, main)
+        job = start_render(project, main) if pending else None
+        dest = render_path(project, main)
         duration = kept_duration(project)
         project["source"] = {"kind": "derush", "path": str(dest), "name": dest.name, "pending": pending,
+                             "render": job.id if job else None,
                              "duration": duration, "width": None, "height": None, "drift": False,
                              "derived": True, "transcript": derived_transcript(project, dest)}
         if not pending:
@@ -506,6 +526,7 @@ def view(project: dict) -> dict:
         job = jobs.get(rush.get("transcript") or "")
         rush_jobs[rush["id"]] = ({"status": job.status, "progress": job.progress, "error": job.error}
                                  if job else {"status": "none", "progress": 0, "error": None})
+    render_job = jobs.get(project["jobs"].get("render") or "")
     return {
         **project,
         "runtime": {
@@ -519,6 +540,7 @@ def view(project: dict) -> dict:
             "plans": script.counts(pid),
             "roast_score": roast.last_score(pid, project["jobs"].get("roast")),
             "render_current": render_current(project) if project["rushes"] else False,
+            "render_timeline": render_timeline(render_job, project) if render_job else None,
             "assets": assets.view(project),
             "thumbs": thumbs.view(),
             "shorts": shorts_view(project),
