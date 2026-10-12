@@ -83,6 +83,9 @@ BROLL_DUR = (2.0, 10.0)
 MAX_VISUALS = 300
 KINDS = ["counter", "diagram", "comparison", "timeline", "list", "logo", "screenshot", "quote", "map", "other"]
 PLACES = ["full", "left", "right", "top", "lower"]
+# un motion plein écran recouvre la vidéo : sans fond opaque, on la voit à travers
+FULL_SCREEN = ("Plein écran : un calque au-dessus de la vidéo, sur un fond opaque de la charte qui couvre tout le cadre "
+               "du début à la fin (il entre en premier, sort en dernier) : la vidéo ne doit jamais se voir dessous.")
 # pour Daryl : ce que chaque place veut dire à l'écran
 PLACE_TEXT = {"full": "plein écran", "left": "tiers gauche de l'image", "right": "tiers droit de l'image",
               "top": "bandeau en haut de l'image", "lower": "bandeau en bas de l'image"}
@@ -1226,7 +1229,9 @@ def image_brief(pid: str, b: dict) -> list[str]:
         "par le mot qui le motive (en retard se lit comme voulu, en avance comme une erreur) ; au plus une dérive "
         "à peine perceptible (2 % sur tout le plan) pour qu'elle ne soit pas figée. Entrée et sortie : coupe franche, poussée, glissé ou masque qui s'ouvre ; un fondu "
         "seulement s'il a une raison.")
-    if b["place"] != "full":
+    if b["place"] == "full":
+        lines.append(f"- {FULL_SCREEN}")
+    else:
         lines.append("- Comme un portrait sur le côté : encadrée, avec une ombre, elle entre depuis son bord, reste "
                      "posée pendant qu'il parle, puis repart ; rien sur son visage à lui.")
     return lines
@@ -1255,6 +1260,8 @@ def brief(pid: str, ids: list[str]) -> str:
             lines += image_brief(pid, b)
         else:
             lines.append(f"- Type : {b['kind']} · place : {PLACE_TEXT.get(b['place'], b['place'])}")
+            if b["place"] == "full":
+                lines.append(f"- {FULL_SCREEN}")
             if b.get("anim"):
                 lines.append(f"- Base : l'animation du kit montage/motion/exemples/{b['anim']} (adapte-la, garde sa mécanique)")
         if b.get("enter") or b.get("exit"):

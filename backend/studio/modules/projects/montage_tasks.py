@@ -36,6 +36,7 @@ setTimeout, de Date.now(), de Math.random(), de repeat infini.
 - Entrée ET sortie animées dans la composition (c'est la transition) : sortie dans les 0,4 dernières \
 secondes. Garde 80 px de marge avec les bords. Respecte la place du beat (plein écran, tiers gauche \
 ou droit, bandeau haut ou bas) : hors plein écran, rien ne passe sur le visage.
+- Plein écran : la composition est un calque qui recouvre la vidéo. Son fond est un aplat OPAQUE qui couvre tout le cadre (1920×1080, sans marge, aux couleurs de la charte : var(--card) ou var(--card-2)), sinon on voit la vidéo et son visage à travers. Le fond entre en premier et sort en dernier, avec la composition ; la marge de 80 px ne vaut que pour ce qui est posé dessus.
 - Pas une pastille de texte : schéma, chiffre qui se construit, liste qui se coche, comparaison, \
 chronologie…
 - Montre, ne dis pas. Le spectateur entend déjà la voix et voit déjà l'image : un texte qui redit l'une \
