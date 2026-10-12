@@ -17,6 +17,7 @@ import type { AutoCut, DerushClip, DerushSeg, TimelineClip } from "../types";
 import AutoDerush from "./derush/AutoDerush.vue";
 import { clipAt, clipLen, move, offsets, remove, removeRange, removeRushRanges, splitAt, timeOf, trim, type Selection } from "./derush/clips";
 import MediaPool from "./derush/MediaPool.vue";
+import { frameStep } from "./montage/ops";
 import PlayerFrame from "./derush/PlayerFrame.vue";
 import Timeline, { type Peaks } from "./derush/Timeline.vue";
 import Transcript from "./derush/Transcript.vue";
@@ -213,8 +214,14 @@ function seekRush(rush: string, t: number) {
 }
 
 // --- clavier, comme dans un logiciel de montage
-const fps = computed(() => project.value.rushes[0]?.fps || 25);
-const nudge = (d: number) => player.seek(Math.max(0, player.t.value + d));
+/** Les images du rush sous la tête de lecture. */
+const fps = computed(() => {
+  const hit = clipAt(flat.value, player.t.value);
+  return project.value.rushes.find((r) => r.id === hit?.c.rush)?.fps || project.value.rushes[0]?.fps || 25;
+});
+const nudge = (d: number) => player.seek(Math.max(0, Math.min(player.t.value + d, kept.value)));
+/** Une image plus loin (ou plus tôt), calée sur une image du rush. */
+const frame = (n: 1 | -1) => player.seek(Math.max(0, Math.min(frameStep(player.t.value, n, fps.value), kept.value)));
 /** Saute au début du bout précédent / suivant. */
 function jump(dir: 1 | -1) {
   const here = player.t.value, bounds = [...offsets(clips.value), kept.value];
@@ -237,8 +244,8 @@ function onKey(e: KeyboardEvent) {
   else if (ctrl && k === "b") onSplit(player.t.value);
   else if (ctrl || e.altKey) done = false;
   else if (e.key === "Delete" || e.key === "Backspace") cutSelection();
-  else if (e.key === "ArrowLeft") nudge(e.shiftKey ? -1 : -1 / fps.value);
-  else if (e.key === "ArrowRight") nudge(e.shiftKey ? 1 : 1 / fps.value);
+  else if (e.key === "ArrowLeft") e.shiftKey ? nudge(-1) : frame(-1);
+  else if (e.key === "ArrowRight") e.shiftKey ? nudge(1) : frame(1);
   else if (e.key === "ArrowUp") jump(-1);
   else if (e.key === "ArrowDown") jump(1);
   else if (e.key === "Escape") selection.value = null;
