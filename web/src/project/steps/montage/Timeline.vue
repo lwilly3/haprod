@@ -328,7 +328,9 @@ function applyGhost(d: NonNullable<typeof ghostDrag>, t: number) {
 
 let drag: { track: Track; id: string; mode: Mode; t0: number; origin: Timeline; pts: number[]; moved: boolean; fx?: FxEnd } | null = null;
 let rangeDrag: { a: number } | null = null;
-let scrub = false;
+// la tête de lecture tirée sur la règle s'aimante aux coupes et aux bords des éléments (Alt : sans aimant)
+let scrub: number[] | null = null;
+const scrubTo = (e: PointerEvent) => emit("seek", e.altKey ? timeAt(e) : snap(timeAt(e), scrub!));
 
 function down(e: PointerEvent, track: Track, id: string, mode: Mode = "move") {
   if (e.button !== 0) return;
@@ -465,7 +467,7 @@ function dragTo(e: PointerEvent) {
     const a = Math.min(rangeDrag.a, t), b = Math.max(rangeDrag.a, t);
     sel.value = b - a > 0.05 ? { range: [round(a), round(b)] } : null;
   } else if (scrub) {
-    emit("seek", timeAt(e));
+    scrubTo(e);
   }
 }
 
@@ -479,7 +481,7 @@ function up() {
   }
   drag = null;
   rangeDrag = null;
-  scrub = false;
+  scrub = null;
   lastMove = null;
   cancelAnimationFrame(edgeRaf);
   edgeRaf = 0;
@@ -505,8 +507,9 @@ function downRuler(e: PointerEvent) {
   if (e.shiftKey) {
     rangeDrag = { a: timeAt(e) };
   } else {
-    scrub = true;
-    emit("seek", timeAt(e));
+    // sans la tête elle-même, qui sinon resterait collée à sa position de départ
+    scrub = snapPoints("").filter((p) => p !== props.t);
+    scrubTo(e);
   }
   (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 }
