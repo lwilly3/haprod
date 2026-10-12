@@ -352,12 +352,18 @@ def put_doc(pid: str, name: str, req: DocRequest):
 
 # --- Script : les blocs du texte et les plans qui s'y rattachent (voir script.py) -------------
 
+def _script_idle(pid: str) -> None:
+    script_job = jobs.get(service.load(pid)["jobs"].get("script") or "")
+    if script_job and not script_job.finished:
+        raise HTTPException(409, "Claude est en train d'écrire le script")
+
+
 @router.get("/{pid}/script")
 def get_script(pid: str):
     _check(pid)
     data = script.load(pid)
     return {"blocks": data["blocks"], "plans": data["plans"], "setups": data["setups"], "sections": data["sections"],
-            "mtime": service.doc_mtime(pid, service.SCRIPT_FILE)}
+            "drafts": script.drafts(pid), "mtime": service.doc_mtime(pid, service.SCRIPT_FILE)}
 
 
 class ScriptBlock(BaseModel):
@@ -372,9 +378,7 @@ class ScriptRequest(BaseModel):
 @router.put("/{pid}/script")
 def put_script(pid: str, req: ScriptRequest):
     _check(pid)
-    script_job = jobs.get(service.load(pid)["jobs"].get("script") or "")
-    if script_job and not script_job.finished:
-        raise HTTPException(409, "Claude est en train d'écrire le script")
+    _script_idle(pid)
     try:
         script.save(pid, [b.model_dump() for b in req.blocks])
     except ValueError as e:
@@ -406,6 +410,52 @@ class SetupsRequest(BaseModel):
 def put_setups(pid: str, req: SetupsRequest):
     _check(pid)
     return script.save_setups(pid, req.setups, req.sections)
+
+
+# les versions du script (V1, V2…) : seule l'active est dans script.json et script.md
+
+@router.post("/{pid}/script/drafts")
+def fork_draft(pid: str):
+    _check(pid)
+    _script_idle(pid)
+    script.fork(pid)
+    return {"drafts": script.drafts(pid)}
+
+
+@router.post("/{pid}/script/drafts/{draft_id}/activate")
+def activate_draft(pid: str, draft_id: str):
+    _check(pid)
+    _script_idle(pid)
+    try:
+        script.activate(pid, draft_id)
+    except ValueError as e:
+        raise HTTPException(404, str(e)) from e
+    return {"drafts": script.drafts(pid)}
+
+
+class DraftRequest(BaseModel):
+    name: str
+
+
+@router.patch("/{pid}/script/drafts/{draft_id}")
+def rename_draft(pid: str, draft_id: str, req: DraftRequest):
+    _check(pid)
+    try:
+        script.rename(pid, draft_id, req.name)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    return {"drafts": script.drafts(pid)}
+
+
+@router.delete("/{pid}/script/drafts/{draft_id}")
+def delete_draft(pid: str, draft_id: str):
+    _check(pid)
+    _script_idle(pid)
+    try:
+        script.delete(pid, draft_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    return {"drafts": script.drafts(pid)}
 
 
 # --- Claude : angles, titres, script, assistant ------------------------------------------------

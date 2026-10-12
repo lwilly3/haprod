@@ -7,6 +7,11 @@ Le script d'un projet : script/script.json en est la source.
   setups    les configurations de tournage (cadre, lieu, lumière) : {id, name, note}, A, B, C… dans l'ordre
   sections  le setup de chaque section : {id du bloc titre: id du setup}
   md_hash   l'empreinte du script.md écrit au dernier enregistrement
+  draft     la version du script (V1, V2…) : {id, name, created}
+
+Les versions : on repart d'une copie du script (V2) sans perdre l'ancienne (V1). Seule la version
+active est dans script.json et script.md, que tout le reste lit ; les autres attendent, complètes
+(texte, plans, setups), dans script/drafts/<id>.json. Changer de version, c'est échanger les fichiers.
 
 Un plan : {id, block, end, q, type, frame, setup, note, media, on, by}
   block     le bloc où commence le passage qu'il illustre, `end` celui où il finit (None : le même)
@@ -41,6 +46,7 @@ from . import service
 
 JSON_FILE = "script.json"
 VERSIONS_DIR = "versions"
+DRAFTS_DIR = "drafts"
 # une copie au plus toutes les 10 minutes pendant l'édition, les 50 dernières gardées
 VERSION_EVERY = 10 * 60
 VERSION_KEEP = 50
@@ -212,7 +218,9 @@ def _read(pid: str) -> dict:
     data = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
     return {"blocks": data.get("blocks", []), "plans": data.get("plans", []), "setups": data.get("setups", []),
             "sections": data.get("sections", {}), "md_hash": data.get("md_hash"),
-            "shots_migrated": data.get("shots_migrated", False)}
+            "shots_migrated": data.get("shots_migrated", False),
+            "draft": data.get("draft") or {"id": "v1", "name": "V1",
+                                           "created": path.stat().st_mtime if path.is_file() else time.time()}}
 
 
 def _write(pid: str, data: dict) -> None:
@@ -336,3 +344,114 @@ def save_setups(pid: str, setups: list[dict], sections: dict[str, str]) -> dict:
                 plan["setup"] = ""
         _write(pid, data)
         return {"setups": data["setups"], "sections": data["sections"], "plans": data["plans"]}
+
+
+# --- Versions ------------------------------------------------------------------------------
+
+def _drafts_dir(pid: str):
+    return service.project_dir(pid) / service.SCRIPT_DIR / DRAFTS_DIR
+
+
+def _draft_path(pid: str, draft_id: str):
+    if not re.fullmatch(r"[a-z0-9]+", draft_id):
+        raise ValueError("version inconnue")
+    return _drafts_dir(pid) / f"{draft_id}.json"
+
+
+def _stored(pid: str) -> list[dict]:
+    """Les versions rangées (pas l'active), de la plus ancienne à la plus récente."""
+    folder = _drafts_dir(pid)
+    stored = [json.loads(p.read_text(encoding="utf-8")) for p in folder.glob("*.json")] if folder.is_dir() else []
+    return sorted(stored, key=lambda d: d["draft"]["created"])
+
+
+def drafts(pid: str) -> list[dict]:
+    """Les versions du script, de la plus ancienne à la plus récente : {id, name, created, active, words}."""
+    active = _read(pid)
+    out = [{**d["draft"], "active": d is active, "words": len(render(d["blocks"]).split())}
+           for d in [active, *_stored(pid)]]
+    return sorted(out, key=lambda d: d["created"])
+
+
+def _stash(pid: str, data: dict) -> None:
+    """Range une version dans drafts/, avec ses plans et ses setups."""
+    folder = _drafts_dir(pid)
+    folder.mkdir(exist_ok=True)
+    path = folder / f"{data['draft']['id']}.json"
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+    tmp.replace(path)
+
+
+def _install(pid: str, data: dict) -> None:
+    """`data` devient la version active : script.json et sa vue script.md."""
+    md = render(data["blocks"])
+    data["md_hash"] = _hash(md)
+    _write_md(pid, md)
+    _write(pid, data)
+
+
+def fork(pid: str) -> None:
+    """Une nouvelle version, copie de l'active (mêmes blocs, mêmes plans), qui prend sa place."""
+    load(pid)
+    with _lock(pid):
+        data = _read(pid)
+        _stash(pid, data)
+        names = [d["draft"]["name"] for d in [data, *_stored(pid)]]
+        numbers = [int(m.group(1)) for n in names if (m := re.fullmatch(r"V(\d+)", n))]
+        data["draft"] = {"id": "v" + uuid.uuid4().hex[:8], "name": f"V{max(numbers, default=1) + 1}",
+                         "created": time.time()}
+        _write(pid, data)
+
+
+def activate(pid: str, draft_id: str) -> None:
+    """La version `draft_id` devient l'active ; l'actuelle est rangée dans drafts/."""
+    load(pid)
+    with _lock(pid):
+        current = _read(pid)
+        if current["draft"]["id"] == draft_id:
+            return
+        path = _draft_path(pid, draft_id)
+        if not path.is_file():
+            raise ValueError("version inconnue")
+        _stash(pid, current)
+        _install(pid, json.loads(path.read_text(encoding="utf-8")))
+        path.unlink()
+
+
+def rename(pid: str, draft_id: str, name: str) -> None:
+    name = " ".join(name.split())[:40]
+    if not name:
+        raise ValueError("nom vide")
+    with _lock(pid):
+        current = _read(pid)
+        if current["draft"]["id"] == draft_id:
+            current["draft"]["name"] = name
+            _write(pid, current)
+            return
+        path = _draft_path(pid, draft_id)
+        if not path.is_file():
+            raise ValueError("version inconnue")
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["draft"]["name"] = name
+        _stash(pid, data)
+
+
+def delete(pid: str, draft_id: str) -> None:
+    """Supprime une version ; si c'est l'active, la plus récente des autres prend sa place.
+    Son texte reste dans les copies de script/versions/."""
+    with _lock(pid):
+        current = _read(pid)
+        others = _stored(pid)
+        if not others:
+            raise ValueError("c'est la seule version du script")
+        if current["draft"]["id"] != draft_id:
+            path = _draft_path(pid, draft_id)
+            if not path.is_file():
+                raise ValueError("version inconnue")
+            _snapshot(pid, render(json.loads(path.read_text(encoding="utf-8"))["blocks"]), force=True)
+            path.unlink()
+            return
+        _snapshot(pid, render(current["blocks"]), force=True)
+        _install(pid, others[-1])
+        _draft_path(pid, others[-1]["draft"]["id"]).unlink()
