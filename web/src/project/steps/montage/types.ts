@@ -52,7 +52,7 @@ export interface MontageView {
   timeline: Timeline;
   /** l'empreinte de cette version, renvoyée avec une retouche */
   rev: string;
-  source: { url: string; name: string; duration: number; width: number; height: number } | null;
+  source: { url: string; name: string; duration: number; width: number; height: number; fps: number } | null;
   analysis: {
     peaks: string | null; peaks_rate: number; pending: boolean;
     filmstrip: { url: string; step: number; cols: number; height: number; width: number } | null;

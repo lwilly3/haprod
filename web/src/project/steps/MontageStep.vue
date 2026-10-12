@@ -19,7 +19,7 @@ import BeatPanel from "./montage/BeatPanel.vue";
 import Inspector from "./montage/Inspector.vue";
 import MonteurChat from "./montage/MonteurChat.vue";
 import TaskQueue from "./montage/TaskQueue.vue";
-import { addMedia, bladeAroll, bladeItem, insertAroll, isVideo, remove } from "./montage/ops";
+import { addMedia, bladeAroll, bladeItem, frameStep, insertAroll, isVideo, remove } from "./montage/ops";
 import Preview from "./montage/Preview.vue";
 import Timeline from "./montage/Timeline.vue";
 import { clipStarts, fxSpan, isImage, needsAnim, spanOf, tcd, trackLabel, TYPE_COLOR, type AnimState, type Beat, type AvailableMedia, type Broll, type MontageTask, type Motion, type Selection, type Shot, type Timeline as TL, type Track } from "./montage/types";
@@ -281,7 +281,7 @@ function onKey(e: KeyboardEvent) {
   const el = e.target as HTMLElement | null;
   if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName))) return;
   const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
-  const fps = 1 / 25;
+  const fps = view.value?.source?.fps || 25;
   let handled = true;
   if (ctrl && k === "z") M.undo();
   else if (ctrl && k === "b") blade("aroll", "", t.value);
@@ -290,8 +290,8 @@ function onKey(e: KeyboardEvent) {
   else if (k === "k") { if (player.playing.value) player.toggle(); }
   else if (k === "l") { if (!player.playing.value) player.toggle(); }
   else if (k === "j") seek(t.value - 5);
-  else if (e.key === "ArrowLeft") seek(t.value - (e.shiftKey ? 1 : fps));
-  else if (e.key === "ArrowRight") seek(t.value + (e.shiftKey ? 1 : fps));
+  else if (e.key === "ArrowLeft") seek(e.shiftKey ? t.value - 1 : frameStep(t.value, -1, fps));
+  else if (e.key === "ArrowRight") seek(e.shiftKey ? t.value + 1 : frameStep(t.value, 1, fps));
   else if (e.key === "ArrowUp") seek([...edges()].reverse().find((x) => x < t.value - 0.01) ?? 0);
   else if (e.key === "ArrowDown") seek(edges().find((x) => x > t.value + 0.01) ?? M.total.value);
   else if (e.key === "Home") seek(0);

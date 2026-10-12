@@ -144,3 +144,6 @@ export function trimAroll(tl: Timeline, id: string, edge: "in" | "out", value: n
 }
 
 export const round = (n: number) => Math.round(n * 1000) / 1000;
+
+/** L'instant `n` images plus loin (ou plus tôt) que `t`, calé sur une image de la source. */
+export const frameStep = (t: number, n: number, fps: number) => round((Math.round(t * fps) + n) / fps);

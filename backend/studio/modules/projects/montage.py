@@ -41,6 +41,7 @@ qui passe avec son propre son. `gain_db` d'un clip de l'A-roll : son volume (abs
 `src` : chemin relatif au projet (« assets/broll/x.mp4 »), ou « library/<catégorie>/<fichier> »
 pour un média de la bibliothèque commune (copié dans le projet à l'enregistrement).
 """
+import functools
 import hashlib
 import html
 import json
@@ -115,6 +116,16 @@ def motion_dir(pid: str) -> Path:
 def _source(project: dict) -> dict | None:
     source = project.get("source") or {}
     return source if source.get("path") and not source.get("pending") and Path(source["path"]).is_file() else None
+
+
+@functools.lru_cache(maxsize=32)
+def _fps(path: str, duration: float | None) -> float:
+    return media.probe(Path(path)).get("fps") or 25
+
+
+def source_fps(source: dict) -> float:
+    """Les images par seconde de la source (lues une fois par fichier) : le pas de l'image par image."""
+    return _fps(source["path"], source.get("duration"))
 
 
 def empty(project: dict) -> dict:
