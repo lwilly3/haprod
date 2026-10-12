@@ -154,7 +154,7 @@ export interface Project {
   research: ResearchSource[];
   shots: Shot[];
   rushes: Rush[]; rush_sort: "Script" | "Heure" | "Manuel";
-  derush: { cuts: Record<string, "cut" | "keep">; splits?: Record<string, number[]>; clips?: DerushClip[] | null };
+  derush: { cuts: Record<string, "cut" | "keep">; splits?: Record<string, number[]>; timelines: DerushTimeline[]; main: string };
   source: Source | null;
   assets: Assets;
   jobs: Record<string, string>;
@@ -183,10 +183,19 @@ export interface ProjectStorage {
 /** Ce qui se modifie directement (PATCH). */
 export type ProjectPatch = Partial<Pick<Project,
   "title" | "status" | "brief" | "angle_sel" | "titles" | "thumbs" | "thumb_sel" | "research" | "shots" | "rush_sort" | "publish">> &
-  { cuts?: Record<string, "cut" | "keep">; splits?: Record<string, number[]>; clips?: DerushClip[]; rush_order?: string[]; capture?: Record<string, boolean>; opened_at?: number };
+  { cuts?: Record<string, "cut" | "keep">; splits?: Record<string, number[]>; timelines?: DerushTimeline[]; rush_order?: string[]; capture?: Record<string, boolean>; opened_at?: number };
 
-/** Un bout de la timeline du dérush : la plage [in, out] d'un rush, en secondes. */
+/** Un bout de rush lu par la timeline du dérush : la plage [in, out] du rush, en secondes. */
 export interface DerushClip { id: string; rush: string; in: number; out: number }
+
+/** Un bout d'une timeline tel qu'on l'édite : un rush (`rush`) ou une autre timeline imbriquée (`tl`), sur [in, out]. */
+export interface TimelineClip { id: string; rush?: string; tl?: string; in: number; out: number }
+
+/**
+ * Une timeline du dérush ; `name` vide : nom par défaut. `clips` null : la globale découle encore des rushes
+ * (voir backend runtime.own_clips).
+ */
+export interface DerushTimeline { id: string; name: string; clips: TimelineClip[] | null }
 
 /** Un mot du transcript d'un rush : [début, fin, texte], en secondes du rush. */
 export type DerushWord = [number, number, string];

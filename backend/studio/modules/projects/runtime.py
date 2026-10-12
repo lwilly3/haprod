@@ -152,14 +152,12 @@ def _rush_entry(path: Path) -> dict:
 
 
 def add_rushes(project: dict, paths: list[Path]) -> None:
-    """Nouveaux rushes : leur transcription part tout de suite (file GPU)."""
+    """Nouveaux rushes : leur transcription part tout de suite (file GPU). Ils arrivent dans la médiathèque,
+    pas dans les timelines (sauf la globale tant qu'elle découle des rushes)."""
     for path in paths:
         rush = _rush_entry(path)
         project["rushes"].append(rush)
         transcribe_rush(project, rush)
-        if project["derush"].get("clips") is not None and rush.get("duration"):
-            project["derush"]["clips"].append({"id": "c" + uuid.uuid4().hex[:8], "rush": rush["id"],
-                                               "in": 0.0, "out": rush["duration"]})
     service.start_step(project, "tournage")
     service.start_step(project, "derush")
     if project["rush_sort"] == "Heure":
@@ -183,8 +181,9 @@ def remove_rush(project: dict, rush_id: str) -> None:
     prefix = rush_id + ":"
     project["derush"]["cuts"] = {k: v for k, v in project["derush"]["cuts"].items() if not k.startswith(prefix)}
     project["derush"].get("splits", {}).pop(rush_id, None)
-    if project["derush"].get("clips") is not None:
-        project["derush"]["clips"] = [c for c in project["derush"]["clips"] if c["rush"] != rush_id]
+    for tl in project["derush"]["timelines"]:
+        if tl["clips"] is not None:
+            tl["clips"] = [c for c in tl["clips"] if c.get("rush") != rush_id]
     path = Path(rush["path"])
     # le fichier n'est supprimé que s'il a été copié dans le projet
     if project_dir(project["id"]) in path.parents:
@@ -278,7 +277,6 @@ def sort_rushes(project: dict, mode: str) -> None:
             if s["type"] == "speech" and s.get("sec") and s["rush"] not in first:
                 first[s["rush"]] = int(s["sec"][1:])
         project["rushes"].sort(key=lambda r: first.get(r["id"], 10_000))
-    order_clips(project)
 
 
 # --- Dérush ------------------------------------------------------------------------
@@ -310,13 +308,21 @@ def analysis(project: dict, edited: bool = True) -> dict:
             [{"rush": r["id"], "status": "done", "progress": 1.0} for r in project["rushes"]]}
 
 
-def clips(project: dict) -> list[dict]:
-    """La timeline du dérush : des bouts de rushes {id, rush, in, out}, dans l'ordre de lecture.
-    Tant que l'utilisateur n'y a pas touché, elle découle des anciennes coupes (ou des rushes entiers)."""
+def timeline(project: dict, tid: str) -> dict | None:
+    return next((t for t in project["derush"]["timelines"] if t["id"] == tid), None)
+
+
+def own_clips(project: dict, tid: str) -> list[dict]:
+    """Les bouts d'une timeline, tels qu'on les édite : de rushes ({rush}) ou de timelines imbriquées ({tl}).
+    Tant que l'utilisateur n'a pas touché à la globale, elle découle des anciennes coupes (ou des rushes entiers)."""
     known = {r["id"] for r in project["rushes"]}
-    stored = project["derush"].get("clips")
-    if stored is not None:
-        return [c for c in stored if c["rush"] in known]
+    tl = timeline(project, tid)
+    if tl is None:
+        return []
+    if tl["clips"] is not None:
+        return [c for c in tl["clips"] if c.get("tl") or c.get("rush") in known]
+    if tid != project["derush"]["main"]:
+        return []
     found = analysis(project)
     if found["ready"]:
         return [{"id": f"c{i}", "rush": r["rush"], "in": r["start"], "out": r["end"]}
@@ -325,13 +331,29 @@ def clips(project: dict) -> list[dict]:
             for i, r in enumerate(project["rushes"]) if r.get("duration")]
 
 
-def order_clips(project: dict) -> None:
-    """Après un changement d'ordre des rushes : les bouts suivent, rush par rush."""
-    stored = project["derush"].get("clips")
-    if stored is None:
-        return
-    rank = {r["id"]: i for i, r in enumerate(project["rushes"])}
-    stored.sort(key=lambda c: rank.get(c["rush"], len(rank)))
+def flatten(project: dict, tid: str, seen: frozenset = frozenset()) -> list[dict]:
+    """Les bouts de rushes lus par une timeline, ses timelines imbriquées dépliées (sur la plage [in, out] de chacune)."""
+    out: list[dict] = []
+    for c in own_clips(project, tid):
+        if c.get("rush"):
+            out.append(c)
+            continue
+        if c["tl"] in seen or c["tl"] == tid:
+            continue
+        cursor = 0.0
+        for sub in flatten(project, c["tl"], seen | {tid}):
+            length = sub["out"] - sub["in"]
+            a, b = max(c["in"], cursor), min(c["out"], cursor + length)
+            if b - a > 0.001:
+                out.append({"id": c["id"], "rush": sub["rush"], "in": round(sub["in"] + a - cursor, 3),
+                            "out": round(sub["in"] + b - cursor, 3)})
+            cursor += length
+    return out
+
+
+def clips(project: dict) -> list[dict]:
+    """La timeline globale du dérush, dépliée : des bouts de rushes {id, rush, in, out}, dans l'ordre de lecture."""
+    return flatten(project, project["derush"]["main"])
 
 
 def ranges(project: dict) -> list[dict]:

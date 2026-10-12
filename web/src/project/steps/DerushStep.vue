@@ -1,21 +1,23 @@
 <script setup lang="ts">
 /**
  * Dérush, façon logiciel de montage : le lecteur, le transcript de la timeline (où l'on retire phrases,
- * mots et silences), la liste des rushes ou le dérush proposé par Daryl, et la timeline : des bouts de rushes qu'on déplace, coupe,
- * rogne ou supprime.
+ * mots et silences), la médiathèque (rushes et timelines) ou le dérush proposé par Daryl, et la timeline : des bouts
+ * de rushes qu'on déplace, coupe, rogne ou supprime. Plusieurs timelines : on dérushe tout d'un coup ou séquence par
+ * séquence, et la globale (celle qu'on exporte) peut contenir les autres.
  */
-import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { api } from "../../lib/api";
 import { mmss } from "../../lib/format";
 import { toast } from "../../lib/toast";
+import ConfirmX from "../../components/ConfirmX.vue";
 import { act, failed, running, store } from "../store";
-import type { AutoCut, DerushClip, DerushSeg } from "../types";
+import type { AutoCut, DerushClip, DerushSeg, TimelineClip } from "../types";
 import AutoDerush from "./derush/AutoDerush.vue";
 import { clipAt, clipLen, move, offsets, remove, removeRange, removeRushRanges, splitAt, timeOf, trim, type Selection } from "./derush/clips";
+import MediaPool from "./derush/MediaPool.vue";
 import PlayerFrame from "./derush/PlayerFrame.vue";
-import RushPanel from "./derush/RushPanel.vue";
 import Timeline, { type Peaks } from "./derush/Timeline.vue";
 import Transcript from "./derush/Transcript.vue";
 import { useDerush } from "./derush/useDerush";
@@ -26,24 +28,56 @@ const router = useRouter();
 const project = computed(() => store.project!);
 const base = computed(() => `/api/projects/${project.value.id}`);
 const derush = useDerush(project);
-const { analysis, ready, segsByRush, clips, kept, transcribing, progress } = derush;
+const { analysis, ready, segsByRush, clips, flat, kept, transcribing, progress } = derush;
 
-const names = computed(() => Object.fromEntries(project.value.rushes.map((r) => [r.id, r.name])));
-const durations = computed(() => Object.fromEntries(project.value.rushes.map((r) => [r.id, r.duration ?? 0])));
+/** Noms et durées des rushes et des timelines (leurs ids ne se croisent pas). */
+const names = computed(() => ({
+  ...Object.fromEntries(project.value.rushes.map((r) => [r.id, r.name])),
+  ...Object.fromEntries(derush.timelines.value.map((k) => [k.id, derush.nameOf(k.id)])),
+}));
+const durations = computed(() => ({
+  ...Object.fromEntries(project.value.rushes.map((r) => [r.id, r.duration ?? 0])),
+  ...Object.fromEntries(derush.timelines.value.map((k) => [k.id, derush.lengthOf(k.id)])),
+}));
+/** Les bouts de rushes posés directement sur la timeline ouverte (ceux des timelines imbriquées se retouchent chez elles). */
+const rushClips = computed(() => clips.value.filter((c): c is DerushClip => !!c.rush));
 const PALETTE = ["#3A3B3D", "#2E5E7E", "#5B4B7D", "#2F6B57", "#7A4F31", "#6E3049", "#4D5A2B", "#36507A"];
 const colors = computed(() => Object.fromEntries(project.value.rushes.map((r, i) => [r.id, PALETTE[i % PALETTE.length]])));
 const media = (rush: string) => `${base.value}/rushes/${rush}/media`;
 
-const pieces = computed<Piece[]>(() => clips.value.map((c) => ({ src: media(c.rush), start: c.in, end: c.out, on: true })));
+const pieces = computed<Piece[]>(() => flat.value.map((c) => ({ src: media(c.rush), start: c.in, end: c.out, on: true })));
 const player = usePlaylist(pieces);
 const selection = ref<Selection>(null);
 const tool = ref<"select" | "blade">("select");
 const tl = ref<InstanceType<typeof Timeline> | null>(null);
 const tab = ref<"transcript" | "rushes" | "daryl">("transcript");
 
+// --- timelines : onglets au-dessus de la timeline, comme les séquences d'un logiciel de montage
+function openTimeline(id: string) {
+  derush.current.value = id;
+}
+watch(derush.current, () => {
+  selection.value = null;
+  player.seek(0);
+  nextTick(() => tl.value?.fit());
+});
+const renaming = ref<string | null>(null);
+function rename(id: string, e: Event) {
+  const name = (e.target as HTMLInputElement).value;
+  renaming.value = null;
+  if (name.trim() && name.trim() !== derush.nameOf(id)) derush.rename(id, name);
+}
+function focusInput({ el }: { el: HTMLInputElement }) {
+  el.focus();
+  el.select();
+}
+function newTimeline() {
+  derush.create(t("derush.timelines.defaultName", { n: derush.timelines.value.length + 1 }));
+}
+
 /** La phrase sous la tête de lecture, en sous-titre. */
 const caption = computed(() => {
-  const hit = clipAt(clips.value, player.t.value);
+  const hit = clipAt(flat.value, player.t.value);
   if (!hit) return "";
   const s = segsByRush.value[hit.c.rush]?.find((k) => k.start <= hit.at && hit.at < k.end);
   return s && s.type !== "sil" ? s.text : "";
@@ -83,7 +117,7 @@ const hasSel = computed(() => !!selection.value);
  * Recale la tête de lecture après le retrait des plages `cut` de la timeline : dans une plage retirée,
  * elle revient à son début (là où reprend la suite) ; après, elle suit le contenu qui a glissé.
  */
-function cutAndFollow(cut: [number, number][], fn: (list: typeof clips.value) => typeof clips.value) {
+function cutAndFollow(cut: [number, number][], fn: (list: TimelineClip[]) => TimelineClip[]) {
   const here = player.t.value;
   let to = here;
   for (const [a, b] of cut) {
@@ -116,7 +150,7 @@ function onMove(ids: string[], before: string | null) {
 
 function onTrim(id: string, side: "in" | "out", value: number) {
   const c = clips.value.find((k) => k.id === id);
-  if (c) derush.edit((list) => trim(list, id, side, value, durations.value[c.rush] || c.out));
+  if (c) derush.edit((list) => trim(list, id, side, value, durations.value[c.rush ?? c.tl ?? ""] || c.out));
 }
 
 function onSplit(at: number) {
@@ -128,7 +162,7 @@ function present(type: DerushSeg["type"]) {
   const out: Record<string, [number, number][]> = {};
   let n = 0, dur = 0;
   for (const [rush, segs] of Object.entries(segsByRush.value)) {
-    const mine = clips.value.filter((c) => c.rush === rush);
+    const mine = rushClips.value.filter((c) => c.rush === rush);
     for (const s of segs) {
       if (s.type !== type) continue;
       const inside = mine.reduce((a, c) => a + Math.max(0, Math.min(c.out, s.end) - Math.max(c.in, s.start)), 0);
@@ -165,14 +199,14 @@ function applyAuto(cuts: AutoCut[]) {
   derush.edit((list) => {
     const before = new Map(list.map((c) => [c.id, c]));
     const next = Object.entries(byRush).reduce((acc, [rush, r]) => removeRushRanges(acc, rush, r), list);
-    const same = (c: DerushClip) => before.get(c.id)?.in === c.in && before.get(c.id)?.out === c.out;
+    const same = (c: TimelineClip) => before.get(c.id)?.in === c.in && before.get(c.id)?.out === c.out;
     return next.filter((c) => clipLen(c) >= MIN_KEEP || same(c));
   });
 }
 
 /** Écoute un passage d'un rush : un peu avant, pour entendre ce qui précède la coupe. */
 function seekRush(rush: string, t: number) {
-  const at = timeOf(clips.value, rush, t);
+  const at = timeOf(flat.value, rush, t);
   if (at == null) return;
   player.seek(Math.max(0, at - 1));
   if (!player.playing.value) player.toggle();
@@ -252,7 +286,7 @@ async function validate() {
 <template>
   <div v-if="!project.rushes.length" class="empty">
     <div class="dashed-box">{{ t("derush.empty") }}</div>
-    <div class="side"><RushPanel /></div>
+    <MediaPool :derush="derush" @open="openTimeline" />
   </div>
 
   <div v-else class="derush">
@@ -269,7 +303,7 @@ async function validate() {
         </div>
         <div class="pane-body">
           <template v-if="tab === 'transcript'">
-            <Transcript v-if="ready" v-model:selection="selection" :clips="clips" :segs="segsByRush" :player="player"
+            <Transcript v-if="ready" v-model:selection="selection" :clips="flat" :segs="segsByRush" :player="player"
               :names="names" @remove="removeSpan" />
             <div v-else-if="transcribing" class="state">
               <span class="state-label">{{ t("derush.transcribing", { p: progress }) }}</span>
@@ -280,11 +314,25 @@ async function validate() {
               <button class="btn dark gen" @click="act('/rushes/transcribe')">{{ t("derush.generate") }}</button>
             </div>
           </template>
-          <AutoDerush v-else-if="tab === 'daryl'" :clips="clips" :names="names" :ready="ready"
+          <AutoDerush v-else-if="tab === 'daryl'" :clips="rushClips" :names="names" :ready="ready"
             @apply="applyAuto" @seek="seekRush" />
-          <div v-else class="scroll"><RushPanel embedded @append="derush.append" /></div>
+          <div v-else class="scroll"><MediaPool :derush="derush" @open="openTimeline" /></div>
         </div>
       </div>
+    </div>
+
+    <div class="seqs">
+      <div v-for="k in derush.timelines.value" :key="k.id" class="seq" :class="{ on: k.id === derush.current.value }"
+        :title="t('derush.timelines.renameTitle')" @click="openTimeline(k.id)" @dblclick="renaming = k.id">
+        <input v-if="renaming === k.id" class="seq-input" :value="derush.nameOf(k.id)"
+          @click.stop @keydown.enter="($event.target as HTMLInputElement).blur()" @keydown.esc="renaming = null"
+          @blur="rename(k.id, $event)" @vue:mounted="focusInput">
+        <span v-else>{{ derush.nameOf(k.id) }}</span>
+        <span v-if="k.id === derush.mainId.value" class="seq-main">{{ t("derush.timelines.global") }}</span>
+        <ConfirmX v-else :label="t('derush.timelines.removeConfirm')" :title="t('derush.timelines.removeTitle')"
+          @confirm="derush.drop(k.id)" />
+      </div>
+      <button class="seq-add" :title="t('derush.timelines.newTitle')" @click="newTimeline">+</button>
     </div>
 
     <div class="toolbar">
@@ -314,9 +362,9 @@ async function validate() {
       </div>
     </div>
 
-    <Timeline ref="tl" v-model:selection="selection" :clips="clips" :player="player" :names="names" :colors="colors"
+    <Timeline ref="tl" v-model:selection="selection" :clips="clips" :flat="flat" :player="player" :names="names" :colors="colors"
       :durations="durations" :segs="segsByRush" :peaks="peaks" :tool="tool"
-      @move="onMove" @trim="onTrim" @split="onSplit" />
+      @move="onMove" @trim="onTrim" @split="onSplit" @insert="derush.add" @open="openTimeline" />
 
     <div class="footer">
       <span class="keys" :title="t('derush.shortcuts')">{{ t("derush.shortcuts") }}</span>
@@ -354,7 +402,7 @@ async function validate() {
 <style scoped>
 .empty { padding: 20px 32px 32px; display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; }
 .empty .dashed-box { flex: 1 1 520px; }
-.empty .side { flex: 0 1 320px; min-width: 260px; }
+.empty > :last-child { flex: 2 1 480px; min-width: 300px; }
 
 .derush { padding: 16px 24px 24px 32px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .top { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: stretch; }
@@ -379,6 +427,17 @@ async function validate() {
 .progress.bar { width: 260px; }
 .btn.gen { height: 38px; padding: 0 18px; font-size: 13.5px; }
 
+.seqs { display: flex; align-items: flex-end; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: -4px; flex-wrap: wrap; }
+.seq {
+  display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; font-size: 12.5px; color: var(--muted);
+  border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0; cursor: pointer; margin-bottom: -1px;
+}
+.seq:hover:not(.on) { color: var(--ink); }
+.seq.on { color: var(--ink); font-weight: 600; background: #fff; border-color: var(--line); }
+.seq-main { font-size: 10px; font-weight: 500; padding: 1px 5px; border-radius: 3px; background: var(--red); color: #fff; }
+.seq-input { width: 140px; height: 22px; font: inherit; padding: 0 4px; border: 1px solid var(--line-strong); border-radius: 3px; }
+.seq-add { height: 26px; width: 26px; margin-bottom: 2px; border: 1px dashed var(--dash); border-radius: 3px; background: none; cursor: pointer; color: var(--muted); }
+.seq-add:hover { border-color: var(--ink); color: var(--ink); }
 .toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 4px; }
 .toolbar .group { display: flex; gap: 4px; }
 .btn.sm { height: 28px; padding: 0 10px; font-size: 12.5px; }

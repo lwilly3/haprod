@@ -74,6 +74,7 @@ STEPS = ("angle", "titre", "vignette", "script", "roast", "tournage", "derush", 
 NEXT = {"transcript": ("storyboard", "selection"), "son": ("rendu",), "soustitres": ("rendu",)}
 DURATIONS = ("< 5 min", "5–10 min", "10–20 min", "20–40 min", "40 min +")
 
+MAIN_TIMELINE = "main"
 VIDEO_EXTENSIONS = ("mov", "mp4", "mxf", "mkv", "avi", "webm", "m4v", "mts")
 
 _UNSAFE_NAME = re.compile(r'[\\/:*?"<>|\x00-\x1f]+')
@@ -107,7 +108,23 @@ def exists(pid: str) -> bool:
 
 
 def load(pid: str) -> dict:
-    return json.loads((project_dir(pid) / PROJECT_FILE).read_text(encoding="utf-8"))
+    project = json.loads((project_dir(pid) / PROJECT_FILE).read_text(encoding="utf-8"))
+    _upgrade_derush(project)
+    return project
+
+
+def empty_derush() -> dict:
+    """timelines : les timelines du dérush ({id, name, clips}) ; `main` : la timeline globale, celle qu'on
+    exporte et qui devient la vidéo source. `clips` à None : la timeline découle des rushes (voir runtime.clips)."""
+    return {"cuts": {}, "splits": {}, "timelines": [{"id": MAIN_TIMELINE, "name": "", "clips": None}], "main": MAIN_TIMELINE}
+
+
+def _upgrade_derush(project: dict) -> None:
+    """Avant les timelines multiples, le dérush n'avait qu'une liste de bouts (derush.clips)."""
+    edits = project.get("derush")
+    if edits is not None and "timelines" not in edits:
+        edits["timelines"] = [{"id": MAIN_TIMELINE, "name": "", "clips": edits.pop("clips", None)}]
+        edits["main"] = MAIN_TIMELINE
 
 
 def _write(project: dict) -> None:
@@ -222,7 +239,7 @@ def create(mode: str, title: str, brief: dict, pid: str | None = None) -> dict:
         "research": [_source_from_link(link) for link in brief["links"]],
         "shots": [],
         "rushes": [], "rush_sort": "Script",
-        "derush": {"cuts": {}, "splits": {}, "clips": None},
+        "derush": empty_derush(),
         "source": None,
         "assets": empty_assets(),
         "jobs": {}, "copies": [],
@@ -292,7 +309,7 @@ def storage(pid: str) -> dict[str, int]:
 
 # ce que l'interface peut remplacer tel quel
 EDITABLE = {"title", "status", "brief", "angle_sel", "titles", "thumbs", "thumb_sel", "research", "shots",
-            "rush_sort", "rush_order", "cuts", "splits", "clips", "capture", "opened_at", "publish"}
+            "rush_sort", "rush_order", "cuts", "splits", "timelines", "capture", "opened_at", "publish"}
 
 
 def patch(pid: str, changes: dict) -> dict:
@@ -303,21 +320,14 @@ def patch(pid: str, changes: dict) -> dict:
         for key, value in changes.items():
             if key in ("cuts", "splits"):
                 project["derush"][key] = value
-            elif key == "clips":
-                known = {r["id"] for r in project["rushes"]}
-                project["derush"]["clips"] = [
-                    {"id": str(c["id"]), "rush": c["rush"], "in": round(float(c["in"]), 3), "out": round(float(c["out"]), 3)}
-                    for c in value if c.get("rush") in known and float(c["out"]) > float(c["in"])]
+            elif key == "timelines":
+                project["derush"]["timelines"] = _clean_timelines(project, value)
             elif key == "capture":
                 project.setdefault("assets", empty_assets())["capture"] = value
             elif key == "rush_order":
                 by_id = {r["id"]: r for r in project["rushes"]}
                 ordered = [by_id.pop(i) for i in value if i in by_id]
                 project["rushes"] = ordered + list(by_id.values())
-                # les bouts de la timeline suivent l'ordre des rushes (sauf s'ils arrivent avec)
-                if project["derush"].get("clips") is not None and "clips" not in changes:
-                    rank = {r["id"]: i for i, r in enumerate(project["rushes"])}
-                    project["derush"]["clips"].sort(key=lambda c: rank.get(c["rush"], len(rank)))
             elif key == "titles" and sum(1 for t in value if t.get("pick")) > MAX_TITLES:
                 raise ValueError(f"{MAX_TITLES} titres retenus au plus")
             elif key == "title":
@@ -333,6 +343,45 @@ def patch(pid: str, changes: dict) -> dict:
         if "research" in changes:
             write_documentation(pid, project["research"])
     return project
+
+
+def _clean_timelines(project: dict, value: list) -> list[dict]:
+    """Les timelines envoyées par l'interface : bouts de rushes connus ({rush}) ou timelines imbriquées ({tl}),
+    sans boucle (une timeline ne peut pas se contenir, même de loin). La globale ne disparaît jamais."""
+    rushes = {r["id"] for r in project["rushes"]}
+    ids = [str(t["id"]) for t in value]
+    out: list[dict] = []
+    for tl in value:
+        clips = tl.get("clips")
+        if clips is not None:
+            kept = []
+            for c in clips:
+                a, b = round(float(c["in"]), 3), round(float(c["out"]), 3)
+                if b <= a:
+                    continue
+                if c.get("rush") in rushes:
+                    kept.append({"id": str(c["id"]), "rush": c["rush"], "in": a, "out": b})
+                elif c.get("tl") in ids and c["tl"] != tl["id"]:
+                    kept.append({"id": str(c["id"]), "tl": c["tl"], "in": a, "out": b})
+            clips = kept
+        out.append({"id": str(tl["id"]), "name": str(tl.get("name") or "").strip(), "clips": clips})
+    main = project["derush"]["main"]
+    if main not in ids:
+        out.insert(0, next(t for t in project["derush"]["timelines"] if t["id"] == main))
+    # une imbrication qui ferait boucle est retirée
+    by_id = {t["id"]: t for t in out}
+
+    def reaches(start: str, target: str, seen: set[str]) -> bool:
+        for c in by_id[start]["clips"] or []:
+            sub = c.get("tl")
+            if sub == target or (sub and sub not in seen and reaches(sub, target, seen | {sub})):
+                return True
+        return False
+
+    for tl in out:
+        if tl["clips"]:
+            tl["clips"] = [c for c in tl["clips"] if not (c.get("tl") and reaches(c["tl"], tl["id"], {c["tl"]}))]
+    return out
 
 
 def complete_step(project: dict, step: str, done: bool) -> None:

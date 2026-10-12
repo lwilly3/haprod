@@ -895,7 +895,7 @@ def rush_peaks(pid: str, rush_id: str):
 def get_derush(pid: str):
     _check(pid)
     project = service.load(pid)
-    return {**runtime.analysis(project, edited=False), "clips": runtime.clips(project)}
+    return {**runtime.analysis(project, edited=False), "clips": runtime.own_clips(project, project["derush"]["main"])}
 
 
 class AutoDerushRequest(BaseModel):

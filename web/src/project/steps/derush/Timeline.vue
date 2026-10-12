@@ -5,18 +5,21 @@
  * phrases et aux mots, Alt pour s'en passer), la lame le coupe en deux. Glisser sur A1 sélectionne une plage.
  * Ctrl + molette zoome autour de la souris, la molette fait défiler. Dans chaque bout, une bande marque
  * la parole (les trous sont des silences, les pointillés du son non transcrit) ; zoomé, le texte des phrases s'affiche.
+ * Une timeline imbriquée est un seul bloc (double-clic : on l'ouvre). On y dépose rushes et timelines de la médiathèque.
  */
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { mmss } from "../../../lib/format";
-import type { DerushClip, DerushSeg } from "../../types";
+import type { DerushClip, DerushSeg, TimelineClip } from "../../types";
 import { clipLen, offsets, type Selection } from "./clips";
+import { MEDIA_TYPE, type MediaItem } from "./useDerush";
 import type { Playlist } from "./usePlaylist";
 
 export interface Peaks { rate: number; peaks: number[] }
 
 const props = defineProps<{
-  clips: DerushClip[]; player: Playlist; names: Record<string, string>; colors: Record<string, string>;
+  /** les bouts de la timeline (rushes et timelines imbriquées) ; `flat` : les bouts de rushes qu'elle lit */
+  clips: TimelineClip[]; flat: DerushClip[]; player: Playlist; names: Record<string, string>; colors: Record<string, string>;
   durations: Record<string, number>; segs: Record<string, DerushSeg[]>; peaks: Record<string, Peaks | undefined>;
   tool: "select" | "blade";
 }>();
@@ -24,6 +27,8 @@ const emit = defineEmits<{
   move: [ids: string[], before: string | null];
   trim: [id: string, side: "in" | "out", value: number];
   split: [t: number];
+  insert: [items: MediaItem[], before: string | null];
+  open: [tl: string];
 }>();
 const sel = defineModel<Selection>("selection", { required: true });
 const { t: tr } = useI18n();
@@ -121,7 +126,7 @@ const clipsV = computed(() => props.clips.map((c, i) => {
   return { c, i, a, b };
 }).filter((k) => k.b >= v0.value && k.a <= v1.value).map((k) => {
   const marks: Mark[] = [];
-  for (const s of props.segs[k.c.rush] ?? []) {
+  for (const s of props.segs[k.c.rush ?? ""] ?? []) {
     if (s.type === "sil" || s.end <= k.c.in || s.start >= k.c.out) continue;
     const sa = k.a + Math.max(s.start, k.c.in) - k.c.in, sb = k.a + Math.min(s.end, k.c.out) - k.c.in;
     if (sb < v0.value || sa > v1.value) continue;
@@ -143,7 +148,7 @@ function drawWave() {
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   g.clearRect(0, 0, w, h);
   g.fillStyle = "#3E9E6E";
-  const cs = props.clips, o = starts.value;
+  const cs = props.flat, o = offsets(cs);
   let i = 0;
   for (let px = 0; px < w; px++) {
     const d = (scrollX.value + px) / pps.value;
@@ -163,7 +168,7 @@ function redraw() {
   cancelAnimationFrame(raf);
   raf = requestAnimationFrame(drawWave);
 }
-watch([() => props.peaks, pps, scrollX, viewW, () => props.clips], redraw);
+watch([() => props.peaks, pps, scrollX, viewW, () => props.flat], redraw);
 onMounted(redraw);
 
 // --- souris
@@ -222,11 +227,11 @@ function downEdge(e: PointerEvent, i: number, side: "in" | "out") {
   if (e.button !== 0 || props.tool === "blade") return;
   e.stopPropagation();
   const c = props.clips[i], pts: number[] = [];
-  for (const s of props.segs[c.rush] ?? []) {
+  for (const s of props.segs[c.rush ?? ""] ?? []) {
     pts.push(s.start, s.end);
     for (const w of s.words) pts.push(w[0], w[1]);
   }
-  const dur = props.durations[c.rush] ?? c.out;
+  const dur = props.durations[c.rush ?? c.tl ?? ""] ?? c.out;
   const edge = side === "in" ? c.in : c.out;
   drag = { kind: "trim", i, side, edge, d0: timeAt(e), to: edge, pts,
     min: side === "in" ? 0 : c.in + 0.05, max: side === "in" ? c.out - 0.05 : dur };
@@ -295,6 +300,26 @@ function onUp() {
   }
 }
 
+// --- dépôt depuis la médiathèque : avant le bout dont le milieu est après la souris
+const dropAt = ref<{ before: string | null; at: number } | null>(null);
+function placeAt(e: DragEvent) {
+  const d = timeAt(e), k = props.clips.findIndex((c, i) => starts.value[i] + clipLen(c) / 2 > d);
+  return k < 0 ? { before: null, at: total.value } : { before: props.clips[k].id, at: starts.value[k] };
+}
+function onDragOver(e: DragEvent) {
+  if (!e.dataTransfer?.types.includes(MEDIA_TYPE)) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "copy";
+  dropAt.value = placeAt(e);
+}
+function onDrop(e: DragEvent) {
+  const raw = e.dataTransfer?.getData(MEDIA_TYPE);
+  dropAt.value = null;
+  if (!raw) return;
+  e.preventDefault();
+  emit("insert", JSON.parse(raw) as MediaItem[], placeAt(e).before);
+}
+
 const fmtDelta = (s: number) => `${s > 0 ? "+" : "−"}${Math.abs(s).toFixed(2)} s`;
 const shortName = (n: string) => n.replace(/\.[^.]+$/, "");
 </script>
@@ -307,7 +332,8 @@ const shortName = (n: string) => n.replace(/\.[^.]+$/, "");
       <div class="lab" :style="{ top: `${top.a}px`, height: `${A}px` }">A1</div>
     </div>
     <div ref="scroller" class="scroller" :style="{ height: `${height + 12}px` }"
-      @wheel="onWheel" @scroll="scrollX = ($event.target as HTMLElement).scrollLeft">
+      @wheel="onWheel" @scroll="scrollX = ($event.target as HTMLElement).scrollLeft"
+      @dragover="onDragOver" @dragleave="dropAt = null" @drop="onDrop">
       <div class="content" :style="{ width: `${width}px`, height: `${height}px` }"
         @pointerdown="downTrack" @pointermove="onMove" @pointerup="onUp" @pointercancel="onUp">
         <!-- règle -->
@@ -323,17 +349,24 @@ const shortName = (n: string) => n.replace(/\.[^.]+$/, "");
 
         <!-- bouts de rushes -->
         <div v-for="k in clipsV" :key="k.c.id" class="clip"
-          :class="{ on: selIds.has(k.c.id), moving: moving?.ids.includes(k.c.id) }"
+          :class="{ on: selIds.has(k.c.id), moving: moving?.ids.includes(k.c.id), nested: !!k.c.tl }"
           :style="{ top: `${top.v}px`, height: `${V}px`, left: `${x(k.a)}px`, width: `${Math.max(2, x(k.b - k.a))}px`,
-                    background: colors[k.c.rush], transform: moving?.ids.includes(k.c.id) ? `translateX(${x(moving.dx)}px)` : '' }"
-          :title="`${names[k.c.rush]} · ${mmss(k.c.in)} → ${mmss(k.c.out)}`" @pointerdown="downClip($event, k.c.id)" @dblclick="tool !== 'blade' && player.seek(k.a)">
-          <span v-if="x(k.b - k.a) > 24" class="name">{{ shortName(names[k.c.rush] ?? k.c.rush) }} <small>{{ mmss(k.c.in) }}</small></span>
+                    background: k.c.tl ? undefined : colors[k.c.rush!], transform: moving?.ids.includes(k.c.id) ? `translateX(${x(moving.dx)}px)` : '' }"
+          :title="k.c.tl ? tr('derush.timeline.nested', { name: names[k.c.tl] }) : `${names[k.c.rush!]} · ${mmss(k.c.in)} → ${mmss(k.c.out)}`"
+          @pointerdown="downClip($event, k.c.id)"
+          @dblclick="tool !== 'blade' && (k.c.tl ? emit('open', k.c.tl) : player.seek(k.a))">
+          <span v-if="x(k.b - k.a) > 24" class="name">
+            <template v-if="k.c.tl">⧉ {{ names[k.c.tl] }}</template>
+            <template v-else>{{ shortName(names[k.c.rush!] ?? k.c.rush) }}</template>
+            <small> {{ mmss(k.c.in) }}</small>
+          </span>
           <span v-for="m in k.marks" :key="m.key" class="mark" :class="m.type" :style="{ left: `${m.left}px`, width: `${m.w}px` }">
             <em v-if="m.w > 50">{{ m.text }}</em>
           </span>
           <i class="edge l" :title="tr('derush.timeline.trim')" @pointerdown="downEdge($event, k.i, 'in')" />
           <i class="edge r" :title="tr('derush.timeline.trim')" @pointerdown="downEdge($event, k.i, 'out')" />
         </div>
+        <div v-if="dropAt" class="drop-at" :style="{ left: `${x(dropAt.at)}px`, top: `${top.v - 2}px`, height: `${V + A + GAP + 4}px` }" />
         <div v-if="moving" class="drop-at" :style="{ left: `${x(moving.at)}px`, top: `${top.v - 2}px`, height: `${V + A + GAP + 4}px` }" />
 
         <canvas ref="canvas" class="wave" :style="{ top: `${top.a}px`, left: `${scrollX}px`, width: `${viewW}px`, height: `${A}px` }" />
@@ -373,6 +406,7 @@ const shortName = (n: string) => n.replace(/\.[^.]+$/, "");
   position: absolute; box-sizing: border-box; overflow: hidden; border-radius: 4px; cursor: grab; z-index: 2;
   border: 1px solid rgba(255, 255, 255, .9); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25);
 }
+.clip.nested { background: repeating-linear-gradient(135deg, #2B3440 0 10px, #323C49 10px 20px); }
 .clip.on { box-shadow: inset 0 0 0 2px var(--red), 0 0 0 1px var(--red); z-index: 3; }
 .clip.moving { opacity: .75; cursor: grabbing; z-index: 6; box-shadow: 0 6px 16px rgba(0, 0, 0, .25); }
 .name {

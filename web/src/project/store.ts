@@ -31,15 +31,11 @@ export async function loadList(): Promise<void> {
 
 function applyPatch(p: Project, changes: ProjectPatch): void {
   for (const [key, value] of Object.entries(changes)) {
-    if (key === "cuts" || key === "splits" || key === "clips") p.derush = { ...p.derush, [key]: value };
+    if (key === "cuts" || key === "splits" || key === "timelines") p.derush = { ...p.derush, [key]: value };
     else if (key === "capture") p.assets = { ...p.assets, capture: value as Project["assets"]["capture"] };
     else if (key === "rush_order") {
       const order = value as string[];
       p.rushes = [...p.rushes].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
-      // les bouts de la timeline du dérush suivent, comme côté serveur
-      if (p.derush.clips && !("clips" in changes)) {
-        p.derush = { ...p.derush, clips: [...p.derush.clips].sort((a, b) => order.indexOf(a.rush) - order.indexOf(b.rush)) };
-      }
     } else (p as any)[key] = value;
   }
 }
