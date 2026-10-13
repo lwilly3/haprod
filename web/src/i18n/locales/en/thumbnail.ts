@@ -72,6 +72,7 @@ export default {
     max: "{n} images max",
     picked: "Library · none selected | Library · {n} selected | Library · {n} selected",
     search: "Search (name, project)…",
+    project: "This project",
     all: "All · {n}",
     noMatch: "No matching images.",
     emptyCategory: "No images in this category yet.",

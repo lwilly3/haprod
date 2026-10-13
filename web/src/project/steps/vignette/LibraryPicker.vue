@@ -1,21 +1,24 @@
 <script setup lang="ts">
 /**
- * Choix d'images d'une catégorie de la bibliothèque (plusieurs à la fois) ; on peut y glisser de
- * nouvelles images, rangées dans la catégorie et cochées d'emblée.
+ * Choix d'images d'une catégorie de la bibliothèque (plusieurs à la fois), ou parmi les images du projet
+ * (assets et fichiers ajoutés) ; on peut y glisser de nouvelles images, rangées dans la catégorie et
+ * cochées d'emblée.
  */
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { api } from "../../../lib/api";
 import { toast } from "../../../lib/toast";
 import { droppedFiles, upload } from "../../../lib/upload";
+import { PROJECT_PREFIX, refUrl } from "./refs";
 
 interface Item { name: string; rel: string; category: string; type: string; project: string | null; kind: string }
 
-const props = defineProps<{ category: string; title: string; selected: string[]; max: number }>();
+const props = defineProps<{ pid: string; category: string; title: string; selected: string[]; max: number }>();
 const emit = defineEmits<{ done: [rels: string[]]; cancel: [] }>();
 
 const { t } = useI18n();
 const items = ref<Item[]>([]);
+const own = ref<Item[]>([]);
 const picked = ref<string[]>([...props.selected]);
 const over = ref(false);
 const uploading = ref<number | null>(null);
@@ -23,7 +26,7 @@ const uploading = ref<number | null>(null);
 const filter = ref<string>(props.category);
 const query = ref("");
 
-const images = computed(() => items.value.filter((x) => x.kind === "Images"));
+const images = computed(() => [...own.value, ...items.value].filter((x) => x.kind === "Images"));
 const categories = computed(() => {
   const counts = new Map<string, { type: string; n: number }>();
   for (const x of images.value) {
@@ -38,8 +41,18 @@ const shown = computed(() => {
     && (!q || `${x.name} ${x.project ?? ""} ${x.type}`.toLowerCase().includes(q)));
 });
 
+// les médias du projet, comme le panneau Médias du script
+const PROJECT_GROUPS = ["Assets", "Fichiers ajoutés"];
+
 onMounted(async () => {
-  items.value = (await api<{ items: Item[] }>("/api/projects/library")).items;
+  const [lib, res] = await Promise.all([
+    api<{ items: Item[] }>("/api/projects/library"),
+    api<{ groups: { k: string; items: { name: string; rel: string; kind: string }[] }[] }>(`/api/projects/${props.pid}/resources`),
+  ]);
+  items.value = lib.items;
+  own.value = res.groups.filter((g) => PROJECT_GROUPS.includes(g.k)).flatMap((g) => g.items).map((x) => ({
+    ...x, rel: `${PROJECT_PREFIX}${x.rel}`, category: PROJECT_PREFIX, type: t("thumbnail.picker.project"), project: null,
+  }));
   if (!images.value.some((x) => x.category === props.category)) filter.value = "all";
 });
 
@@ -68,8 +81,6 @@ async function onDrop(e: DragEvent) {
     uploading.value = null;
   }
 }
-
-const src = (rel: string) => `/api/projects/library/file/${rel.split("/").map(encodeURIComponent).join("/")}`;
 </script>
 
 <template>
@@ -92,7 +103,7 @@ const src = (rel: string) => `/api/projects/library/file/${rel.split("/").map(en
     </div>
     <div class="grid scroll">
       <button v-for="x in shown" :key="x.rel" class="cell" :class="{ on: picked.includes(x.rel) }" :title="`${x.type} · ${x.name}`" @click="toggle(x.rel)">
-        <img :src="src(x.rel)" alt="">
+        <img :src="refUrl(pid, x.rel)" alt="">
         <span v-if="picked.includes(x.rel)" class="n">{{ picked.indexOf(x.rel) + 1 }}</span>
       </button>
       <span v-if="!shown.length" class="nothing">

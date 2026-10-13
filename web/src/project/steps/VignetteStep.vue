@@ -16,6 +16,7 @@ import { act, failed, running, store, update } from "../store";
 import type { Thumb, ThumbIdea, ThumbImage } from "../types";
 import LibraryPicker from "./vignette/LibraryPicker.vue";
 import VariantTile from "./vignette/VariantTile.vue";
+import { refUrl } from "./vignette/refs";
 
 // le plafond d'images de référence de fal (backend projects/thumbs.py)
 const MAX_REFS = 10;
@@ -246,7 +247,6 @@ const PICKERS = {
   portraits: { category: "portraits", title: "thumbnail.myPortraits" },
   styles: { category: "vignettes", title: "thumbnail.styleRefs" },
 } as const;
-const libUrl = (rel: string) => `/api/projects/library/file/${rel.split("/").map(encodeURIComponent).join("/")}`;
 const pickerMax = computed(() => {
   const t = current.value;
   if (!t || !picking.value) return MAX_REFS;
@@ -328,7 +328,7 @@ const big = computed(() => feed.value === "desktop");
             </div>
             <div class="chips">
               <div v-for="rel in current[kind] ?? []" :key="rel" class="chip">
-                <img :src="libUrl(rel)" alt="" :title="rel.split('/').pop()">
+                <img :src="refUrl(project.id, rel)" alt="" :title="rel.split('/').pop()">
                 <button class="x-btn" :title="tr('common.remove')" @click="unref(kind, rel)">×</button>
               </div>
               <span v-if="!(current[kind] ?? []).length" class="faint none">
@@ -409,7 +409,7 @@ const big = computed(() => feed.value === "desktop");
     </section>
 
     <LibraryPicker
-      v-if="picking && current" :category="PICKERS[picking].category" :title="tr(PICKERS[picking].title)"
+      v-if="picking && current" :pid="project.id" :category="PICKERS[picking].category" :title="tr(PICKERS[picking].title)"
       :selected="current[picking] ?? []" :max="pickerMax" @done="picked" @cancel="picking = null" />
 
     <template v-if="ideasOpen && current">

@@ -3,8 +3,8 @@ L'étape Vignette côté API : les compositions proposées par Claude, la géné
 
 Chaque variante (project.thumbs, éditée par l'interface) est associée à l'un des titres, et a sa
 description, le texte que le modèle écrit dans l'image (vide : aucun), ses portraits et ses
-vignettes de style, choisis dans la bibliothèque (toutes catégories). Une génération lance
-un job par modèle (`<pid>-thumb-<variante>-<modèle>`), les modèles tournent en parallèle ; une retouche
+vignettes de style, choisis dans la bibliothèque (toutes catégories) ou les médias du projet.
+Une génération lance un job par modèle (`<pid>-thumb-<variante>-<modèle>`), les modèles tournent en parallèle ; une retouche
 (`start_edit`) fait de même en partant d'une image de la galerie et d'une consigne. Les images produites
 vont dans vignettes/ ; leur liste, project.thumb_images (variante -> images), n'est écrite que
 par l'API (`sync`, `remove_image`) : l'interface, qui renvoie project.thumbs en entier, ne peut
@@ -43,11 +43,17 @@ def ready() -> bool:
     return bool(fal.key())
 
 
-def _ref_path(rel: str) -> Path:
-    """Une image de la bibliothèque, quelle que soit sa catégorie (le sélecteur les propose toutes)."""
-    path = (library.LIBRARY_DIR / rel).resolve()
-    if library.LIBRARY_DIR.resolve() not in path.parents or not path.is_file():
-        raise ValueError(f"image introuvable dans la bibliothèque : {rel}")
+# une référence prise dans les médias du projet plutôt que dans la bibliothèque
+PROJECT_PREFIX = "projet/"
+
+
+def _ref_path(project: dict, rel: str) -> Path:
+    """Une image de la bibliothèque, quelle que soit sa catégorie (le sélecteur les propose toutes), ou
+    « projet/<rel> » : une image des médias du projet."""
+    root = service.project_dir(project["id"]) if rel.startswith(PROJECT_PREFIX) else library.LIBRARY_DIR
+    path = (root / rel.removeprefix(PROJECT_PREFIX)).resolve()
+    if root.resolve() not in path.parents or not path.is_file():
+        raise ValueError(f"image de référence introuvable : {rel}")
     return path
 
 
@@ -126,8 +132,8 @@ def _launch(project: dict, tid: str, models: list[str], prompt: str, refs: list[
 def start(project: dict, tid: str, models: list[str]) -> None:
     """Génère des vignettes neuves pour la variante `tid`, à partir de sa description et de ses références."""
     thumb = _thumb(project, tid)
-    portraits = [_ref_path(r) for r in thumb.get("portraits") or []]
-    styles = [_ref_path(r) for r in thumb.get("styles") or []]
+    portraits = [_ref_path(project, r) for r in thumb.get("portraits") or []]
+    styles = [_ref_path(project, r) for r in thumb.get("styles") or []]
     if not portraits and not styles:
         raise ValueError("choisis au moins un portrait ou une vignette de référence")
     prompt = build_prompt(thumb, video_title(project, thumb), len(portraits), len(styles))
@@ -144,7 +150,7 @@ def start_edit(project: dict, tid: str, file: str, instruction: str, models: lis
     base = service.project_dir(project["id"]) / service.VIGNETTES_DIR / file
     if not base.is_file():
         raise ValueError(f"fichier introuvable : {file}")
-    portraits = [_ref_path(r) for r in thumb.get("portraits") or []][:MAX_REFS - 1]
+    portraits = [_ref_path(project, r) for r in thumb.get("portraits") or []][:MAX_REFS - 1]
     _launch(project, tid, models, build_edit_prompt(instruction, len(portraits)), [base, *portraits],
             source=file, edit=instruction.strip())
 
@@ -158,8 +164,8 @@ def ideas_payload(project: dict, tid: str, note: str) -> dict:
     angle = project["angles"][sel] if sel is not None and 0 <= sel < len(project["angles"]) else None
     return {"thumb": tid, "note": note, "angle": angle, "current": thumb, "variants": project["thumbs"],
             "titles": [t["t"] for t in project["titles"] if t.get("pick")], "title": video_title(project, thumb),
-            "portraits": [str(_ref_path(r)) for r in thumb.get("portraits") or []],
-            "styles": [str(_ref_path(r)) for r in thumb.get("styles") or []]}
+            "portraits": [str(_ref_path(project, r)) for r in thumb.get("portraits") or []],
+            "styles": [str(_ref_path(project, r)) for r in thumb.get("styles") or []]}
 
 
 def apply_ideas(project: dict, result: dict, tid: str) -> None:
