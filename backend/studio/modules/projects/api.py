@@ -1117,7 +1117,8 @@ def project_file(pid: str, rel: str):
     path = (root / rel).resolve()
     if root not in path.parents or not path.is_file():
         raise HTTPException(404, "fichier introuvable")
-    return FileResponse(path)
+    # la charte d'un projet change avec son style, sous le même nom : jamais reprise du cache sans vérifier
+    return FileResponse(path, headers={"Cache-Control": "no-cache"} if path.suffix == ".css" else None)
 
 
 # --- Assets : YouTube --------------------------------------------------------------------
@@ -1405,6 +1406,21 @@ class MontageRequest(BaseModel):
     beats_shift: list[dict] = []
     # l'empreinte de la version retouchée
     rev: str | None = None
+
+
+# le style du projet : choisi parmi le design system du kit et ses ambiances
+@router.get("/{pid}/montage/style")
+def get_montage_style(pid: str):
+    _check(pid)
+    montage.prepare(pid)
+    return {"style": montage.style(pid), "kit": kit.design(), "presets": [{**kit.defaults(), "id": "base"}, *kit.PRESETS]}
+
+
+@router.put("/{pid}/montage/style")
+def put_montage_style(pid: str, values: dict):
+    _check(pid)
+    montage.set_style(pid, values)
+    return get_montage_style(pid)
 
 
 @router.put("/{pid}/montage")

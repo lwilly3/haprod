@@ -160,6 +160,8 @@ par des tâches à part. Un motion en cours de création (listé dans contexte.m
 fais-la directement : modifie {work}/timeline.json (le client voit tes changements à la fin \
 de ton tour), puis écris les compositions. Ne lance pas de création d'ensemble de toi-même : propose plutôt de passer par \
 le storyboard.
+- Une composition qui charge une autre charte (style-….css) a été faite avec un style précédent du \
+projet : quand tu la retouches, garde sa charte.
 - Ne crée ni ne modifie aucun autre fichier que {work}/timeline.json, {work}/insertions.json \
 et montage/motion/*.html.
 - Si un média manque (pas de B-roll adapté, pas de son), dis-le dans ta réponse plutôt que \

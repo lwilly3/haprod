@@ -22,6 +22,13 @@ export default {
     exportTitle: "Writes the .fcpxml to the project folder",
     revealTitle: "Open the edit folder",
   },
+  style: {
+    label: "Style",
+    title: "Motion style",
+    hint: "Motions created from now on use this style. Existing ones keep theirs, even when touched up, and aren't re-rendered; recreate a motion to give it the new style.",
+    kit: "My design system (library)",
+    custom: "Custom",
+  },
   keys: "Ctrl+scroll move playhead · Alt+scroll zoom · Shift+Z fit · Space play · J K L · ←→ frame · ↑↓ cuts · A/B select/blade · Ctrl+B cut · Del · M beat · I/O range · Ctrl+Z undo · drag on empty space = range",
   tracks: {
     aroll: "Video",

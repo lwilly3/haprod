@@ -138,8 +138,41 @@ def empty(project: dict) -> dict:
 
 def prepare(pid: str) -> None:
     """Le dossier du montage, avec la charte et les exemples de motion design."""
-    # la charte reste celle avec laquelle le projet a commencé ; les exemples suivent le kit
+    # la charte est celle du projet (au départ, le design system du kit) ; les exemples suivent le kit
     kit.install(motion_dir(pid), keep_style=True)
+
+
+# la charte du projet (style.css), ou une ancienne figée sous son empreinte (style-<empreinte>.css)
+STYLE_FILE = "style.css"
+_STYLE_LINK = re.compile(rb'href="(style(?:-[0-9a-f]{10})?\.css)"')
+
+
+def style(pid: str) -> dict:
+    """Le style du projet : les réglages de sa charte."""
+    path = motion_dir(pid) / STYLE_FILE
+    return kit.design_of(path.read_text(encoding="utf-8")) if path.is_file() else kit.design()
+
+
+def set_style(pid: str, values: dict) -> None:
+    """
+    Change le style du projet : les motions écrits ensuite le prennent. Ceux qui existent gardent le leur : la
+    charte d'avant est figée sous son empreinte et ils la chargent désormais (leur rendu reste valable).
+    """
+    with _locked(pid):
+        prepare(pid)
+        folder, current = motion_dir(pid), motion_dir(pid) / STYLE_FILE
+        old = current.read_text(encoding="utf-8")
+        new = kit.style_css(kit.clean(values, style(pid)))
+        if new == old:
+            return
+        frozen = f"style-{hashlib.sha1(old.encode()).hexdigest()[:10]}.css"
+        if not (folder / frozen).is_file():
+            (folder / frozen).write_text(old, encoding="utf-8")
+        for comp in folder.glob("*.html"):
+            raw = comp.read_bytes()
+            if f'href="{STYLE_FILE}"'.encode() in raw:
+                comp.write_bytes(raw.replace(f'href="{STYLE_FILE}"'.encode(), f'href="{frozen}"'.encode()))
+        current.write_text(new, encoding="utf-8")
 
 
 def load(pid: str) -> dict:
@@ -845,8 +878,11 @@ def motion_signature(pid: str, item: dict) -> str | None:
     comp = motion_dir(pid) / f"{item['id']}.html"
     if not comp.is_file():
         return None
-    body = comp.read_bytes() + json.dumps([item["dur"], MOTION_PAGE_VERSION]).encode()
-    style = motion_dir(pid) / "style.css"
+    raw = comp.read_bytes()
+    # la charte qu'elle charge compte, pas son nom : figer une charte (changement de style) ne relance aucun rendu
+    link = _STYLE_LINK.search(raw)
+    style = motion_dir(pid) / (link.group(1).decode() if link else STYLE_FILE)
+    body = _STYLE_LINK.sub(f'href="{STYLE_FILE}"'.encode(), raw) + json.dumps([item["dur"], MOTION_PAGE_VERSION]).encode()
     if style.is_file():
         body += style.read_bytes()
     return hashlib.sha1(body).hexdigest()[:12]

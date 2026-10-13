@@ -22,6 +22,13 @@ export default {
     exportTitle: "Écrit le .fcpxml dans le dossier du projet",
     revealTitle: "Ouvrir le dossier du montage",
   },
+  style: {
+    label: "Style",
+    title: "Style des motions",
+    hint: "Les motions créés à partir de maintenant prennent ce style. Ceux déjà faits gardent le leur, même retouchés, et leur rendu n’est pas refait ; recrée un motion pour lui donner le nouveau style.",
+    kit: "Mon design system (bibliothèque)",
+    custom: "Personnalisé",
+  },
   keys: "Ctrl+molette déplacer la tête · Alt+molette zoom · Maj+Z ajuster · Espace lecture · J K L · ←→ image · ↑↓ coupes · A/B sélection/lame · Ctrl+B couper · Suppr · M beat · I/O plage · Ctrl+Z annuler · glisser sur une zone vide = plage",
   tracks: {
     aroll: "Vidéo",

@@ -68,15 +68,24 @@ def _root_var(css: str, name: str) -> str | None:
     return m.group(1).strip() if m else None
 
 
-def defaults() -> dict:
-    """Le design system de la charte de base : {couleur: #hex, radius: px, font, mono, texture}."""
-    css = _base_css()
+def _texture_css(texture: str) -> str:
+    path = BUILTIN_DIR / "textures" / f"{texture}.css"
+    return path.read_text(encoding="utf-8") if path.is_file() else ""
+
+
+def design_of(css: str) -> dict:
+    """Les réglages d'une charte générée : {couleur: #hex, radius: px, font, mono, texture}."""
     out = {k: _root_var(css, k) for k in COLORS}
     out["radius"] = int(re.sub(r"\D", "", _root_var(css, "radius") or "22") or 22)
     for k in FONTS:
         out[k] = (_root_var(css, k) or "").split(",")[0].strip().strip('"')
-    out["texture"] = TEXTURES[0]
+    out["texture"] = next((t for t in TEXTURES[1:] if _texture_css(t) and _texture_css(t) in css), TEXTURES[0])
     return out
+
+
+def defaults() -> dict:
+    """Le design system de la charte de base."""
+    return design_of(_base_css())
 
 
 def design() -> dict:
@@ -84,9 +93,9 @@ def design() -> dict:
     return {**defaults(), **saved}
 
 
-def save_design(values: dict) -> dict:
-    """Enregistre ce qui est valide, ignore le reste ; rend le design system complet."""
-    out = design()
+def clean(values: dict, base: dict) -> dict:
+    """`base` modifié par ce qui est valide dans `values` (le reste est ignoré)."""
+    out = dict(base)
     for k in COLORS:
         if isinstance(values.get(k), str) and _HEX.match(values[k]):
             out[k] = values[k].lower()
@@ -97,14 +106,21 @@ def save_design(values: dict) -> dict:
             out[k] = values[k].strip()
     if values.get("texture") in TEXTURES:
         out["texture"] = values["texture"]
+    return out
+
+
+def save_design(values: dict) -> dict:
+    """Enregistre ce qui est valide, ignore le reste ; rend le design system complet."""
+    out = clean(values, design())
     USER_DIR.mkdir(parents=True, exist_ok=True)
     DESIGN_FILE.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
     return out
 
 
-def style_css() -> str:
-    """La charte de base, avec les variables et les polices du design system, puis sa matière."""
-    d = design()
+def style_css(d: dict | None = None) -> str:
+    """La charte de base, avec les variables et les polices d'un design system (celui du kit par défaut),
+    puis sa matière."""
+    d = d or design()
     css = _base_css()
     families = "&".join(f"family={quote_plus(d[k])}:wght@{WEIGHTS[k]}" for k in FONTS)
     css = re.sub(r'@import url\("https://fonts\.googleapis\.com/[^"]*"\);',
@@ -113,10 +129,7 @@ def style_css() -> str:
     values |= {k: f'"{d[k]}", {FALLBACK[k]}' for k in FONTS}
     for k, v in values.items():
         css = re.sub(rf"(--{re.escape(k)}:\s*)[^;]+;", lambda m, v=v: f"{m.group(1)}{v};", css, count=1)
-    texture = BUILTIN_DIR / "textures" / f"{d['texture']}.css"
-    if texture.is_file():
-        css += texture.read_text(encoding="utf-8")
-    return css
+    return css + _texture_css(d["texture"])
 
 
 def version() -> str:

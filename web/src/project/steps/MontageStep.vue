@@ -21,6 +21,7 @@ import MonteurChat from "./montage/MonteurChat.vue";
 import TaskQueue from "./montage/TaskQueue.vue";
 import { addMedia, bladeAroll, bladeItem, frameStep, insertAroll, isVideo, remove } from "./montage/ops";
 import Preview from "./montage/Preview.vue";
+import StylePicker from "./montage/StylePicker.vue";
 import Timeline from "./montage/Timeline.vue";
 import { clipStarts, fxSpan, isImage, needsAnim, spanOf, tcd, trackLabel, TYPE_COLOR, type AnimState, type Beat, type AvailableMedia, type Broll, type MontageTask, type Motion, type Selection, type Shot, type Timeline as TL, type Track } from "./montage/types";
 import { useMontage } from "./montage/useMontage";
@@ -367,6 +368,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
           <span v-if="M.dirty.value" class="saving mono">{{ tr("common.saving") }}</span>
           <span v-else-if="M.busy.value" class="busy mono">{{ tr("editing.toolbar.busy") }}</span>
           <span class="spacer" />
+          <StylePicker :pid="project.id" />
           <button class="link-btn" :disabled="!view.can_undo" title="Ctrl+Z" @click="M.undo()">{{ tr("editing.toolbar.undo") }}</button>
           <button class="btn" :disabled="exporting" :title="tr('editing.toolbar.exportTitle')" @click="exportResolve">{{ tr("editing.toolbar.export") }}</button>
           <button class="btn" :title="tr('editing.toolbar.revealTitle')" @click="reveal">{{ tr("common.openFolder") }}</button>
