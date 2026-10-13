@@ -3,9 +3,11 @@
  * Description : titre, description et tags de chaque vidéo (la longue et les shorts de la sélection).
  * La vidéo longue a aussi sa vignette, son test A/B (jusqu'à 3 couples titre + vignette) et ses
  * chapitres, tirés des marqueurs du montage ; un short montre son passage et peut renvoyer à la longue.
+ * Ce qu'on insère (chapitres, lien) se place au-dessus de la description par défaut des réglages.
  */
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import { api } from "../../lib/api";
 import { usePref } from "../../lib/composables";
 import { contentText, contentTextAll, loadChannelLanguage } from "../../lib/content";
 import { mmss } from "../../lib/format";
@@ -56,12 +58,25 @@ const removeTag = (t: string) => set({ tags: sel.value!.meta.tags.filter((x) => 
 // les textes insérés dans la description sont dans la langue de la chaîne
 loadChannelLanguage();
 
+// --- la description par défaut (réglages) : le bloc commun, qu'on garde en bas
+const footer = ref("");
+onMounted(async () => {
+  footer.value = (await api<{ description: string }>("/api/settings/publish").catch(() => ({ description: "" }))).description;
+});
+/** Ajoute un bloc à la description : juste au-dessus du bloc commun s'il y est, sinon à la fin. */
+function insert(desc: string, block: string): string {
+  const at = footer.value ? desc.lastIndexOf(footer.value) : -1;
+  if (at < 0) return `${desc.trimEnd()}${desc.trim() ? "\n\n" : ""}${block}`;
+  const head = desc.slice(0, at).trimEnd();
+  return `${head}${head ? "\n\n" : ""}${block}\n\n${desc.slice(at)}`;
+}
+
 // --- chapitres (vidéo longue)
 const chaptersText = computed(() => (sel.value?.chapters ?? []).map((c) => `${c.t} ${c.label}`).join("\n"));
 function insertChapters() {
   const m = sel.value!.meta;
   if (m.desc.includes("00:00")) return toast(tr("details.chaptersAlready"));
-  set({ desc: `${m.desc.trimEnd()}${m.desc.trim() ? "\n\n" : ""}${contentText("chapters")}\n${chaptersText.value}` });
+  set({ desc: insert(m.desc, `${contentText("chapters")}\n${chaptersText.value}`) });
   toast(tr("details.chaptersInserted"));
 }
 
@@ -74,7 +89,7 @@ function addLongLink() {
   const line = `${prefix} ${url || P.longTitle.value}`;
   // déjà là, même ajouté quand la chaîne avait une autre langue
   if (contentTextAll("fullVideo").some((p) => m.desc.includes(p))) return toast(tr("details.linkAlready"));
-  set({ desc: `${m.desc.trimEnd()}\n\n${line}` });
+  set({ desc: insert(m.desc, line) });
   toast(url ? tr("details.linkAdded") : tr("details.linkPending"));
 }
 
