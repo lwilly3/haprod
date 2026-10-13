@@ -76,6 +76,7 @@ export default {
     all: "Toutes · {n}",
     noMatch: "Aucune image ne correspond.",
     emptyCategory: "Aucune image dans cette catégorie pour l’instant.",
+    page: "Page {n} / {total}",
     uploading: "Envoi · {n} %",
     drop: "Glisse des images ici pour les ajouter à la bibliothèque",
   },
