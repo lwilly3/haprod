@@ -186,7 +186,7 @@ const status = (v: Video) => (metaMissing(v).length ? tr("details.todo") : "✓"
     <aside class="side">
       <template v-if="sel.kind === 'long'">
         <span class="eyebrow">{{ tr("details.chaptersFromEdit") }}</span>
-        <div v-for="c in sel.chapters" :key="c.t" class="chap"><span class="mono">{{ c.t }}</span><span>{{ c.label }}</span></div>
+        <div v-for="(c, i) in sel.chapters" :key="i" class="chap"><span class="mono">{{ c.t }}</span><span>{{ c.label }}</span></div>
         <i18n-t v-if="!sel.chapters?.length" keypath="details.noChapters" tag="p" class="hint" scope="global">
           <template #editing><RouterLink :to="`/p/${project.id}/montage`">{{ tr("details.editing") }}</RouterLink></template>
         </i18n-t>
