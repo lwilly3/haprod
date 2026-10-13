@@ -1427,10 +1427,11 @@ def put_montage_style(pid: str, values: dict):
 def put_montage(pid: str, req: MontageRequest):
     _check(pid)
     montage.prepare(pid)
-    montage.save(pid, req.timeline, shifts=req.beats_shift, base=req.rev)
+    base = montage.save_edit(pid, req.timeline, req.beats_shift, req.rev)
     with service.editing(pid) as p:
         service.start_step(p, "montage")
-    return _montage_view(pid)
+    # la base des retouches faites à l'écran pendant l'enregistrement
+    return {**_montage_view(pid), "base": base}
 
 
 @router.post("/{pid}/montage/undo")

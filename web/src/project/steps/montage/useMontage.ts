@@ -32,8 +32,13 @@ export function useMontage(pid: string) {
     }
   }
 
+  /** change à chaque retouche : une relecture partie avant ne la défait pas en revenant */
+  let edits = 0;
+
   async function load(force = false) {
-    receive(await api<MontageView>(base), force);
+    const at = edits;
+    const v = await api<MontageView>(base);
+    if (force || at === edits) receive(v, force);
   }
 
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -53,6 +58,7 @@ export function useMontage(pid: string) {
 
   /** Enregistre la timeline (regroupe les modifications rapprochées). */
   function save(delay = 500) {
+    edits++;
     dirty.value = true;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(flush, delay);
@@ -66,18 +72,35 @@ export function useMontage(pid: string) {
     shifts.push({ at, length });
   }
 
+  /** l'enregistrement en cours : le suivant part après, de la version qu'il a écrite */
+  let saving: Promise<void> | null = null;
+
   async function flush() {
     clearTimeout(saveTimer);
+    while (saving) await saving;
     if (!dirty.value || !tl.value) return;
+    saving = put();
+    try {
+      await saving;
+    } finally {
+      saving = null;
+    }
+  }
+
+  async function put() {
+    if (!tl.value) return;
     const sent = clone(tl.value);
     const beats_shift = shifts;
     shifts = [];
     try {
-      const v = await putJson<MontageView>(base, { timeline: sent, beats_shift, rev });
+      const v = await putJson<MontageView & { base: string }>(base, { timeline: sent, beats_shift, rev });
       // rien n'a bougé depuis l'envoi : la version du serveur (nettoyée) fait foi
       const same = JSON.stringify(sent) === JSON.stringify(tl.value);
       if (same) dirty.value = false;
       receive(v, same);
+      // retouché pendant l'envoi : la suite part de ce qui a été envoyé (sinon un élément ajouté depuis l'ancienne
+      // base semblerait ajouté des deux côtés, et serait doublé)
+      if (!same) rev = v.base;
     } catch (e) {
       toast((e as Error).message, true);
       dirty.value = false;

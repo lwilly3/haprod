@@ -496,7 +496,11 @@ def rev(pid: str) -> str:
     path = root(pid) / TIMELINE_FILE
     if not path.is_file():
         return ""
-    data = path.read_bytes()
+    return _keep(pid, path.read_bytes())
+
+
+def _keep(pid: str, data: bytes) -> str:
+    """Garde une version de la timeline parmi les versions connues ; rend son empreinte."""
     key = hashlib.sha1(data).hexdigest()[:16]
     copy = root(pid) / REVS_DIR / f"{key}.json"
     if not copy.is_file():
@@ -578,12 +582,28 @@ def save(pid: str, raw: dict, keep_history: bool = True, shifts: list[dict] | No
     l'A-roll qu'elle contient ([{at, length}]), que les beats du storyboard suivent. `base` : l'empreinte de la version
     retouchée ; si la timeline a changé depuis (le tour de Daryl vient d'y être fusionné), la retouche y est fusionnée.
     """
+    return _save(pid, raw, keep_history, shifts, base)[0]
+
+
+def save_edit(pid: str, raw: dict, shifts: list[dict] | None, base: str | None) -> str:
+    """
+    Comme `save`, pour une retouche de l'interface ; rend l'empreinte de la version reçue (nettoyée) : la base des
+    retouches faites à l'écran pendant l'enregistrement. Ce n'est pas celle de la version écrite si un tour de Daryl
+    y a été fusionné : sinon ces retouches sembleraient défaire ce tour, et un élément ajouté entre-temps semblerait
+    ajouté des deux côtés (et serait doublé).
+    """
+    return _save(pid, raw, True, shifts, base)[1]
+
+
+def _save(pid: str, raw: dict, keep_history: bool, shifts: list[dict] | None, base: str | None) -> tuple[dict, str]:
     project = service.load(pid)
     duration = (_source(project) or {}).get("duration") or 0.0
     cleaned = clean(pid, raw, duration)
     with _locked(pid):
         older = _read(root(pid) / REVS_DIR / f"{base}.json") if base and base != rev(pid) else None
+        mine = None
         if older is not None:
+            mine = _keep(pid, json.dumps(cleaned, ensure_ascii=False, indent=1).encode("utf-8"))
             cleaned = clean(pid, merge(older, cleaned, load(pid))[0], duration)
         if keep_history:
             snapshot(pid)
@@ -591,8 +611,9 @@ def save(pid: str, raw: dict, keep_history: bool = True, shifts: list[dict] | No
         for shift in shifts or []:
             # sans historique, rien à défaire : on décale seulement
             (shift_beats if keep_history else _shift_beats)(pid, _num(shift.get("at")), _num(shift.get("length")))
+        mine = mine or rev(pid)
     after_change(pid)
-    return cleaned
+    return cleaned, mine
 
 
 # --- La copie de travail de Daryl ------------------------------------------------------------
