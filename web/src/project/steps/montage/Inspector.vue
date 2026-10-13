@@ -261,7 +261,7 @@ const SOUND_ROLES = computed(() => [["sfx", tr("editing.inspector.sound")], ["mu
 
         <template v-else-if="item.track === 'markers'">
           <input class="input" :value="(item.data as Marker).text" :placeholder="tr('editing.inspector.chapterTitle')"
-            @change="set<Marker>((x) => { x.text = ($event.target as HTMLInputElement).value; })">
+            @input="set<Marker>((x) => { x.text = ($event.target as HTMLInputElement).value; })">
           <span class="sub">{{ tr((item.data as Marker).by === "ai" ? "editing.inspector.byAi" : "editing.inspector.byUser") }}</span>
         </template>
       </fieldset>
