@@ -140,7 +140,7 @@ function openProject(id: string) {
       <RouterLink to="/bibliotheque" class="nav-item">{{ t("nav.library") }}</RouterLink>
     </template>
 
-    <RouterLink to="/reglages" class="nav-item" :class="{ on: route.name === 'settings' }">{{ t("nav.settings") }}</RouterLink>
+    <RouterLink to="/settings" class="nav-item" :class="{ on: route.name === 'settings' }">{{ t("nav.settings") }}</RouterLink>
     <div
       class="worker"
       :class="workerAlive === null ? 'unknown' : workerAlive ? 'ok' : 'down'"
