@@ -208,7 +208,8 @@ const qualities = computed(() => {
 // --- destination
 const common = usePref("assets.ytCommon", false);
 const category = usePref("assets.ytCategory", "broll");
-const projectCategory = computed(() => (mode.value === "audio" ? "musique" : thumb.value ? "images" : "broll"));
+// une miniature sert de modèle à l'étape Vignette, pas de visuel au montage
+const projectCategory = computed(() => (mode.value === "audio" ? "musique" : thumb.value ? "vignettes" : "broll"));
 
 async function download() {
   const v = video.value;
