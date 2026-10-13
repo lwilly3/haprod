@@ -14,7 +14,7 @@ import YoutubeTab from "./YoutubeTab.vue";
 
 const tab = defineModel<AddTab>("tab", { required: true });
 defineProps<{ uploading: number | null }>();
-const emit = defineEmits<{ close: []; files: [files: File[]] }>();
+const emit = defineEmits<{ close: []; files: [files: File[]]; added: [] }>();
 const { t } = useI18n();
 
 const title = computed(() => t(`media.add.tabs.${tab.value}.label`));
@@ -60,7 +60,7 @@ function onPick(e: Event) {
       <input ref="input" type="file" multiple hidden @change="onPick">
     </template>
     <YoutubeTab v-else-if="tab === 'youtube'" />
-    <ImagesTab v-else-if="tab === 'images'" />
+    <ImagesTab v-else-if="tab === 'images'" @added="emit('added')" />
     <DocTab v-else />
   </Modal>
 </template>

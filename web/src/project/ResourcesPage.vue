@@ -56,6 +56,12 @@ function closeAdd() {
   else load();
 }
 
+// des images validées dans la popup apparaissent derrière, sans attendre sa fermeture
+async function onAdded() {
+  await load();
+  tab.value = "Assets";
+}
+
 // un téléchargement YouTube qui se termine arrive dans la liste
 const downloaded = computed(() => store.project?.runtime.assets.downloads.filter((d) => d.finished).length ?? 0);
 watch(downloaded, (n, before) => { if (n > before) load(); });
@@ -146,7 +152,7 @@ async function toLibrary(item: Item, category: string) {
       </div>
       <span v-if="!items.length" class="nothing">{{ t("common.nothingYet") }}</span>
     </div>
-    <AddMediaModal v-if="adding && store.project?.id === pid" v-model:tab="addTab" :uploading="uploading" @files="uploadFiles" @close="closeAdd" />
+    <AddMediaModal v-if="adding && store.project?.id === pid" v-model:tab="addTab" :uploading="uploading" @files="uploadFiles" @added="onAdded" @close="closeAdd" />
     <MediaLightbox v-model="zoom" :items="zoomable">
       <template #actions="{ item }"><button class="link-btn" @click="reveal(item.rel)">{{ t("common.showInExplorer") }}</button></template>
     </MediaLightbox>

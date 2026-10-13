@@ -14,6 +14,7 @@ import type { ImagesState } from "../types";
 import CheckBox from "./CheckBox.vue";
 import DestPicker from "./DestPicker.vue";
 
+const emit = defineEmits<{ added: [] }>();
 const { t } = useI18n();
 const base = `/api/projects/${store.project!.id}/assets`;
 const state = ref<ImagesState>({ messages: [], results: [], busy: false, error: null, activity: null });
@@ -81,6 +82,7 @@ async function validate() {
     receive(out);
     const dest = out.results.find((r) => r.added)?.added ?? "";
     toast(t("sourcing.images.added", { dest }, out.added));
+    if (out.added) emit("added");
   } catch (e) {
     toast((e as Error).message, true);
   }
