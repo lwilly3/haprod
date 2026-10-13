@@ -22,6 +22,8 @@ export const store = reactive({
 const base = (pid: string) => `/api/projects/${pid}`;
 
 let pending: ProjectPatch = {};
+/** envoyé, pas encore enregistré : une relecture partie avant ne doit pas le défaire */
+let sending: ProjectPatch = {};
 let flushTimer: ReturnType<typeof setTimeout> | undefined;
 let pollTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -42,7 +44,7 @@ function applyPatch(p: Project, changes: ProjectPatch): void {
 
 /** Remplace le projet affiché par ce que renvoie le serveur, sans perdre ce qui n'est pas encore envoyé. */
 export function receive(view: Project): void {
-  if (store.project && store.project.id === view.id) applyPatch(view, pending);
+  if (store.project && store.project.id === view.id) applyPatch(view, { ...sending, ...pending });
   store.project = view;
   const i = store.list.findIndex((p) => p.id === view.id);
   if (i >= 0) store.list[i] = { ...store.list[i], title: view.title, status: view.status, brief: view.brief };
@@ -56,6 +58,7 @@ export async function open(pid: string): Promise<void> {
   try {
     const view = await api<Project>(base(pid));
     pending = {};
+    sending = {};
     store.project = view;
     schedulePoll();
     // dernier projet ouvert : c'est lui que l'accueil propose de reprendre
@@ -86,10 +89,15 @@ export async function flush(): Promise<void> {
   if (!p || !Object.keys(pending).length) return;
   const changes = pending;
   pending = {};
+  sending = { ...sending, ...changes };
   try {
     receive(await patchJson<Project>(base(p.id), changes));
   } catch (e) {
     toast(t("project.saveFailed", { error: (e as Error).message }), true);
+  } finally {
+    for (const key of Object.keys(changes) as (keyof ProjectPatch)[]) {
+      if (sending[key] === changes[key]) delete sending[key];
+    }
   }
 }
 
@@ -118,6 +126,7 @@ export async function createProject(body: unknown): Promise<Project> {
   const view = await post<Project>("/api/projects", body);
   store.project = view;
   pending = {};
+  sending = {};
   await loadList();
   return view;
 }
