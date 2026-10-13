@@ -37,6 +37,13 @@ export default {
   thumbManual: "miniature à poser à la main",
   failed: "Échec : {error}",
   schedule: "Programmer",
+  ab: {
+    todo: "Test A/B à finir dans YouTube Studio : l’API n’envoie que la variante A. Ajoute ces variantes dans « Tester et comparer », à côté de la miniature.",
+    openStudio: "Ouvrir dans YouTube Studio →",
+    copy: "Copier le titre",
+    copied: "Titre copié",
+    download: "Télécharger la miniature",
+  },
   allSent: "Toutes les vidéos sont envoyées. Le projet passe dans « Publiées ».",
   auditNote: "Tant que Google n’a pas audité ton projet Google Cloud, YouTube garde en privé les vidéos envoyées par l’API : passe-les en public dans YouTube Studio. Les variantes B et C du test A/B s’y ajoutent aussi.",
 };

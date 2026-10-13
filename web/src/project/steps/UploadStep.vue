@@ -2,13 +2,15 @@
 /**
  * Upload : chaque vidéo (la longue, les shorts) s'envoie à part sur YouTube par l'API, avec sa
  * visibilité (ou sa date de publication). Une vidéo ne part que si ses vérifications passent :
- * vignette, titre, chapitres, test A/B, rendu à jour.
+ * vignette, titre, chapitres, test A/B, rendu à jour. L'API ne crée pas le test A/B : une fois la
+ * vidéo longue envoyée, ses variantes B et C restent affichées pour les poser dans YouTube Studio.
  */
 import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { usePref } from "../../lib/composables";
 import { mmss } from "../../lib/format";
+import { toast } from "../../lib/toast";
 import { store } from "../store";
 import type { Visibility } from "../types";
 import { checkLabel, missing, thumbUrl, uploading, usePublish, VISIBILITY, type Video } from "./publish/usePublish";
@@ -39,6 +41,20 @@ function state(v: Video): { label: string; tone: "" | "done" | "red" } {
 }
 
 const done = (v: Video) => v.upload?.status === "done";
+
+// la vidéo longue envoyée avec un test A/B : ses variantes B et C restent à poser à la main
+const abLeft = computed(() => {
+  const v = P.videos.value.find((x) => x.kind === "long");
+  if (!v || !done(v) || !v.meta.ab_on || !v.meta.ab?.length) return null;
+  return {
+    studio: v.upload?.video_id ? `https://studio.youtube.com/video/${v.upload.video_id}/edit` : null,
+    variants: v.meta.ab.map((a, i) => ({ ...a, l: "BC"[i], img: thumbUrl(project.value, a.thumb) })),
+  };
+});
+async function copyTitle(title: string) {
+  await navigator.clipboard.writeText(title);
+  toast(t("upload.ab.copied"));
+}
 const visLabel = (vis: Visibility) => { const key = VISIBILITY.find(([k]) => k === vis)?.[1]; return key ? t(key) : vis; };
 </script>
 
@@ -106,6 +122,22 @@ const visLabel = (vis: Visibility) => { const key = VISIBILITY.find(([k]) => k =
         </div>
       </div>
 
+      <section v-if="abLeft" class="ab">
+        <div class="ab-head">
+          <span>{{ t("upload.ab.todo") }}</span>
+          <span class="spacer" />
+          <a v-if="abLeft.studio" :href="abLeft.studio" target="_blank" rel="noopener" class="small">{{ t("upload.ab.openStudio") }}</a>
+        </div>
+        <div v-for="a in abLeft.variants" :key="a.l" class="ab-row">
+          <span class="badge mono">{{ a.l }}</span>
+          <a v-if="a.img" :href="a.img" download><img :src="a.img" alt="" class="img wide" :title="t('upload.ab.download')"></a>
+          <div v-else class="img wide hatch" />
+          <span class="title">{{ a.title }}</span>
+          <button class="link-btn small" @click="copyTitle(a.title)">{{ t("upload.ab.copy") }}</button>
+          <a v-if="a.img" :href="a.img" download class="small">{{ t("upload.ab.download") }}</a>
+        </div>
+      </section>
+
       <p v-if="allSent" class="end">{{ t("upload.allSent") }}</p>
       <p v-else-if="P.account.value?.connected" class="note">
         {{ t("upload.auditNote") }}
@@ -146,6 +178,10 @@ const visLabel = (vis: Visibility) => { const key = VISIBILITY.find(([k]) => k =
 .send .done { color: var(--ink); }
 .track { height: 3px; width: 100%; background: var(--line-soft); }
 .track > div { height: 3px; background: var(--red); transition: width .4s; }
+.ab { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border: 1px solid var(--red); border-radius: 4px; }
+.ab-head { display: flex; align-items: baseline; gap: 12px; font-size: 13.5px; color: var(--red-dark); }
+.ab-row { display: grid; grid-template-columns: 22px 71px minmax(0, 1fr) auto auto; gap: 14px; align-items: center; }
+.badge { width: 20px; height: 20px; border-radius: 2px; background: var(--red); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; }
 .end, .note { margin: 6px 0 0; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
 .note { font-size: 12.5px; color: var(--muted-2); }
 </style>

@@ -37,6 +37,13 @@ export default {
   thumbManual: "set the thumbnail manually",
   failed: "Failed: {error}",
   schedule: "Schedule",
+  ab: {
+    todo: "A/B test to finish in YouTube Studio: the API only uploads variant A. Add these variants under “Test & compare”, next to the thumbnail.",
+    openStudio: "Open in YouTube Studio →",
+    copy: "Copy title",
+    copied: "Title copied",
+    download: "Download thumbnail",
+  },
   allSent: "All videos are uploaded. The project moves to “Published”.",
   auditNote: "Until Google audits your Google Cloud project, YouTube keeps videos uploaded through the API private: switch them to public in YouTube Studio. That’s also where you add variants B and C of the A/B test.",
 };
