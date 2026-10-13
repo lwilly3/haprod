@@ -8,6 +8,7 @@ import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, putJson } from "../../lib/api";
 import { themesFromImage } from "../../lib/palette";
+import ThemeSwatch from "../../components/ThemeSwatch.vue";
 import { toast } from "../../lib/toast";
 
 type Design = Record<string, string | number>;
@@ -35,10 +36,6 @@ const changed = (key: string) => view.value && view.value.design[key] !== view.v
 
 // la charte de base en tête des ambiances ; une ambiance est active si tous ses réglages le sont
 const presets = computed<Design[]>(() => view.value ? [{ ...view.value.defaults, id: "base" }, ...view.value.presets] : []);
-const swatch = (p: Design) => ({
-  background: String(p.card), borderColor: String(p.line), color: String(p.text),
-  borderRadius: p.radius === undefined ? undefined : `${Math.min(Number(p.radius), 12)}px`,
-});
 const active = (values: Design) => !!view.value && Object.entries(values)
   .every(([k, v]) => k === "id" || view.value!.design[k] === v);
 
@@ -67,9 +64,7 @@ async function readPhoto(e: Event) {
     </div>
     <div class="themes">
       <button v-for="p in presets" :key="p.id" class="theme" :class="{ active: active(p) }" @click="save(p)">
-        <span class="swatch" :style="swatch(p)">
-          Aa<i :style="{ background: String(p.accent) }" />
-        </span>
+        <ThemeSwatch :theme="p" />
         <span>{{ t(`library.design.presets.${p.id}`) }}</span>
       </button>
       <button class="theme photo" @click="photo?.click()">
@@ -81,9 +76,7 @@ async function readPhoto(e: Event) {
     <div v-if="fromPhoto.length" class="themes">
       <span class="muted hint">{{ t("library.design.photoHint") }}</span>
       <button v-for="(p, i) in fromPhoto" :key="i" class="theme" :class="{ active: active(p) }" @click="save(p)">
-        <span class="swatch" :style="swatch(p)">
-          Aa<i :style="{ background: String(p.accent) }" />
-        </span>
+        <ThemeSwatch :theme="p" />
         <span>{{ t("library.design.photoTheme", { n: i + 1 }) }}</span>
       </button>
     </div>
@@ -122,9 +115,7 @@ async function readPhoto(e: Event) {
 .theme { display: flex; align-items: center; gap: 8px; padding: 4px 10px 4px 4px; border: 1px solid var(--line); border-radius: 6px; background: none; font-size: 13px; color: var(--muted); cursor: pointer; }
 .theme:hover { border-color: var(--line-strong); }
 .theme.active { border-color: var(--ink); color: var(--ink); font-weight: 500; }
-.swatch { position: relative; display: grid; place-items: center; width: 44px; height: 30px; border: 1px solid; font-size: 13px; font-weight: 600; }
-.swatch i { position: absolute; right: 4px; bottom: 4px; width: 8px; height: 8px; border-radius: 50%; }
-.swatch.add { border: 1px dashed var(--line-strong); border-radius: 4px; color: var(--muted); font-size: 16px; font-weight: 400; }
+.swatch.add { display: grid; place-items: center; width: 44px; height: 30px; border: 1px dashed var(--line-strong); border-radius: 4px; color: var(--muted); font-size: 16px; font-weight: 400; }
 .fields { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; }
 .field { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); cursor: pointer; }
 .field.changed span { color: var(--ink); font-weight: 500; }
