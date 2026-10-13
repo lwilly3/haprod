@@ -1,4 +1,6 @@
 export default {
+  tabs: { channel: "Chaîne", services: "Services", interface: "Interface" },
+  unsaved: "Modifications non enregistrées",
   title: "Réglages",
   intro: "Le profil de ta chaîne est donné à Daryl à chaque étape d’écriture (angles, titres, script, assistant), comme toile de fond : le brief, l’angle retenu et la méthode du skill passent avant. Tous les champs sont facultatifs.",
   language: "Langue de l’interface",

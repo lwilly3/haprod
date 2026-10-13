@@ -1,4 +1,6 @@
 export default {
+  tabs: { channel: "Channel", services: "Services", interface: "Interface" },
+  unsaved: "Unsaved changes",
   title: "Settings",
   intro: "Your channel profile is given to Daryl at every writing step (angles, titles, script, assistant) as background: the brief, the kept angle and the skill’s method come first. All fields are optional.",
   language: "Interface language",

@@ -46,7 +46,7 @@ const visLabel = (vis: Visibility) => { const key = VISIBILITY.find(([k]) => k =
   <div class="screen">
     <div v-if="P.account.value && !P.account.value.connected" class="banner">
       {{ t("upload.notConnected") }}
-      <RouterLink to="/settings">{{ t("upload.connect") }}</RouterLink>
+      <RouterLink to="/settings/services">{{ t("upload.connect") }}</RouterLink>
     </div>
     <div v-else-if="P.account.value?.channel" class="summary">
       <span>{{ t("upload.summary", { sent, n: P.videos.value.length }) }}{{ blocked ? t("upload.blocked", { n: blocked }) : "" }}</span>

@@ -9,7 +9,7 @@ export const router = createRouter({
     { path: "/", name: "home", component: () => import("./pages/HomePage.vue"), meta: { title: "nav.projects" } },
     { path: "/nouveau", name: "new", component: () => import("./pages/NewProjectPage.vue"), meta: { title: "nav.newProject" } },
     { path: "/bibliotheque", name: "library", component: () => import("./pages/LibraryPage.vue"), meta: { title: "nav.library" } },
-    { path: "/settings", name: "settings", component: () => import("./pages/SettingsPage.vue"), meta: { title: "nav.settings" } },
+    { path: "/settings/:tab(channel|services|interface)?", name: "settings", component: () => import("./pages/SettingsPage.vue"), meta: { title: "nav.settings" } },
     { path: "/reglages", redirect: "/settings" },
     { path: "/p/:pid", name: "project", component: () => import("./project/OverviewPage.vue") },
     { path: "/p/:pid/brief", name: "brief", component: () => import("./pages/NewProjectPage.vue"), meta: { title: "nav.brief" } },

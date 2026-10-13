@@ -1,7 +1,11 @@
 <script setup lang="ts">
-/** Réglages : le profil de la chaîne, donné à Claude dans toutes les étapes d'écriture. */
+/**
+ * Réglages, en onglets : le profil de la chaîne (donné à Claude dans toutes les étapes d'écriture),
+ * les services (publication YouTube, transcription) et l'interface.
+ */
 import { computed, onMounted, reactive, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import { useRoute, useRouter } from "vue-router";
 import Seg from "../components/Seg.vue";
 import { LOCALES, setLocale, type Locale } from "../i18n";
 import { api, del, post, putJson } from "../lib/api";
@@ -25,6 +29,15 @@ const FIELDS: { key: Exclude<Key, "name">; rows?: number }[] = [
 ];
 
 const { t, locale } = useI18n();
+
+/** L'onglet est dans l'URL (/settings/services…) : on peut y renvoyer depuis une autre page. */
+const TABS = ["channel", "services", "interface"] as const;
+type Tab = (typeof TABS)[number];
+const route = useRoute();
+const router = useRouter();
+const tab = computed<Tab>(() => (TABS as readonly string[]).includes(route.params.tab as string) ? route.params.tab as Tab : "channel");
+const selectTab = (k: Tab) => router.replace(k === "channel" ? "/settings" : `/settings/${k}`);
+
 /** La langue de l'interface : une préférence du navigateur, pas du profil de la chaîne. */
 const uiLocale = computed<Locale>({ get: () => locale.value as Locale, set: (l) => setLocale(l) });
 const localeOptions = Object.entries(LOCALES) as [Locale, string][];
@@ -269,83 +282,106 @@ function followers(n: number | null): string {
 <template>
   <div class="page">
     <div class="form">
-      <div class="intro">
-        <span class="h1">{{ t("settings.title") }}</span>
-        <span class="muted">{{ t("settings.intro") }}</span>
+      <span class="h1">{{ t("settings.title") }}</span>
+      <div class="tabs">
+        <button v-for="k in TABS" :key="k" :class="{ on: k === tab }" @click="selectTab(k)">
+          {{ t(`settings.tabs.${k}`) }}<span v-if="k === 'channel' && dirty" class="dot" :title="t('settings.unsaved')" />
+        </button>
       </div>
 
-      <div class="field">
-        <label>{{ t("settings.language") }}</label>
-        <span class="hint">{{ t("settings.languageHint") }}</span>
-        <Seg v-model="uiLocale" :options="localeOptions" />
-      </div>
-
-      <template v-if="loaded">
-        <div class="field">
-          <label>{{ t("settings.channel") }}</label>
-          <span class="hint">{{ t("settings.channelHint") }}</span>
-          <div class="search">
-            <input v-model="form.name" class="input name-input" :placeholder="t('settings.channelPlaceholder')"
-              @input="onNameInput" @focus="results.length && (open = true)" @blur="closeSoon" @keydown.esc="open = false">
-            <span v-if="searching" class="spinner in-input" />
-            <div v-if="open && (searching || searchError || results.length || form.name.trim().length >= 2)" class="results">
-              <div v-if="searchError" class="state err">{{ searchError }}</div>
-              <div v-else-if="searching && !results.length" class="state">{{ t("settings.searching") }}</div>
-              <div v-else-if="!results.length" class="state">{{ t("settings.noChannel") }}</div>
-              <button v-for="c in results" :key="c.id" class="result" @mousedown.prevent="pick(c)">
-                <img v-if="c.thumbnail" :src="c.thumbnail" class="avatar" alt="" referrerpolicy="no-referrer">
-                <span v-else class="avatar hatch" />
-                <span class="meta">
-                  <span class="t">{{ c.title }}</span>
-                  <span class="s">{{ [c.handle, followers(c.followers)].filter(Boolean).join(" · ") }}</span>
-                  <span v-if="c.description" class="d">{{ c.description }}</span>
-                </span>
-              </button>
+      <template v-if="tab === 'channel'">
+        <span class="muted intro">{{ t("settings.intro") }}</span>
+        <template v-if="loaded">
+          <div class="field">
+            <label>{{ t("settings.channel") }}</label>
+            <span class="hint">{{ t("settings.channelHint") }}</span>
+            <div class="search">
+              <input v-model="form.name" class="input name-input" :placeholder="t('settings.channelPlaceholder')"
+                @input="onNameInput" @focus="results.length && (open = true)" @blur="closeSoon" @keydown.esc="open = false">
+              <span v-if="searching" class="spinner in-input" />
+              <div v-if="open && (searching || searchError || results.length || form.name.trim().length >= 2)" class="results">
+                <div v-if="searchError" class="state err">{{ searchError }}</div>
+                <div v-else-if="searching && !results.length" class="state">{{ t("settings.searching") }}</div>
+                <div v-else-if="!results.length" class="state">{{ t("settings.noChannel") }}</div>
+                <button v-for="c in results" :key="c.id" class="result" @mousedown.prevent="pick(c)">
+                  <img v-if="c.thumbnail" :src="c.thumbnail" class="avatar" alt="" referrerpolicy="no-referrer">
+                  <span v-else class="avatar hatch" />
+                  <span class="meta">
+                    <span class="t">{{ c.title }}</span>
+                    <span class="s">{{ [c.handle, followers(c.followers)].filter(Boolean).join(" · ") }}</span>
+                    <span v-if="c.description" class="d">{{ c.description }}</span>
+                  </span>
+                </button>
+              </div>
+            </div>
+            <div v-if="form.youtube" class="linked">
+              <img v-if="form.youtube.thumbnail" :src="form.youtube.thumbnail" class="avatar sm" alt="" referrerpolicy="no-referrer">
+              <a :href="form.youtube.url" target="_blank" rel="noopener" class="l">{{ form.youtube.title }}</a>
+              <span class="muted">{{ [form.youtube.handle, followers(form.youtube.followers)].filter(Boolean).join(" · ") }}</span>
+              <button class="x-btn" :title="t('settings.unlink')" @click="form.youtube = null">×</button>
             </div>
           </div>
-          <div v-if="form.youtube" class="linked">
-            <img v-if="form.youtube.thumbnail" :src="form.youtube.thumbnail" class="avatar sm" alt="" referrerpolicy="no-referrer">
-            <a :href="form.youtube.url" target="_blank" rel="noopener" class="l">{{ form.youtube.title }}</a>
-            <span class="muted">{{ [form.youtube.handle, followers(form.youtube.followers)].filter(Boolean).join(" · ") }}</span>
-            <button class="x-btn" :title="t('settings.unlink')" @click="form.youtube = null">×</button>
-          </div>
-        </div>
 
-        <div class="field">
-          <label>{{ t("settings.channelLanguage") }}</label>
-          <span class="hint">{{ t("settings.channelLanguageHint") }}</span>
-          <Seg v-model="form.language" :options="channelLanguages" />
-        </div>
-
-        <div class="field">
-          <label>{{ t("settings.analysis") }}</label>
-          <span class="hint">{{ t("settings.analysisHint") }}</span>
-          <div v-if="ytwatch && !ytwatch.connected" class="row">
-            <input v-model="token" type="password" class="input" :placeholder="t('settings.tokenPlaceholder')" @keydown.enter="connect">
-            <button class="btn lg" :disabled="!token.trim()" @click="connect">{{ t("settings.connectYtwatch") }}</button>
+          <div class="field">
+            <label>{{ t("settings.channelLanguage") }}</label>
+            <span class="hint">{{ t("settings.channelLanguageHint") }}</span>
+            <Seg v-model="form.language" :options="channelLanguages" />
           </div>
-          <div v-else-if="ytwatch" class="analysis">
-            <div class="row center">
-              <span class="muted small">{{ t("settings.ytwatchConnected") }} · <span class="mono">{{ ytwatch.token_hint }}</span></span>
-              <button class="link-btn small" @click="disconnect">{{ t("settings.disconnect") }}</button>
-              <span class="spacer" />
-              <template v-if="running">
-                <span class="spinner" />
-                <span class="muted small">{{ analysis?.activity ? t("settings.activity", { activity: analysis.activity }) : t("settings.waitingWorker") }}</span>
-                <button class="btn" @click="cancelAnalysis">{{ t("common.cancel") }}</button>
-              </template>
-              <button v-else class="btn lg dark" @click="analyse">{{ analysis?.status === "done" ? t("settings.rerunAnalysis") : t("settings.analyse") }}</button>
+
+          <div class="field">
+            <label>{{ t("settings.analysis") }}</label>
+            <span class="hint">{{ t("settings.analysisHint") }}</span>
+            <div v-if="ytwatch && !ytwatch.connected" class="row">
+              <input v-model="token" type="password" class="input" :placeholder="t('settings.tokenPlaceholder')" @keydown.enter="connect">
+              <button class="btn lg" :disabled="!token.trim()" @click="connect">{{ t("settings.connectYtwatch") }}</button>
             </div>
-            <div v-if="analysis?.status === 'error'" class="state err">{{ t("settings.analysisFailed", { error: analysis.error }) }}</div>
-            <div v-if="!form.youtube && !running" class="state">{{ t("settings.pickChannelFirst") }}</div>
-            <div v-if="proposal('message')" class="proposal">
-              <div class="p-head"><span class="eyebrow">{{ t("settings.takeaway") }}</span>
-                <button class="x-btn" :title="t('settings.hide')" @click="settle('message', false)">×</button></div>
-              <p>{{ proposal("message") }}</p>
+            <div v-else-if="ytwatch" class="analysis">
+              <div class="row center">
+                <span class="muted small">{{ t("settings.ytwatchConnected") }} · <span class="mono">{{ ytwatch.token_hint }}</span></span>
+                <button class="link-btn small" @click="disconnect">{{ t("settings.disconnect") }}</button>
+                <span class="spacer" />
+                <template v-if="running">
+                  <span class="spinner" />
+                  <span class="muted small">{{ analysis?.activity ? t("settings.activity", { activity: analysis.activity }) : t("settings.waitingWorker") }}</span>
+                  <button class="btn" @click="cancelAnalysis">{{ t("common.cancel") }}</button>
+                </template>
+                <button v-else class="btn lg dark" @click="analyse">{{ analysis?.status === "done" ? t("settings.rerunAnalysis") : t("settings.analyse") }}</button>
+              </div>
+              <div v-if="analysis?.status === 'error'" class="state err">{{ t("settings.analysisFailed", { error: analysis.error }) }}</div>
+              <div v-if="!form.youtube && !running" class="state">{{ t("settings.pickChannelFirst") }}</div>
+              <div v-if="proposal('message')" class="proposal">
+                <div class="p-head"><span class="eyebrow">{{ t("settings.takeaway") }}</span>
+                  <button class="x-btn" :title="t('settings.hide')" @click="settle('message', false)">×</button></div>
+                <p>{{ proposal("message") }}</p>
+              </div>
             </div>
           </div>
-        </div>
 
+
+          <div v-for="f in FIELDS" :key="f.key" class="field">
+            <label>{{ t(`settings.fields.${f.key}.label`) }}</label>
+            <span class="hint">{{ t(`settings.fields.${f.key}.hint`) }}</span>
+            <textarea v-model="form[f.key]" class="textarea" :rows="f.rows ?? 3" :placeholder="t(`settings.fields.${f.key}.placeholder`)" />
+            <div v-if="proposal(f.key)" class="proposal">
+              <div class="p-head">
+                <span class="eyebrow">{{ t("settings.proposal") }}</span>
+                <span class="spacer" />
+                <button class="btn" @click="settle(f.key, false)">{{ t("common.dismiss") }}</button>
+                <button class="btn dark" @click="settle(f.key, true)">{{ form[f.key].trim() ? t("settings.replace") : t("settings.use") }}</button>
+              </div>
+              <p>{{ proposal(f.key) }}</p>
+            </div>
+          </div>
+
+          <div class="submit">
+            <button class="btn xl" :class="dirty ? 'red' : 'off'" :disabled="busy || !dirty" @click="save">
+              {{ busy ? t("common.saving") : dirty ? t("common.save") : t("settings.savedState") }}
+            </button>
+          </div>
+        </template>
+      </template>
+
+      <template v-else-if="tab === 'services'">
         <div class="field">
           <label>{{ t("settings.account") }}</label>
           <span class="hint">{{ t("settings.accountHint") }}</span>
@@ -386,26 +422,13 @@ function followers(n: number | null): string {
             <span v-if="transcription.engine !== engine" class="state err">{{ t("settings.engineInactive") }}</span>
           </template>
         </div>
+      </template>
 
-        <div v-for="f in FIELDS" :key="f.key" class="field">
-          <label>{{ t(`settings.fields.${f.key}.label`) }}</label>
-          <span class="hint">{{ t(`settings.fields.${f.key}.hint`) }}</span>
-          <textarea v-model="form[f.key]" class="textarea" :rows="f.rows ?? 3" :placeholder="t(`settings.fields.${f.key}.placeholder`)" />
-          <div v-if="proposal(f.key)" class="proposal">
-            <div class="p-head">
-              <span class="eyebrow">{{ t("settings.proposal") }}</span>
-              <span class="spacer" />
-              <button class="btn" @click="settle(f.key, false)">{{ t("common.dismiss") }}</button>
-              <button class="btn dark" @click="settle(f.key, true)">{{ form[f.key].trim() ? t("settings.replace") : t("settings.use") }}</button>
-            </div>
-            <p>{{ proposal(f.key) }}</p>
-          </div>
-        </div>
-
-        <div class="submit">
-          <button class="btn xl" :class="dirty ? 'red' : 'off'" :disabled="busy || !dirty" @click="save">
-            {{ busy ? t("common.saving") : dirty ? t("common.save") : t("settings.savedState") }}
-          </button>
+      <template v-else>
+        <div class="field">
+          <label>{{ t("settings.language") }}</label>
+          <span class="hint">{{ t("settings.languageHint") }}</span>
+          <Seg v-model="uiLocale" :options="localeOptions" />
         </div>
       </template>
     </div>
@@ -415,7 +438,9 @@ function followers(n: number | null): string {
 <style scoped>
 .page { flex: 1; overflow: auto; padding: 32px 40px 56px; }
 .form { max-width: 720px; display: flex; flex-direction: column; gap: 26px; }
-.intro { display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.5; }
+.intro { font-size: 14px; line-height: 1.5; margin-top: -8px; }
+.tabs { margin-top: -12px; }
+.tabs .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); align-self: center; }
 .h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.015em; }
 .field { display: flex; flex-direction: column; gap: 8px; }
 .field label { font-size: 13.5px; font-weight: 600; }
