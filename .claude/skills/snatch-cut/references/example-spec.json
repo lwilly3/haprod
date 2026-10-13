@@ -1,0 +1,30 @@
+{
+  "source": "in.mp4", "output": "test_render.mp4", "fps": 30, "tail_black": 15,
+  "master_gain_db": 16, "limit": 0.79,
+  "shots": [
+    {"in": 14, "out": 40, "zoom": {"at": 0, "dur": 26, "amount": 0.08, "anchor": [0.5, 0.5]}, "keep_audio": true},
+    {"in": 64, "out": 82, "zoom": {"at": 10, "dur": 3, "amount": 0.15, "anchor": [0.5, 0.4]}, "keep_audio": true},
+    {"in": 122, "out": 146, "zoom": {"at": 12, "dur": 3, "amount": 0.15, "anchor": [0.6, 0.4]}, "keep_audio": true},
+    {"in": 160, "out": 178, "zoom": {"at": 8, "dur": 3, "amount": 0.20, "anchor": [0.6, 0.6]}, "keep_audio": true},
+    {"in": 186, "out": 270},
+    {"in": 270, "out": 374},
+    {"in": 426, "out": 446, "zoom": {"at": 8, "dur": 3, "amount": 0.25, "anchor": [0.15, 0.85]}},
+    {"in": 477, "out": 566}
+  ],
+  "audio": [
+    {"file": "sfx/roomtone.wav", "in": 0, "out": 13.3, "at": 0, "gain_db": -28},
+    {"file": "source", "in": 6.10, "out": 12.45, "at": {"shot": 4, "frame": -3}, "gain_db": 10,
+     "filters": "acompressor=threshold=-30dB:ratio=3:attack=5:release=120", "fade_out": 0.1},
+    {"file": "source", "in": 15.90, "out": 18.85, "at": {"shot": 7}, "filters": "afftdn=nr=25:nf=-55",
+     "boost": {"windows": [[0.15, 0.8], [1.25, 1.7]], "in_db": 22, "out_db": 3}},
+    {"file": "sfx/door.wav", "in": 0.15, "out": 1.25, "at": {"shot": 0}, "gain_db": -14},
+    {"file": "sfx/whoosh-2.wav", "in": 0, "out": 0.66, "at": {"shot": 1}, "sync": 0.26, "gain_db": -24},
+    {"file": "sfx/switch.wav", "in": 0, "out": 0.5, "at": {"shot": 1, "frame": 10}, "gain_db": -11},
+    {"file": "sfx/whoosh-2.wav", "in": 0, "out": 0.66, "at": {"shot": 2}, "sync": 0.26, "gain_db": -24},
+    {"file": "sfx/lamp.wav", "in": 0, "out": 0.9, "at": {"shot": 2, "frame": 12}, "sync": 0.195, "gain_db": -9},
+    {"file": "sfx/whoosh-2.wav", "in": 0, "out": 0.66, "at": {"shot": 3}, "sync": 0.26, "gain_db": -24},
+    {"file": "sfx/mouse.wav", "in": 0, "out": 0.2, "at": {"shot": 3, "frame": 8}, "gain_db": -11},
+    {"file": "sfx/hit.wav", "in": 0, "out": 0.8, "at": {"shot": 3, "frame": 8}, "gain_db": -17},
+    {"file": "sfx/mouse.wav", "in": 0, "out": 0.2, "at": {"shot": 6, "frame": 8}, "gain_db": -11}
+  ]
+}
