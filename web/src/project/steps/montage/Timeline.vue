@@ -12,6 +12,7 @@
  */
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { useAltWheel } from "../../../lib/composables";
 import { fxName } from "../../../lib/transitions";
 import { MEDIA_DRAG, trimAroll } from "./ops";
 import {
@@ -106,9 +107,11 @@ function fit() {
 }
 defineExpose({ zoomBy, fit });
 
+const altWheel = useAltWheel();
 function onWheel(e: WheelEvent) {
   // la molette seule fait défiler la page (pour atteindre les pistes du bas)
   if (e.altKey) {
+    altWheel();
     e.preventDefault();
     zoomBy(Math.pow(1.0015, -e.deltaY));
   } else if ((e.ctrlKey || e.metaKey) && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {

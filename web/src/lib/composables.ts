@@ -25,3 +25,19 @@ export function usePolling(tick: () => Promise<number>) {
   onMounted(loop);
   onUnmounted(() => { stopped = true; clearTimeout(timer); });
 }
+
+/**
+ * Sous Windows, relâcher Alt donne le focus au menu de Chrome (et Espace l'ouvre ensuite). Après un
+ * Alt+molette, on annule ce relâchement : appeler la fonction renvoyée à chaque molette avec Alt.
+ */
+export function useAltWheel(): () => void {
+  let used = false;
+  const onKeyUp = (e: KeyboardEvent) => {
+    if (e.key !== "Alt") return;
+    if (used) e.preventDefault();
+    used = false;
+  };
+  onMounted(() => window.addEventListener("keyup", onKeyUp));
+  onUnmounted(() => window.removeEventListener("keyup", onKeyUp));
+  return () => { used = true; };
+}
