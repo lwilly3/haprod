@@ -3,7 +3,7 @@
  * Upload : le serveur donne les valeurs par défaut, l'envoi et le rendu ; ce qui est saisi ici va dans
  * project.publish et l'emporte aussitôt, sans attendre la relecture.
  */
-import { computed, ref, type Ref } from "vue";
+import { computed, ref, toRaw, type Ref } from "vue";
 import { api, post } from "../../../lib/api";
 import { usePolling, usePref } from "../../../lib/composables";
 import { t } from "../../../i18n";
@@ -91,7 +91,8 @@ export function usePublish(project: Ref<Project>) {
   }));
 
   function write(change: (p: Required<PublishData>) => void, delay = 500): void {
-    const next = structuredClone({ videos: {}, pub: {}, ...saved() }) as Required<PublishData>;
+    // les objets réactifs ne se clonent pas : on clone l'objet brut
+    const next = structuredClone({ videos: {}, pub: {}, ...toRaw(saved()) }) as Required<PublishData>;
     change(next);
     update({ publish: next }, delay);
   }
