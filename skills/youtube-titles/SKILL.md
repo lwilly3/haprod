@@ -1,6 +1,6 @@
 ---
 name: youtube-titles
-description: Generate 30 YouTube titles that earn clicks without lying — 20 built on three structural formulas (bold statement, how-to, time frame) with psychological levers, plus 10 free titles across proven click patterns (curiosity gap, outcome, contrarian, numbers, comparison, story, how-to). Every title is built from the concrete facts of the video and comes with a rationale. Use when the user wants YouTube titles, title ideas, or title variants to A/B test.
+description: Generate 30 YouTube titles that earn clicks without lying — each one pulling on fear, desire or curiosity, ideally two of them — 20 built on three structural formulas (bold statement, how-to, time frame) with psychological levers, plus 10 free titles across proven click patterns (curiosity gap, outcome, contrarian, numbers, comparison, story, how-to, mistake). Every title is built from the concrete facts of the video and comes with a rationale. Use when the user wants YouTube titles, title ideas, or title variants to A/B test.
 ---
 
 # YouTube Title Generator
@@ -12,6 +12,36 @@ If a voice skill is installed, apply it. If not, pick up the user's natural voic
 You generate YouTube titles that earn clicks without resorting to lies. Every title is built on the **click equation: curiosity + relevance + credibility**. A title needs all three — curiosity alone is clickbait, relevance alone is boring, credibility alone is forgettable.
 
 You produce a wide range (30 titles), from safe to polarizing, so the author can see several kinds of promises before choosing.
+
+## The Three Triggers
+
+Every click comes from one of three drives. Each title pulls on at least one; the strongest stack two, sometimes all three.
+
+### Fear
+The viewer worries they're missing something, or already doing something wrong.
+- **Start from the audience's real worry**: falling behind, wasting months on the wrong skill, the "good practice" that secretly hurts them.
+- **Flip tips into mistakes**: "5 Ways to Write Better Prompts" → "5 Prompt Mistakes Wrecking Your Output".
+- **Invert a proven format**: "How to Ship Faster" → "The Fastest Way to Wreck Your Codebase".
+- **Tease the danger, don't name it**: "The Setting That Leaks Your API Keys" makes the viewer check; naming the setting answers the question.
+
+Only a fear the audience already has, and one the video actually addresses. Don't overdo it: one worry per title, no doom.
+
+### Desire
+The title promises a transformation the viewer wants.
+- **Sell the result, not the process**: the deployed app, the hours saved, the job — not the tutorial steps.
+- The video must deliver the full result it promises, or the click turns into a thumbs-down.
+
+### Curiosity
+The title opens a question only the video can answer.
+- **Ask what nobody thought to ask**: "How Much Does a Claude Code Session Really Cost?"
+- **Build in contrast**: a $5 setup next to a $500 one, 1 prompt next to 100.
+- **Go novel**: something almost nobody would try ("I Let AI Run My Side Project for 30 Days").
+- **Use "actually" or "really"**: "Do AI Agents Actually Save Time?" implies the answer is surprising.
+
+### Stacking
+- Desire + curiosity: "Get Your First 1,000 Users (Nobody Teaches This Part)"
+- Fear + curiosity: "The Copilot Habit Slowing You Down (Without You Noticing)"
+- Fear + desire: "Stop Learning New Frameworks (Learn This Instead)"
 
 ## What You Need
 
@@ -33,6 +63,7 @@ Before writing anything, list what the video actually contains.
 | Transformation | What changes for the viewer: skills, career, income, time, way of working? |
 | Big idea | The one claim from the video people would repeat to a friend |
 | Audience | Who gains, and what they want or fear |
+| Risk | The mistake, waste or danger the video helps the viewer avoid — only if it really does |
 | Contrast | Where a modest effort leads to an outsized result, or where the advice goes against the grain |
 
 **The facts**
@@ -67,7 +98,7 @@ A concrete amount of time or effort, then where to put it.
 - "2 Hours a Day for 6 Months (The Skills Worth Learning Now)"
 - "From Screenshot to Working Page in 18 Minutes (Full Build)"
 
-Spread these levers across the 20 titles, each in several titles:
+Across the 20 titles, all three triggers appear several times each, and at least half the titles stack two. Spread these levers too, each in several titles:
 
 | Lever | How | Wording |
 | --- | --- | --- |
@@ -75,6 +106,7 @@ Spread these levers across the 20 titles, each in several titles:
 | Transformation | A visible change in the viewer | "change your career", "you won't work the same way" |
 | Insider knowledge | What most people miss | "what nobody tells you", "most people ignore this" |
 | Status | Getting ahead | "ahead of 99 % of developers", "irreplaceable" |
+| Mistake / risk | What the viewer may be getting wrong | "the mistake killing your…", "before it's too late", "you're doing it wrong" |
 
 And these contrasts, in several titles:
 - **Small input, big output:** "2 hours a day" → "a new career", "one screenshot" → "a full app".
@@ -83,7 +115,7 @@ And these contrasts, in several titles:
 
 ## Step 3: 10 Free Titles
 
-Ten more that leave the formulas aside: the most clickable titles you can find for this video, noticeably different from the first twenty. Draw on these patterns, at least five of them:
+Ten more that leave the formulas aside: the most clickable titles you can find for this video, noticeably different from the first twenty. Draw on these patterns, at least five of them, and cover all three triggers:
 
 ### 1. Curiosity Gap
 Create an information gap the viewer needs to close. Say enough to intrigue, not enough to satisfy.
@@ -119,6 +151,11 @@ Personal narrative hooks. The viewer clicks to hear what happened.
 Direct value promise. Works best when the outcome is specific.
 - "How to [Achieve Specific Result] (Step by Step)"
 - "The Complete Guide to [X] for [Audience]"
+
+### 8. Mistake / Warning
+The fear trigger on its own: what the viewer is getting wrong, without saying exactly what.
+- "[Number] [X] Mistakes Killing Your [Outcome]"
+- "You're Using [Tool] Wrong"
 
 For tech, tutorial and tool videos, the content type points to the strongest pattern:
 
@@ -158,12 +195,13 @@ Present each title with:
 ```
 **[Title]**
 Pattern: [which formula or pattern]
-Why it works: [one sentence — what makes this clickable for the target audience]
+Triggers: [fear, desire and/or curiosity]
+Why it works: [one sentence — which trigger it pulls on and why this audience feels it]
 ```
 
 ## After the List
 
-Recommend your **top 3 picks** and explain why. Pick three titles that make three different promises (for example one statement, one how-to, one free title), so an A/B test tells the author which kind of promise their audience prefers. Consider:
+Recommend your **top 3 picks** and explain why. Pick three titles led by three different triggers (one fear, one desire, one curiosity), so an A/B test tells the author which drive moves their audience. Within that, prefer titles that stack a second trigger. Consider:
 - Which ones have the strongest curiosity gap?
 - Which ones most clearly signal value to the target audience?
 - Which ones would stand out in a feed full of similar content?
@@ -173,6 +211,7 @@ If the user has existing videos (check CLAUDE.md or ask), factor in what title s
 ## Rules
 
 - **High conviction, never a lie.** Be bold, take sides, be polarizing when it fits — but every title is a promise the video actually keeps.
+- **Real fears only.** A fear title names a worry the audience already has and the video resolves; never invent a threat to scare people into clicking.
 - **30 distinct titles.** No two titles that only differ by a word; no formula twice in a row.
 - **The core idea stays.** Every title is about this video, not a more clickable neighbouring topic.
 - Every title under 60 characters when possible (displays fully on mobile), 70 at most

@@ -114,7 +114,8 @@ TITLES_SCHEMA = {
                 "pattern": {"type": "string",
                             "description": "Le motif ou la formule du skill qu'il applique, en deux ou "
                                            "trois mots."},
-                "why": {"type": "string", "description": "Une phrase : pourquoi ce public cliquerait."},
+                "why": {"type": "string", "description": "Une phrase : le ou les déclencheurs qu'il active (peur, "
+                                                         "désir, curiosité) et pourquoi ce public cliquerait."},
                 "top": {"type": "boolean", "description": f"Un de tes {MAX_TITLES} titres conseillés."},
             },
         }},
