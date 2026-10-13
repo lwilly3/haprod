@@ -31,7 +31,7 @@ const FIELDS: { key: Exclude<Key, "name">; rows?: number }[] = [
 const { t, locale } = useI18n();
 
 /** L'onglet est dans l'URL (/settings/services…) : on peut y renvoyer depuis une autre page. */
-const TABS = ["channel", "services", "interface"] as const;
+const TABS = ["channel", "publish", "services", "interface"] as const;
 type Tab = (typeof TABS)[number];
 const route = useRoute();
 const router = useRouter();
@@ -128,6 +128,35 @@ function pick(c: Found) {
 function closeSoon() {
   // laisse le temps au clic sur un résultat d'arriver
   setTimeout(() => (open.value = false), 150);
+}
+
+// --- Description par défaut : le bloc commun à toutes les descriptions (liens, outils, réseaux) ---
+
+const publish = reactive({ description: "" });
+const publishSaved = ref<string | null>(null);
+const publishBusy = ref(false);
+const publishDirty = computed(() => publishSaved.value !== null && publish.description !== publishSaved.value);
+
+onMounted(async () => {
+  try {
+    Object.assign(publish, await api<typeof publish>("/api/settings/publish"));
+    publishSaved.value = publish.description;
+  } catch (e) {
+    toast((e as Error).message, true);
+  }
+});
+
+async function savePublish() {
+  publishBusy.value = true;
+  try {
+    Object.assign(publish, await putJson<typeof publish>("/api/settings/publish", publish));
+    publishSaved.value = publish.description;
+    toast(t("settings.saved"));
+  } catch (e) {
+    toast((e as Error).message, true);
+  } finally {
+    publishBusy.value = false;
+  }
 }
 
 // --- Compte YouTube : publication par l'API (étape Upload) ---
@@ -285,7 +314,7 @@ function followers(n: number | null): string {
       <span class="h1">{{ t("settings.title") }}</span>
       <div class="tabs">
         <button v-for="k in TABS" :key="k" :class="{ on: k === tab }" @click="selectTab(k)">
-          {{ t(`settings.tabs.${k}`) }}<span v-if="k === 'channel' && dirty" class="dot" :title="t('settings.unsaved')" />
+          {{ t(`settings.tabs.${k}`) }}<span v-if="k === 'channel' ? dirty : k === 'publish' && publishDirty" class="dot" :title="t('settings.unsaved')" />
         </button>
       </div>
 
@@ -379,6 +408,19 @@ function followers(n: number | null): string {
             </button>
           </div>
         </template>
+      </template>
+
+      <template v-else-if="tab === 'publish'">
+        <div v-if="publishSaved !== null" class="field">
+          <label>{{ t("settings.defaultDescription") }}</label>
+          <span class="hint">{{ t("settings.defaultDescriptionHint") }}</span>
+          <textarea v-model="publish.description" class="textarea" rows="14" :placeholder="t('settings.defaultDescriptionPlaceholder')" />
+        </div>
+        <div v-if="publishSaved !== null" class="submit">
+          <button class="btn xl" :class="publishDirty ? 'red' : 'off'" :disabled="publishBusy || !publishDirty" @click="savePublish">
+            {{ publishBusy ? t("common.saving") : publishDirty ? t("common.save") : t("settings.savedState") }}
+          </button>
+        </div>
       </template>
 
       <template v-else-if="tab === 'services'">

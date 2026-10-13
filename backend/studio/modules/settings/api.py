@@ -1,6 +1,7 @@
 """
 API des reglages : le profil de la chaine, la recherche de la chaine sur YouTube, la
-connexion a ytwatch, l'analyse de la chaine par Claude et le moteur de transcription.
+connexion a ytwatch, l'analyse de la chaine par Claude, la description par defaut des
+videos et le moteur de transcription.
 """
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -29,6 +30,16 @@ def search_channels(q: str):
         return service.search_channels(q)
     except Exception as e:  # noqa: BLE001  yt-dlp leve des erreurs de toutes sortes (reseau, YouTube)
         raise HTTPException(502, f"recherche YouTube impossible : {e}") from e
+
+
+@router.get("/publish")
+def get_publish():
+    return service.publish_settings()
+
+
+@router.put("/publish")
+def put_publish(values: dict):
+    return service.save_publish_settings(values)
 
 
 class Ytwatch(BaseModel):

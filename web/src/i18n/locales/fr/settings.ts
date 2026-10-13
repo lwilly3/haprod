@@ -1,6 +1,9 @@
 export default {
-  tabs: { channel: "Chaîne", services: "Services", interface: "Interface" },
+  tabs: { channel: "Chaîne", publish: "Publication", services: "Services", interface: "Interface" },
   unsaved: "Modifications non enregistrées",
+  defaultDescription: "Description par défaut",
+  defaultDescriptionHint: "Le bloc commun à toutes tes vidéos (liens, outils, réseaux…) : il remplit la description de chaque nouvelle vidéo, longue ou short. Tu écris au-dessus, et les chapitres s’insèrent juste avant lui.",
+  defaultDescriptionPlaceholder: "Ex. :\nRessources utiles\n--------------------\nMon blog : https://…\n\nOù me trouver ?\nBluesky : https://…",
   title: "Réglages",
   intro: "Le profil de ta chaîne est donné à Daryl à chaque étape d’écriture (angles, titres, script, assistant), comme toile de fond : le brief, l’angle retenu et la méthode du skill passent avant. Tous les champs sont facultatifs.",
   language: "Langue de l’interface",

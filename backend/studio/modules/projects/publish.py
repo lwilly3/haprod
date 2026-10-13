@@ -13,7 +13,8 @@ project.json, "publish" (modifié par l'interface) :
     }
 
 Un champ absent prend sa valeur par défaut (titres et vignettes retenus, titre et accroche du
-short…). L'envoi de chaque vidéo est un job, dans project["jobs"]["upload:<vidéo>"].
+short, description par défaut des réglages…). L'envoi de chaque vidéo est un job, dans
+project["jobs"]["upload:<vidéo>"].
 
 L'API ne sait pas créer le test A/B de YouTube : la variante A est envoyée, B et C se posent
 dans YouTube Studio. Les shorts n'ont pas de vignette personnalisée par l'API.
@@ -26,7 +27,7 @@ from pathlib import Path
 from ...core import jobs, youtube_api
 from ...core.system import tool
 from ...core.tasks import TaskContext
-from ..settings.service import language
+from ..settings.service import default_description, language
 from . import montage, render, service
 
 KIND = "project_upload"
@@ -72,12 +73,17 @@ def _long_defaults(project: dict) -> dict:
     titles = [t["t"] for t in project["titles"] if t.get("pick")]
     others = [t for t in picked if first is None or t["id"] != first["id"]][:MAX_VARIANTS - 1]
     return {"title": (first or {}).get("title") or (titles[0] if titles else project["title"]),
-            "thumb": first["id"] if first else None, "desc": "", "tags": [],
+            "thumb": first["id"] if first else None, "desc": _with_footer(""), "tags": [],
             "ab_on": bool(others), "ab": [{"thumb": t["id"], "title": t.get("title") or ""} for t in others]}
 
 
+def _with_footer(text: str) -> str:
+    """Le texte, suivi de la description par défaut des réglages (le bloc commun à toutes les vidéos)."""
+    return "\n\n".join(x for x in (text.strip(), default_description()) if x)
+
+
 def _short_defaults(short: dict) -> dict:
-    return {"title": short["title"], "desc": f"{short['hook']}\n\n#shorts".strip(), "tags": ["shorts"]}
+    return {"title": short["title"], "desc": _with_footer(f"{short['hook']}\n\n#shorts"), "tags": ["shorts"]}
 
 
 def _check_title(title: str) -> bool:

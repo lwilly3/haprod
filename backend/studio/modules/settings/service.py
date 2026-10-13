@@ -245,6 +245,29 @@ def _write_transcription(data: dict) -> None:
     TRANSCRIPTION_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
+# --- Publication : le bloc commun a toutes les descriptions --------------------------
+# Les liens, les outils, les reseaux : propose par defaut sous chaque description, a
+# completer au-dessus (accroche) ou entre les deux (chapitres). Hors du profil : Claude n'en a pas besoin.
+
+PUBLISH_FILE = DATA_DIR / "publish.json"
+
+
+def publish_settings() -> dict:
+    data = json.loads(PUBLISH_FILE.read_text(encoding="utf-8")) if PUBLISH_FILE.is_file() else {}
+    return {"description": str(data.get("description") or "")}
+
+
+def save_publish_settings(values: dict) -> dict:
+    data = {"description": str(values.get("description") or "").strip()}
+    PUBLISH_FILE.parent.mkdir(parents=True, exist_ok=True)
+    PUBLISH_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return data
+
+
+def default_description() -> str:
+    return publish_settings()["description"]
+
+
 # --- Analyse de la chaine -----------------------------------------------------------
 # Un job : Claude lit les stats (MCP ytwatch) et quelques transcriptions, et propose une
 # version de chaque champ. Rien n'est ecrit dans le profil : l'auteur accepte champ par champ.
