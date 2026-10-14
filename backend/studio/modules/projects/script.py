@@ -160,12 +160,30 @@ def guess_type(text: str) -> str:
 
 def cue_plan(text: str) -> tuple[str, str]:
     """(type, description) d'une indication « Type — description » ; sans type reconnu, on le devine."""
+    alone = next((t for t in PLAN_TYPES if t.lower() == text.strip().lower()), None)
+    if alone:
+        return alone, ""
     parts = _CUE_SPLIT.split(text, maxsplit=1)
     if len(parts) == 2:
         known = next((t for t in PLAN_TYPES if t.lower() == parts[0].strip().lower()), None)
         if known:
             return known, parts[1].strip()
     return guess_type(text), text.strip()
+
+
+def _split_cues(md: str) -> tuple[list[str], str]:
+    """Les indications [VISUEL : …] d'un bloc (le bloc entier, ou des lignes collées au texte) et le texte restant."""
+    m = _CUE.match(md.strip())
+    if m:
+        return [m.group(1)], ""
+    cues, lines = [], []
+    for line in md.split("\n"):
+        m = _CUE.match(line.strip())
+        if m:
+            cues.append(m.group(1))
+        else:
+            lines.append(line)
+    return cues, "\n".join(lines).strip("\n")
 
 
 def _extract_cues(data: dict) -> bool:
@@ -179,11 +197,13 @@ def _extract_cues(data: dict) -> bool:
         pending.clear()
 
     for b in data["blocks"]:
-        m = _CUE.match(b["md"].strip())
-        if m:
-            pending.append(" ".join(m.group(1).split()))
+        cues, md = _split_cues(b["md"])
+        if cues:
+            pending += [" ".join(c.split()) for c in cues]
             found = True
-            continue
+            if not md.strip():
+                continue
+            b = {**b, "md": md}
         if pending and not b["md"].lstrip().startswith("#"):
             attach(b["id"])
         blocks.append(b)
