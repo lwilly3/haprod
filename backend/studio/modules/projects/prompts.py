@@ -314,7 +314,8 @@ les sources de {DOCUMENTATION_FILE} (ouvre celles que leur commentaire signale c
 
 # Format de {SCRIPT_FILE}
 - En tête : `# Titre de travail`, puis « Durée visée » et le nombre de mots (~150 mots par \
-minute), puis « Sources (vérifiées le JJ/MM/AAAA) » : une ligne par source, avec l'URL.
+minute). Pas de liste de sources dans le script : elles vivent dans {DOCUMENTATION_FILE}, et \
+celles que tu ajoutes passent par la sortie structurée.
 - Puis les sections, chacune avec un titre de niveau 2 au format exact \
 `## Libellé — Titre` : `## Accroche — …`, `## Introduction — …`, `## Partie 1 — …`, …, \
 `## Conclusion — …`. Le libellé est court et générique, le titre dit de quoi parle la section.
@@ -322,8 +323,10 @@ minute), puis « Sources (vérifiées le JJ/MM/AAAA) » : une ligne par source, 
 Pas de listes à puces dans le texte dit.
 - Les intentions de plan sur leur propre ligne, juste AVANT le paragraphe qu'elles illustrent : \
 `[VISUEL : Type — ce qu'on voit]`, Type parmi {", ".join(PLAN_TYPES)}. Elles deviennent les \
-plans du paragraphe (l'auteur les voit sous le texte). Le gras pour les mots sur lesquels insister.
-- Chaque chiffre, date, citation ou étude vient d'une source listée en tête. Ce que tu n'as \
+plans du paragraphe et quittent le texte (l'auteur les voit sous le texte). Le gras pour les \
+mots sur lesquels insister.
+- Chaque chiffre, date, citation ou étude vient d'une source de {DOCUMENTATION_FILE} ou de celles \
+que tu renvoies. Ce que tu n'as \
 pas pu vérifier est marqué [À VÉRIFIER].
 {f"- Durée visée : {duration}." if duration else ""}
 - N'écris que {SCRIPT_FILE}. Dans la sortie structurée : un court message (ce que tu as fait, \
