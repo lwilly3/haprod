@@ -24,6 +24,8 @@ LABELS = {"elevenlabs": "ElevenLabs Scribe v2", "gladia": "Gladia Solaria"}
 TIMEOUT = 30 * 60
 POLL_EVERY = 2.0
 # ElevenLabs renvoie des codes ISO 639-3
+# connexion perdue (paquets perdus, WinError 10060) : reessayee, rien n'a encore ete envoye
+_http = httpx.Client(transport=httpx.HTTPTransport(retries=3))
 ISO3 = {"fra": "fr", "eng": "en", "spa": "es", "deu": "de", "ita": "it", "por": "pt"}
 
 Words = list[tuple[float, float, str]]
@@ -48,6 +50,10 @@ class CloudEngine:
         try:
             run = self._elevenlabs if self.provider == "elevenlabs" else self._gladia
             words, detected = run(mp3, language, check_cancel)
+        except httpx.TransportError as e:
+            # coupure reseau, pare-feu, proxy : le message brut (WinError 10060...) ne dit pas qui
+            raise RuntimeError(f"{LABELS[self.provider]} injoignable ({type(e).__name__}) : "
+                               "vérifie la connexion, ou repasse sur Whisper dans les réglages") from e
         finally:
             mp3.unlink(missing_ok=True)
         segments = group(words)
@@ -62,7 +68,7 @@ class CloudEngine:
         if language:
             data["language_code"] = language
         with audio.open("rb") as f:
-            r = httpx.post(ELEVENLABS_URL, headers={"xi-api-key": self.key}, data=data,
+            r = _http.post(ELEVENLABS_URL, headers={"xi-api-key": self.key}, data=data,
                            files={"file": (audio.name, f, "audio/mpeg")}, timeout=TIMEOUT)
         _raise(r, "ElevenLabs")
         raw = r.json()
@@ -73,18 +79,18 @@ class CloudEngine:
     def _gladia(self, audio: Path, language: str | None, check_cancel) -> tuple[Words, str | None]:
         h = {"x-gladia-key": self.key}
         with audio.open("rb") as f:
-            up = httpx.post(f"{GLADIA_URL}/upload", headers=h, files={"audio": (audio.name, f, "audio/mpeg")},
+            up = _http.post(f"{GLADIA_URL}/upload", headers=h, files={"audio": (audio.name, f, "audio/mpeg")},
                             timeout=TIMEOUT)
         _raise(up, "Gladia")
         body: dict = {"audio_url": up.json()["audio_url"]}
         if language:
             body["language_config"] = {"languages": [language]}
-        job = httpx.post(f"{GLADIA_URL}/pre-recorded", headers=h, json=body, timeout=60)
+        job = _http.post(f"{GLADIA_URL}/pre-recorded", headers=h, json=body, timeout=60)
         _raise(job, "Gladia")
         url = f"{GLADIA_URL}/pre-recorded/{job.json()['id']}"
         while True:
             check_cancel()
-            r = httpx.get(url, headers=h, timeout=60)
+            r = _http.get(url, headers=h, timeout=60)
             _raise(r, "Gladia")
             raw = r.json()
             if raw.get("status") == "done":
