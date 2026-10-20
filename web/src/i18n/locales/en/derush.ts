@@ -22,6 +22,7 @@ export default {
   transcribing: "Transcribing · {p}%",
   intro: "The clips play back to back in the timeline. Generate the transcript to show the text and spot gaps and bad takes.",
   generate: "Generate transcript",
+  transcriptFailed: "The last transcription failed: {e}",
   rendering: "Rendering {name} · {p}%",
   renderFailed: "Render failed",
   cutsChanged: " · cuts changed since",

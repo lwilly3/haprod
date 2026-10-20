@@ -29,7 +29,7 @@ const router = useRouter();
 const project = computed(() => store.project!);
 const base = computed(() => `/api/projects/${project.value.id}`);
 const derush = useDerush(project);
-const { analysis, ready, segsByRush, clips, flat, kept, transcribing, progress } = derush;
+const { analysis, ready, segsByRush, clips, flat, kept, transcribing, progress, transcriptError } = derush;
 
 /** Noms et durées des rushes et des timelines (leurs ids ne se croisent pas). */
 const names = computed(() => ({
@@ -327,6 +327,7 @@ async function validate() {
             </div>
             <div v-else-if="analysis" class="state">
               <span class="state-text">{{ t("derush.intro") }}</span>
+              <span v-if="transcriptError" class="state-error">{{ t("derush.transcriptFailed", { e: transcriptError }) }}</span>
               <button class="btn dark gen" @click="act('/rushes/transcribe')">{{ t("derush.generate") }}</button>
             </div>
           </template>
@@ -440,6 +441,7 @@ async function validate() {
   padding: 20px; border: 1px dashed var(--dash); border-radius: 4px; text-align: center;
 }
 .state-text { font-size: 14px; color: var(--muted); max-width: 440px; line-height: 1.5; text-wrap: pretty; }
+.state-error { font-size: 13px; color: var(--red-ink); max-width: 440px; line-height: 1.5; overflow-wrap: anywhere; }
 .state-label { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
 .progress.bar { width: 260px; }
 .btn.gen { height: 38px; padding: 0 18px; font-size: 13.5px; }

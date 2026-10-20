@@ -152,9 +152,13 @@ export function useDerush(project: Ref<Project>) {
     const sum = all.reduce((a, r) => a + (r?.status === "done" ? 1 : r?.progress ?? 0), 0);
     return all.length ? Math.round(sum / all.length * 100) : 0;
   });
+  /** Message de la dernière transcription en échec, s'il y en a une. */
+  const transcriptError = computed(() => project.value.rushes
+    .map((r) => project.value.runtime.rush_transcripts[r.id])
+    .find((r) => r?.status === "error")?.error ?? null);
 
   return {
-    analysis, ready, segsByRush, transcribing, progress,
+    analysis, ready, segsByRush, transcribing, progress, transcriptError,
     timelines, mainId, current, clips, flat, kept, lengthOf, nameOf, canNest,
     edit, undo, redo, canUndo, canRedo, add, create, rename, drop,
   };
