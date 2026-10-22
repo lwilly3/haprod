@@ -16,6 +16,8 @@ import { toast } from "../../lib/toast";
 import { store } from "../store";
 import { usePlaylist, type Piece } from "./derush/usePlaylist";
 import BeatPanel from "./montage/BeatPanel.vue";
+import type { ImageTab } from "./montage/BeatImageModal.vue";
+import ImageSearchQueue from "./montage/ImageSearchQueue.vue";
 import Inspector from "./montage/Inspector.vue";
 import MonteurChat from "./montage/MonteurChat.vue";
 import TaskQueue from "./montage/TaskQueue.vue";
@@ -171,6 +173,19 @@ function openBeat(id: string) {
   selection.value = null;
 }
 watch(selection, (s) => { if (s) beatSel.value = null; });
+/** la popup des images du beat sélectionné, et son onglet */
+const imagePopup = ref<ImageTab | null>(null);
+watch(beatSel, () => { imagePopup.value = null; });
+/** les recherches d'images des beats encore à faire, dans la file à côté du chat */
+const imageJobs = computed(() => pending.value
+  .filter((b) => SB.view.value?.image_jobs?.[b.id])
+  .map((b) => ({ beat: b, job: SB.view.value!.image_jobs[b.id] })));
+/** rouvre la popup d'un beat sur sa recherche */
+async function openSearch(id: string) {
+  openBeat(id);
+  await nextTick();
+  imagePopup.value = "search";
+}
 /** un beat déplacé ou tiré sur la timeline (enregistré au lâcher) */
 function moveBeat(id: string, at: number, dur: number) {
   SB.edit((list) => { const b = list.find((x) => x.id === id); if (b) Object.assign(b, { at, dur }); }, 60_000);
@@ -191,13 +206,31 @@ function askBeat(id: string) {
   if (!b) return;
   comment(tr("editing.beat.askText", { id, tc: tcd(b.at) }));
 }
-/** le média d'un B-roll choisi depuis l'aperçu (comme au Storyboard : une image va en plein écran ou sur un côté) */
-function pickMedia(id: string, src: string) {
+/** une image tout juste importée n'est connue qu'une fois les médias relus */
+async function knowMedia(srcs: string[]) {
+  if (srcs.some((s) => !SB.view.value?.visuals.some((v) => v.src === s))) {
+    await SB.flush();
+    await SB.load();
+  }
+}
+/** le média d'un B-roll (comme au Storyboard : une image va en plein écran ou sur un côté) */
+async function pickMedia(id: string, src: string) {
+  if (src) await knowMedia([src]);
   SB.edit((list) => {
     const b = list.find((x) => x.id === id);
     if (!b) return;
     b.src = src;
     if (isImage(src) && !["full", "left", "right"].includes(b.place)) b.place = "full";
+  }, 150);
+}
+/** les images de référence d'un motion */
+async function setImages(id: string, srcs: string[]) {
+  await knowMedia(srcs);
+  SB.edit((list) => {
+    const b = list.find((x) => x.id === id);
+    if (!b) return;
+    b.images = srcs;
+    delete b.src;
   }, 150);
 }
 /** supprime un beat du storyboard depuis l'aperçu, après confirmation (sa création en file ou en cours est arrêtée) */
@@ -341,7 +374,9 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
             @pick-text="(id: string) => (selection = { item: { track: 'texts', id } })" @move-text="moveText" />
           <BeatPanel v-if="selBeat" class="insp" :beat="selBeat" :anims="anims" :visuals="SB.view.value?.visuals ?? []"
             :places="SB.view.value?.places ?? []" @change="(c, d) => changeBeat(selBeat!.id, c, d)" @create="(id: string) => createAnimations([id])"
-            @stop="(id: string) => SB.stopAnim(id)" @remove="removeBeat" @ask="askBeat" @seek="seek" @close="beatSel = null" />
+            @stop="(id: string) => SB.stopAnim(id)" @remove="removeBeat" @ask="askBeat" @seek="seek" @close="beatSel = null"
+            @image="(src: string) => pickMedia(selBeat!.id, src)" @images="(srcs: string[]) => setImages(selBeat!.id, srcs)"
+            :image-popup="imagePopup" @image-popup="(tab: ImageTab | null) => (imagePopup = tab)" />
           <Inspector v-else v-model:selection="selection" class="insp" :tl="tl" :view="view" :available="M.available.value"
             :t="t" :total="M.total.value" @edit="edit" @comment="comment" @seek="seek" @beat="addBeat"
             @insert="(m: AvailableMedia) => insertClip(m, t)" @media="M.loadAvailable()" />
@@ -404,6 +439,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
         <span class="spacer" />
         <button class="link-btn new" :disabled="!current" @click="newRequest">{{ tr("editing.chat.new") }}</button>
       </div>
+      <ImageSearchQueue v-if="imageJobs.length" :jobs="imageJobs" @open="openSearch" @stop="SB.stopSearch" @dismiss="SB.dismissSearch" />
       <TaskQueue v-if="view.tasks.length" :tasks="view.tasks" :current="current" :describe="describe"
         @open="openTask" @stop="M.stop" @close="M.close" />
       <MonteurChat ref="chat" :task="task" :usage="view.usage" :selection="selection" :describe="describe"

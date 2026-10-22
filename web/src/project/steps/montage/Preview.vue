@@ -18,7 +18,7 @@ import { fxFrame, layersAt } from "../../../lib/transitions";
 import LayerVideo from "./LayerVideo.vue";
 import { releaseMedia } from "../../../lib/media";
 import {
-  clipStarts, isImage, tcd, TEXT_BORDER, TEXT_FADE, TEXT_FONT, type AnimState, type Beat, type MontageView, type TextNote, type Timeline, type Visual,
+  clipStarts, isImage, slideImage, tcd, TEXT_BORDER, TEXT_FADE, TEXT_FONT, type AnimState, type Beat, type MontageView, type TextNote, type Timeline, type Visual,
 } from "./types";
 
 const props = defineProps<{
@@ -351,8 +351,8 @@ defineExpose({ capture });
           <RouterLink class="btn sm" :to="`/p/${route.params.pid}/ressources?add=youtube`">{{ tr("editing.storyboard.broll.goMedia") }}</RouterLink>
         </span>
       </div>
-      <div v-else-if="beat" class="slide" :class="[beat.type === 'transition' ? 'full' : beat.place, beat.type, { off: !beat.on, img: isImage(beat.src) }]">
-        <img v-if="beat.type === 'broll' && isImage(beat.src)" class="s-img" :src="mediaUrl(beat.src!)" alt="">
+      <div v-else-if="beat" class="slide" :class="[beat.type === 'transition' ? 'full' : beat.place, beat.type, { off: !beat.on, img: !!slideImage(beat) }]">
+        <img v-if="slideImage(beat)" class="s-img" :src="mediaUrl(slideImage(beat)!)" alt="">
         <button v-if="create" class="x-btn s-remove" :title="tr('editing.storyboard.remove')" @click.stop="emit('remove', beat.id)">×</button>
         <span class="s-kind mono">{{ slideKind(beat) }}</span>
         <textarea v-if="create" class="s-edit" :rows="beat.type === 'transition' || beat.place === 'full' ? 3 : 4" :value="beat.show"

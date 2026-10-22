@@ -16,6 +16,8 @@ export function useStoryboard(pid: string) {
   const chatBusy = computed(() => !!view.value?.chat.busy);
   /** des animations de beats en file ou en cours */
   const animating = computed(() => Object.values(view.value?.anim_jobs ?? {}).some((a) => a.status === "queued" || a.status === "running"));
+  /** des recherches d'images de beats en file ou en cours */
+  const searching = computed(() => Object.values(view.value?.image_jobs ?? {}).some((a) => a.status === "queued" || a.status === "running"));
 
   let timer: ReturnType<typeof setTimeout> | undefined;
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -32,7 +34,7 @@ export function useStoryboard(pid: string) {
   async function poll() {
     await load();
     if (stopped) return;
-    timer = setTimeout(poll, busy.value || chatBusy.value || animating.value ? 1500 : 8000);
+    timer = setTimeout(poll, busy.value || chatBusy.value || animating.value || searching.value ? 1500 : 8000);
   }
   poll();
   onUnmounted(() => { stopped = true; clearTimeout(timer); clearTimeout(saveTimer); });
@@ -87,6 +89,16 @@ export function useStoryboard(pid: string) {
     }
   }
 
+  /** La recherche d'images d'un beat : arrêtée, ou retirée de la file (sa discussion reste). */
+  async function stopSearch(beat: string) {
+    await post(`/api/projects/${pid}/assets/images/stop?beat=${encodeURIComponent(beat)}`).catch((e) => toast(e.message, true));
+    await load();
+  }
+  async function dismissSearch(beat: string) {
+    await post(`/api/projects/${pid}/assets/images/dismiss?beat=${encodeURIComponent(beat)}`).catch((e) => toast(e.message, true));
+    await load();
+  }
+
   async function stopAnim(beat: string) {
     view.value = await post<StoryboardView>(`${base}/animate/stop`, { beat });
   }
@@ -118,7 +130,7 @@ export function useStoryboard(pid: string) {
       const v = await putJson<StoryboardView>(base, {
         beats: board.beats.map((b) => ({
           id: b.id, type: b.type, show: b.show, kind: b.kind, place: b.place, anim: b.anim ?? "", sfx: b.sfx, on: b.on,
-          zoom: b.zoom, src: b.src, search: b.search, start: b.start, enter: b.enter ?? null, exit: b.exit ?? null,
+          zoom: b.zoom, src: b.src, images: b.images, search: b.search, start: b.start, enter: b.enter ?? null, exit: b.exit ?? null,
           at: b.at, dur: b.dur,
         })),
       });
@@ -136,7 +148,7 @@ export function useStoryboard(pid: string) {
     }
   }
 
-  return { view, busy, chatBusy, animating, run, stop, send, stopChat, animate, add, stopAnim, edit, flush, load };
+  return { view, busy, chatBusy, animating, run, stop, send, stopChat, animate, add, stopAnim, stopSearch, dismissSearch, edit, flush, load };
 }
 
 export type StoryboardState = ReturnType<typeof useStoryboard>;

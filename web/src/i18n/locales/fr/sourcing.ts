@@ -55,6 +55,7 @@ export default {
     resultsEmpty: "Les résultats apparaîtront ici.",
     addedTag: "Ajoutée",
     source: "source ↗",
+    restart: "Nouvelle recherche",
     validateN: "Valider | Valider {n} image | Valider {n} images",
   },
   youtube: {

@@ -90,11 +90,17 @@ export interface Beat {
   zoom?: { scale: number; x: number; y: number };
   /** broll : le média (vide : à trouver), la recherche toute prête, et pour une vidéo la seconde où le plan commence */
   src?: string; search?: string; start?: number;
+  /** motion : les images à intégrer à l'animation (facultatives) */
+  images?: string[];
   /** motion et broll : les transitions d'entrée et de sortie au montage */
   enter?: Fx | null; exit?: Fx | null;
 }
 const IMAGE = /\.(png|jpe?g|webp|gif|svg)$/i;
 export const isImage = (src?: string) => !!src && IMAGE.test(src);
+/** Les images d'un motion (`src` : l'ancienne forme, une seule image). */
+export const beatImages = (b: Beat): string[] => b.images ?? (b.type === "motion" && isImage(b.src) ? [b.src!] : []);
+/** L'image montrée sur la slide d'un beat : celle d'un B-roll, la première d'un motion. */
+export const slideImage = (b: Beat): string | undefined => b.type === "motion" ? beatImages(b)[0] : isImage(b.src) ? b.src : undefined;
 /** Le beat passe par une animation écrite par Daryl ; sinon (zoom, B-roll vidéo) il est posé tel quel. */
 export const needsAnim = (b: Beat) => b.type === "motion" || b.type === "transition" || (b.type === "broll" && isImage(b.src));
 /** La couleur de chaque type de beat (bande de rythme, cartes, timeline). */
@@ -127,10 +133,14 @@ export interface StoryboardView {
   chat: StoryboardChat;
   /** la création de l'animation des beats qui en ont une en cours, en file ou ratée */
   anim_jobs: Record<string, AnimState>;
+  /** les recherches d'images des beats, tant qu'elles sont dans la file */
+  image_jobs: Record<string, ImageJob>;
   /** les mots de la timeline [début, fin], où s'aimantent les beats posés à la main ; un beat commence `lead` s
    * avant son premier mot et finit `tail` s après le dernier */
   words: [number, number][]; lead: number; tail: number;
 }
+/** La recherche d'images d'un beat (backend assets.beat_searches) : `found`, les images proposées à sa dernière demande. */
+export interface ImageJob { status: "queued" | "running" | "done" | "error" | "cancelled"; activity: string | null; error: string | null; query: string; found: number }
 export interface AnimState { status: "queued" | "running" | "error" | "cancelled"; activity: string | null; error: string | null }
 export interface StoryboardMessage {
   role: "user" | "ai"; text: string;

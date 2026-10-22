@@ -26,7 +26,8 @@ Fichier : montage/storyboard.json
      "beats": [{"id", "type", "at", "dur", "anchor", "until", "says", "show", "kind", "place",
                 "motion": {"enter", "hold", "exit"}, "sfx", "ref", "why", "on",
                 "zoom": {"scale", "x", "y"},       # zoom
-                "src", "search"}]}                 # broll : le média (vide : à trouver), la recherche
+                "src", "search",                   # broll : le média (vide : à trouver), la recherche
+                "images"}]}                        # motion : les images à y intégrer (facultatives)
 `at` / `dur` en secondes de la timeline. Les contrôles (`check`) sont refaits à chaque lecture :
 le montage de l'A-roll peut avoir bougé depuis la génération.
 """
@@ -41,7 +42,7 @@ from ...core import jobs
 from ...core.tasks import TaskContext
 from ..settings.service import language_name
 from ..transcript import cues
-from . import autoderush, library, media, montage, runtime, service, transitions
+from . import assets, autoderush, library, media, montage, runtime, service, transitions
 
 KIND = "project_storyboard"
 FILE = "storyboard.json"
@@ -926,17 +927,21 @@ def retype(b: dict, kind) -> None:
     """Change le type d'un beat, avec ce qu'il faut au nouveau type (sa durée ne bouge pas)."""
     if kind not in TYPES or kind == b.get("type"):
         return
+    # les images suivent : celle d'un B-roll devient la référence du motion, la première du motion le média du B-roll
+    images = motion_images(b) if b.get("type") == "motion" else [b["src"]] if media_kind(b.get("src", "")) == "image" else []
     b["type"] = kind
     # ce qui ne sert qu'à l'ancien type s'en va
-    for key, owner in (("zoom", "zoom"), ("src", "broll"), ("search", "broll"), ("start", "broll")):
+    for key, owner in (("zoom", "zoom"), ("src", "broll"), ("search", "broll"), ("start", "broll"), ("images", "motion")):
         if kind != owner:
             b.pop(key, None)
+    if kind == "motion" and images:
+        b["images"] = images
     if kind not in ("motion", "broll"):
         b["enter"] = b["exit"] = None
     if kind == "zoom":
         b.setdefault("zoom", zoom_of(None))
     if kind == "broll":
-        b.setdefault("src", "")
+        b.setdefault("src", images[0] if images else "")
         b.setdefault("search", "")
         b.setdefault("start", 0.0)
         if b.get("place") not in ("full", "left", "right"):
@@ -977,6 +982,14 @@ def edit(pid: str, changes: list[dict]) -> None:
                 b["search"] = c["search"].strip()[:200]
             if "start" in c:
                 b["start"] = start_of(c["start"])
+        if b["type"] == "motion" and isinstance(c.get("images"), list):
+            b.pop("src", None)
+            images = [resolve_media(x, media) for x in c["images"] if isinstance(x, str)]
+            images = list(dict.fromkeys(x for x in images if media_kind(x) == "image"))
+            if images:
+                b["images"] = images
+            else:
+                b.pop("images", None)
         if c.get("kind") in KINDS:
             b["kind"] = c["kind"]
         if c.get("place") in PLACES:
@@ -1097,9 +1110,28 @@ def animated(pid: str, timeline: dict) -> dict[str, str]:
     return {b: x for b, x in composed(timeline).items() if x not in motions or (folder / f"{x}.html").is_file()}
 
 
-def image_file(beat: dict) -> str:
-    """Le nom, dans montage/motion/, de l'image d'un B-roll animé."""
-    return f"{MEDIA_DIR}/{beat['id']}-{Path(beat['src']).name}"
+def image_file(beat: dict, src: str | None = None) -> str:
+    """Le nom, dans montage/motion/, de l'image d'un B-roll animé (ou de `src`, une image d'un motion)."""
+    return f"{MEDIA_DIR}/{beat['id']}-{Path(src or beat['src']).name}"
+
+
+def motion_images(beat: dict) -> list[str]:
+    """Les images à intégrer à un motion (`src` : l'ancienne forme, une seule image)."""
+    images = [x for x in beat.get("images") or [] if media_kind(x) == "image"]
+    if media_kind(beat.get("src", "")) == "image" and beat["src"] not in images:
+        images.insert(0, beat["src"])
+    return images
+
+
+def copy_image(pid: str, beat: dict, src: str | None = None) -> bool:
+    """Copie une image du beat (celle d'un B-roll, sinon `src`) à côté des compositions ; faux si elle est introuvable."""
+    rel = montage._resolve_src(pid, src or beat["src"])
+    if not rel:
+        return False
+    dest = montage.motion_dir(pid) / image_file(beat, src)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(service.project_dir(pid) / rel, dest)
+    return True
 
 
 def _ends(beat: dict) -> dict:
@@ -1143,7 +1175,10 @@ def compose(pid: str, only: list[str] | None = None) -> dict:
         if not b.get("on") or (only is not None and b["id"] not in only) or b["id"] in written:
             continue
         if b["id"] in done:
-            # déjà posé, composition jamais écrite : on la redemande sans le reposer
+            # déjà posé, composition jamais écrite : on la redemande sans le reposer (avec les images choisies depuis)
+            if b.get("type") == "motion":
+                for src in motion_images(b):
+                    copy_image(pid, b, src)
             out["motions"].append(done[b["id"]])
             continue
         kind = b.get("type", "motion")
@@ -1174,13 +1209,13 @@ def compose(pid: str, only: list[str] | None = None) -> dict:
         else:
             if kind == "broll":
                 # l'image, à côté des compositions
-                src = montage._resolve_src(pid, b["src"])
-                if not src:
+                if not copy_image(pid, b):
                     out["missing"].append(b["id"])
                     continue
-                dest = montage.motion_dir(pid) / image_file(b)
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(service.project_dir(pid) / src, dest)
+            elif kind == "motion":
+                # les images de référence aussi ; une introuvable est passée (la consigne reste)
+                for src in motion_images(b):
+                    copy_image(pid, b, src)
             mid = next_id("motion")
             timeline["motion"].append({"id": mid, "at": b["at"], "dur": b["dur"], "title": b["show"][:60],
                                        "kind": "image" if kind == "broll" else "transition" if kind == "transition"
@@ -1237,6 +1272,25 @@ def image_brief(pid: str, b: dict) -> list[str]:
     return lines
 
 
+def motion_images_brief(pid: str, b: dict) -> list[str]:
+    """La fiche des images fournies pour un motion : à intégrer à l'animation décrite, pas à mettre en scène seules."""
+    files = [image_file(b, src) for src in motion_images(b)]
+    files = [f for f in files if (montage.motion_dir(pid) / f).is_file()]
+    if not files:
+        return []
+    lines = [f"- {'Image fournie' if len(files) == 1 else 'Images fournies'} par l'auteur : regarde chacune (Read) "
+             "avant de composer et intègre-les à l'animation là où la consigne en parle (ce sont les visuels dont elle "
+             "parle : ne les remplace pas par des imitations en HTML)."]
+    for f in files:
+        info = media.probe(montage.motion_dir(pid) / f)
+        w, h = info.get("width"), info.get("height")
+        sharp = f", {w}×{h} px : à l'écran jamais plus de {round(w * MAX_UPSCALE)} × {round(h * MAX_UPSCALE)} px" if w and h else ""
+        lines.append(f"  - src=\"{f}\"{sharp}")
+    lines.append(f"- Netteté : au-delà de ×{MAX_UPSCALE} sa taille (zooms compris), une image est floue. Pour lire un "
+                 "passage de près, on l'isole (le reste s'assombrit ou se floute) plutôt que de zoomer dans les pixels.")
+    return lines
+
+
 def brief(pid: str, ids: list[str]) -> str:
     """La fiche de chaque motion à composer : ce que le storyboard validé demande."""
     board = load(pid) or {"beats": []}
@@ -1264,6 +1318,7 @@ def brief(pid: str, ids: list[str]) -> str:
                 lines.append(f"- {FULL_SCREEN}")
             if b.get("anim"):
                 lines.append(f"- Base : l'animation du kit montage/motion/exemples/{b['anim']} (adapte-la, garde sa mécanique)")
+            lines += motion_images_brief(pid, b)
         if b.get("enter") or b.get("exit"):
             lines.append("- Le montage ajoute " + " et ".join(
                 f"{'en entrée' if k == 'enter' else 'en sortie'} la transition « {transitions.label(b[k]['fx'])} » "
@@ -1298,7 +1353,7 @@ def view(pid: str) -> dict:
            "types": TYPES, "kinds": KINDS, "places": PLACES, "sfx": ["", *(x["src"] for x in sfx)],
            "visuals": visuals(pid),
            "sfx_help": {x["src"]: x["description"] for x in sfx}, "anims": anims, "composed": {},
-           "chat": storyboard_chat.view(pid), "anim_jobs": {},
+           "chat": storyboard_chat.view(pid), "anim_jobs": {}, "image_jobs": {},
            # les mots de la timeline [début, fin], où s'aimantent les beats qu'on pose ou tire à la main
            "words": [[w.start, w.end] for w in words], "lead": LEAD, "tail": TAIL}
     if board:
@@ -1309,6 +1364,7 @@ def view(pid: str) -> dict:
             b["anim"] = resolve_anim(b.get("anim", ""), [a["name"] for a in anims])
         out["composed"] = animated(pid, timeline)
         out["anim_jobs"] = beat_anim.states(pid, board["beats"])
+        out["image_jobs"] = assets.beat_searches(pid, [b["id"] for b in board["beats"]])
         total = sum(c["out"] - c["in"] for c in timeline["aroll"])
         covers = [p for p in script_plans(pid, words) if not p["motion"] and p["at"] is not None]
         out["checks"] = check(board["beats"], words, timeline, total, board.get("density") or DEFAULT_DENSITY, covers)

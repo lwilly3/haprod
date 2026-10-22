@@ -19,12 +19,15 @@ from . import library, service
 CANDIDATES_DIR = ".candidates"
 
 
-def candidates_dir(pid: str) -> Path:
-    return service.project_dir(pid) / service.ASSETS_DIR / CANDIDATES_DIR
+def candidates_dir(pid: str, beat: str = "") -> Path:
+    """Les images proposées par une recherche : celle de Médias, ou celle d'un beat du montage (`beat`)."""
+    folder = service.project_dir(pid) / service.ASSETS_DIR / CANDIDATES_DIR
+    return folder / "beats" / beat if beat else folder
 
 
-def images_job_id(pid: str) -> str:
-    return f"{pid}-images"
+def images_job_id(pid: str, beat: str = "") -> str:
+    """La recherche d'images de Médias, ou celle d'un beat : chaque beat a sa discussion, qui tourne sans la popup."""
+    return f"{pid}-images-{beat}" if beat else f"{pid}-images"
 
 
 # --- YouTube ---------------------------------------------------------------------------
@@ -109,8 +112,8 @@ def view(project: dict) -> dict:
 
 # --- Images ------------------------------------------------------------------------------
 
-def images_state(pid: str) -> dict:
-    job = jobs.get(images_job_id(pid))
+def images_state(pid: str, beat: str = "") -> dict:
+    job = jobs.get(images_job_id(pid, beat))
     if not job:
         return {"messages": [], "results": [], "busy": False, "error": None, "activity": None}
     return {"messages": job.state.get("messages", []), "results": job.state.get("results", []),
@@ -118,19 +121,59 @@ def images_state(pid: str) -> dict:
             "activity": job.state.get("activity")}
 
 
-def add_images(pid: str, ids: list[str], common: bool, category: str, project_title: str) -> int:
-    """Copie les images retenues à destination ; rend leur nombre."""
-    job = jobs.get(images_job_id(pid))
+def reset_images(pid: str, beat: str = "") -> None:
+    """Une nouvelle recherche : la discussion et les images proposées s'effacent (celles déjà rangées restent)."""
+    job = jobs.get(images_job_id(pid, beat))
+    if job and not job.finished:
+        raise ValueError("Daryl cherche encore : attends la fin de la recherche")
+    if job:
+        jobs.delete(job.id)
+    folder = candidates_dir(pid, beat)
+    if beat:
+        shutil.rmtree(folder, ignore_errors=True)
+    elif folder.is_dir():
+        # celles des beats restent : leurs recherches continuent
+        for f in folder.iterdir():
+            if f.is_file():
+                f.unlink(missing_ok=True)
+
+
+def beat_searches(pid: str, beats: list[str]) -> dict:
+    """Les recherches d'images des beats, pour la file du montage : {beat: {status, activity, error, query, found}}.
+    Une recherche finie que l'auteur a écartée (ou dont il a gardé des images) n'y figure plus."""
+    out = {}
+    for beat in beats:
+        job = jobs.get(images_job_id(pid, beat))
+        if not job or job.state.get("dismissed"):
+            continue
+        asked = next((m["text"] for m in reversed(job.state.get("messages", [])) if m["role"] == "user"), "")
+        found = sum(1 for r in job.state.get("results", []) if r.get("query") == asked and not r.get("added"))
+        status = job.status if job.status in ("queued", "error", "cancelled", "done") else "running"
+        out[beat] = {"status": status, "activity": job.state.get("activity"), "error": job.error, "query": asked,
+                     "found": found}
+    return out
+
+
+def dismiss_search(pid: str, beat: str) -> None:
+    """Retire la recherche d'un beat de la file (sa discussion reste, pour la popup)."""
+    job = jobs.get(images_job_id(pid, beat))
+    if job and job.finished:
+        jobs.update(job.id, state={**job.state, "dismissed": True})
+
+
+def add_images(pid: str, ids: list[str], common: bool, category: str, project_title: str, beat: str = "") -> list[str]:
+    """Copie les images retenues à destination ; rend leur `src` (comme la timeline), dans l'ordre de `ids`."""
+    job = jobs.get(images_job_id(pid, beat))
     if not job:
         raise ValueError("aucune recherche d'images")
     if not job.finished:
         raise ValueError("Claude cherche encore : attends la fin de la recherche")
     folder, label = library.destination(pid, common, category)
-    count = 0
+    added = {}
     for r in job.state.get("results", []):
         if r["id"] not in ids or r.get("added"):
             continue
-        src = candidates_dir(pid) / r["file"]
+        src = candidates_dir(pid, beat) / r["file"]
         if not src.is_file():
             continue
         name = r["title"] + (f" - {r['variant']}" if r.get("variant") else "")
@@ -139,6 +182,10 @@ def add_images(pid: str, ids: list[str], common: bool, category: str, project_ti
         if common:
             library.remember_origin(f"{category}/{dest.name}", project_title)
         r["added"] = label
-        count += 1
+        added[r["id"]] = (f"library/{category}/{dest.name}" if common
+                          else dest.relative_to(service.project_dir(pid)).as_posix())
+    if beat and added:
+        # gardées : la recherche quitte la file du montage
+        job.state["dismissed"] = True
     jobs.update(job.id, state=job.state)
-    return count
+    return [added[i] for i in ids if i in added]

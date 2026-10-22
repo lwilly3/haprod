@@ -2,11 +2,12 @@
 API des projets : /api/projects/…
 """
 import base64
+import re
 import shutil
 import time
 import uuid
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, unquote, urlparse
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, Response
@@ -15,7 +16,7 @@ from pydantic import BaseModel
 from ...core import jobs, system
 from ..animations import kit
 from ..youtube import service as youtube
-from . import (assets, autoderush, derush, kit_adapt, library, migrate, montage, publish, render, roast, runtime, script,
+from . import (asset_tasks, assets, autoderush, derush, kit_adapt, library, migrate, montage, publish, render, roast, runtime, script,
                service, storyboard, storyboard_chat, thumbs, timeline, transitions)
 from . import beat_anim
 
@@ -1212,10 +1213,17 @@ def remove_download(pid: str, job_id: str):
 
 # --- Assets : images -------------------------------------------------------------------
 
+def _beat(beat: str) -> str:
+    """L'id d'un beat dont on cherche les images ("" : la recherche de Médias)."""
+    if beat and not re.fullmatch(r"[\w-]{1,40}", beat):
+        raise HTTPException(400, "beat inconnu")
+    return beat
+
+
 @router.get("/{pid}/assets/images")
-def get_images(pid: str):
+def get_images(pid: str, beat: str = ""):
     _check(pid)
-    return assets.images_state(pid)
+    return assets.images_state(pid, _beat(beat))
 
 
 class ImagesRequest(BaseModel):
@@ -1223,21 +1231,54 @@ class ImagesRequest(BaseModel):
 
 
 @router.post("/{pid}/assets/images")
-def search_images(pid: str, req: ImagesRequest):
+def search_images(pid: str, req: ImagesRequest, beat: str = ""):
     _check(pid)
+    beat = _beat(beat)
     if not req.text.strip():
         raise HTTPException(400, "demande vide")
-    job = jobs.get(assets.images_job_id(pid))
+    job = jobs.get(assets.images_job_id(pid, beat))
     state = job.state if job else {"messages": [], "results": []}
     if job and job.status == "error" and state["messages"] and state["messages"][-1]["role"] == "user":
         # la demande restée sans réponse est remplacée par la nouvelle
         state["messages"].pop()
     state["messages"].append({"role": "user", "text": req.text.strip()})
+    # une nouvelle demande revient dans la file du montage
+    state.pop("dismissed", None)
     try:
-        service.requeue(assets.images_job_id(pid), "project_images", _claude_payload(pid), state)
+        service.requeue(assets.images_job_id(pid, beat), "project_images", _claude_payload(pid, beat=beat), state)
     except ValueError as e:
         raise HTTPException(409, str(e)) from e
-    return assets.images_state(pid)
+    return assets.images_state(pid, beat)
+
+
+@router.post("/{pid}/assets/images/stop")
+def stop_images(pid: str, beat: str = ""):
+    _check(pid)
+    beat = _beat(beat)
+    job = jobs.get(assets.images_job_id(pid, beat))
+    if job and not job.finished:
+        jobs.cancel(job)
+    return assets.images_state(pid, beat)
+
+
+@router.post("/{pid}/assets/images/dismiss")
+def dismiss_images(pid: str, beat: str):
+    """La recherche d'un beat quitte la file du montage."""
+    _check(pid)
+    assets.dismiss_search(pid, _beat(beat))
+    return {"ok": True}
+
+
+@router.delete("/{pid}/assets/images")
+def reset_images(pid: str, beat: str = ""):
+    """Repart d'une recherche d'images vierge."""
+    _check(pid)
+    beat = _beat(beat)
+    try:
+        assets.reset_images(pid, beat)
+    except ValueError as e:
+        raise HTTPException(409, str(e)) from e
+    return assets.images_state(pid, beat)
 
 
 class AddImagesRequest(BaseModel):
@@ -1247,19 +1288,43 @@ class AddImagesRequest(BaseModel):
 
 
 @router.post("/{pid}/assets/images/add")
-def add_images(pid: str, req: AddImagesRequest):
+def add_images(pid: str, req: AddImagesRequest, beat: str = ""):
     _check(pid)
+    beat = _beat(beat)
     try:
-        count = assets.add_images(pid, req.ids, req.common, req.category, service.load(pid)["title"])
+        srcs = assets.add_images(pid, req.ids, req.common, req.category, service.load(pid)["title"], beat)
     except ValueError as e:
         raise HTTPException(409, str(e)) from e
-    return {"added": count, **assets.images_state(pid)}
+    return {"added": len(srcs), "srcs": srcs, **assets.images_state(pid, beat)}
+
+
+@router.post("/{pid}/assets/image")
+def import_image(pid: str, file: UploadFile | None = File(None), url: str = Form("")):
+    """Une image ajoutée au projet d'un geste (fichier envoyé, ou téléchargée depuis son adresse), rangée dans ses
+    images ; rend son `src` (comme la timeline), pour l'attacher tout de suite à un beat."""
+    _check(pid)
+    folder = service.project_dir(pid) / service.ASSETS_DIR / "images"
+    if file is not None:
+        if storyboard.media_kind(file.filename or "") != "image":
+            raise HTTPException(400, "pas une image (png, jpg, webp, gif, svg…)")
+        dest = _save_upload(file, folder)
+    elif url.strip():
+        try:
+            got = asset_tasks.fetch_image(url.strip(), folder / f".import-{uuid.uuid4().hex[:10]}")
+        except Exception as e:  # noqa: BLE001 — lien mort, pas une image, trop lourde…
+            raise HTTPException(400, f"image non récupérée : {e}") from e
+        # nommée d'après son adresse, l'extension d'après son type
+        name = service.safe_name(unquote(Path(urlparse(url.strip()).path).stem)[:80], "image")
+        dest = got.rename(service.unique_path(folder, name + got.suffix))
+    else:
+        raise HTTPException(400, "ni fichier ni adresse")
+    return {"src": dest.relative_to(service.project_dir(pid)).as_posix()}
 
 
 @router.get("/{pid}/assets/candidates/{name}")
-def candidate(pid: str, name: str):
+def candidate(pid: str, name: str, beat: str = ""):
     _check(pid)
-    path = assets.candidates_dir(pid) / service.safe_name(name)
+    path = assets.candidates_dir(pid, _beat(beat)) / service.safe_name(name)
     if not path.is_file():
         raise HTTPException(404, "image inconnue")
     return FileResponse(path)

@@ -73,7 +73,7 @@ def images(ctx: TaskContext) -> None:
     ctx.set_status("downloading")
     state["activity"] = "vérifie les images"
     ctx.save(force=True)
-    cache = assets.candidates_dir(p["project"])
+    cache = assets.candidates_dir(p["project"], p.get("beat", ""))
     known = {r["url"] for r in results}
     fresh, rejected = [], 0
     for img in output.get("images") or []:

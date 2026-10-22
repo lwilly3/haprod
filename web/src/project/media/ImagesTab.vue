@@ -2,11 +2,13 @@
 /**
  * Onglet Images : on dit à Claude ce qu'on cherche (logo d'une marque, photo d'une personne…), il
  * cherche sur le web ; les images trouvées sont vérifiées et téléchargées par le studio, on coche
- * celles à garder et on les range dans le projet ou dans les assets communs.
+ * celles à garder et on les range dans le projet ou dans les assets communs. Depuis le montage, la recherche part
+ * de la consigne d'un beat (`prefill`), dans la discussion propre à ce beat (`beat`), et l'image gardée lui est
+ * attachée.
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { api, post } from "../../lib/api";
+import { api, del, post } from "../../lib/api";
 import { usePref } from "../../lib/composables";
 import { toast } from "../../lib/toast";
 import { store } from "../store";
@@ -14,11 +16,15 @@ import type { ImagesState } from "../types";
 import CheckBox from "./CheckBox.vue";
 import DestPicker from "./DestPicker.vue";
 
-const emit = defineEmits<{ added: [] }>();
+const props = defineProps<{ prefill?: string; beat?: string }>();
+/** les images rangées, par leur `src` (comme la timeline) */
+const emit = defineEmits<{ added: [srcs: string[]] }>();
 const { t } = useI18n();
 const base = `/api/projects/${store.project!.id}/assets`;
+/** la recherche d'un beat, ou celle de Médias */
+const scope = props.beat ? `?beat=${encodeURIComponent(props.beat)}` : "";
 const state = ref<ImagesState>({ messages: [], results: [], busy: false, error: null, activity: null });
-const input = ref("");
+const input = ref(props.prefill ?? "");
 const sending = ref(false);
 const picked = ref(new Set<string>());
 const scroller = ref<HTMLElement>();
@@ -35,10 +41,10 @@ function receive(s: ImagesState): void {
     if (first && first.query === asked) picked.value = new Set([...picked.value, first.id]);
   }
   clearTimeout(timer);
-  if (s.busy) timer = setTimeout(() => api<ImagesState>(`${base}/images`).then(receive).catch(() => receive(s)), 1500);
+  if (s.busy) timer = setTimeout(() => api<ImagesState>(`${base}/images${scope}`).then(receive).catch(() => receive(s)), 1500);
 }
 
-onMounted(() => api<ImagesState>(`${base}/images`).then(receive).catch((e) => toast(e.message, true)));
+onMounted(() => api<ImagesState>(`${base}/images${scope}`).then(receive).catch((e) => toast(e.message, true)));
 onBeforeUnmount(() => clearTimeout(timer));
 
 watch(() => state.value.messages.length + (state.value.busy ? 1 : 0), async () => {
@@ -51,12 +57,23 @@ async function send() {
   if (!text || sending.value || state.value.busy) return;
   sending.value = true;
   try {
-    receive(await post<ImagesState>(`${base}/images`, { text }));
+    receive(await post<ImagesState>(`${base}/images${scope}`, { text }));
     input.value = "";
   } catch (e) {
     toast((e as Error).message, true);
   } finally {
     sending.value = false;
+  }
+}
+
+/** une nouvelle recherche : la discussion et les images proposées s'effacent */
+async function restart() {
+  try {
+    receive(await del<ImagesState>(`${base}/images${scope}`));
+    picked.value = new Set();
+    input.value = props.prefill ?? "";
+  } catch (e) {
+    toast((e as Error).message, true);
   }
 }
 
@@ -75,25 +92,28 @@ const category = usePref("assets.imgCategory", "logos");
 async function validate() {
   if (!selection.value.length) return toast(t("sourcing.images.checkOne"), true);
   try {
-    const out = await post<ImagesState & { added: number }>(`${base}/images/add`, {
+    const out = await post<ImagesState & { added: number; srcs: string[] }>(`${base}/images/add${scope}`, {
       ids: selection.value.map((r) => r.id), common: common.value, category: common.value ? category.value : "images",
     });
     picked.value = new Set();
     receive(out);
     const dest = out.results.find((r) => r.added)?.added ?? "";
     toast(t("sourcing.images.added", { dest }, out.added));
-    if (out.added) emit("added");
+    if (out.added) emit("added", out.srcs);
   } catch (e) {
     toast((e as Error).message, true);
   }
 }
 
-const src = (file: string) => `${base}/candidates/${encodeURIComponent(file)}`;
+const src = (file: string) => `${base}/candidates/${encodeURIComponent(file)}${scope}`;
 </script>
 
 <template>
   <div class="images">
     <div class="chat">
+      <div v-if="state.messages.length" class="chat-head">
+        <button class="link-btn" :disabled="state.busy" @click="restart">+ {{ t("sourcing.images.restart") }}</button>
+      </div>
       <div ref="scroller" class="messages">
         <div class="msg ai">{{ t("sourcing.images.hello") }}</div>
         <div v-for="(m, i) in state.messages" :key="i" class="msg" :class="m.role">{{ m.text }}</div>
@@ -142,6 +162,8 @@ const src = (file: string) => `${base}/candidates/${encodeURIComponent(file)}`;
 <style scoped>
 .images { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 24px; align-items: start; }
 .chat { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 4px; height: 520px; position: sticky; top: 0; }
+.chat-head { display: flex; justify-content: flex-end; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.chat-head .link-btn { font-size: 12.5px; }
 .messages { flex: 1; overflow: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
 .msg { max-width: 88%; padding: 8px 11px; border-radius: 6px; font-size: 13px; line-height: 1.45; white-space: pre-wrap; }
 .msg.ai { align-self: flex-start; background: #F2F2EF; color: var(--ink-2); }

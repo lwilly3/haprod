@@ -1,24 +1,27 @@
 <script setup lang="ts">
 /**
  * À la place de l'inspecteur : le beat du storyboard sélectionné sur la timeline (posé à la main, ou proposé). On y
- * change son type, on réécrit sa consigne (« on montre »), puis on lance ce qu'il faut : créer l'animation, poser
+ * change son type, on réécrit sa consigne (« on montre »), on lui donne son image, puis on lance ce qu'il faut : créer l'animation, poser
  * le zoom ou le B-roll, ou en parler à Daryl. Les réglages fins restent à l'étape Storyboard.
  */
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
+import BeatImage from "./BeatImage.vue";
+import type { ImageTab } from "./BeatImageModal.vue";
 import { BEAT_TYPES, isImage, needsAnim, tcd, TYPE_COLOR, type AnimState, type Beat, type BeatType, type Visual } from "./types";
 
-const props = defineProps<{ beat: Beat; anims: Record<string, AnimState>; visuals: Visual[]; places: string[] }>();
+const props = defineProps<{ beat: Beat; anims: Record<string, AnimState>; visuals: Visual[]; places: string[]; imagePopup: ImageTab | null }>();
 const emit = defineEmits<{
   /** une retouche du beat ; `delay` : regroupe les frappes */
   change: [(b: Beat) => void, number?];
   create: [string]; stop: [string]; remove: [string]; ask: [string]; seek: [number]; close: [];
+  /** le média d'un B-roll ("" : aucun), ou les images d'un motion ; peut-être tout juste importés */
+  image: [string]; images: [string[]]; imagePopup: [ImageTab | null];
 }>();
 const { t: tr } = useI18n();
 
 const anim = computed(() => props.anims[props.beat.id]);
 const live = computed(() => ["queued", "running"].includes(anim.value?.status ?? ""));
-const shortName = (name: string) => name.replace(/\.[^.]+$/, "");
 /** zoom et B-roll vidéo se posent tels quels ; un B-roll sans média attend le sien */
 const placeable = computed(() => props.beat.type === "zoom" || (props.beat.type === "broll" && !!props.beat.src && !isImage(props.beat.src)));
 
@@ -31,12 +34,6 @@ function setType(type: BeatType) {
       b.search ??= "";
       if (!["full", "left", "right"].includes(b.place)) b.place = "full";
     }
-  });
-}
-function setSrc(src: string) {
-  emit("change", (b) => {
-    b.src = src;
-    if (isImage(src) && !["full", "left", "right"].includes(b.place)) b.place = "full";
   });
 }
 </script>
@@ -66,17 +63,8 @@ function setSrc(src: string) {
       </select>
     </label>
 
-    <label v-if="beat.type === 'broll'" class="f">
-      {{ tr("editing.storyboard.broll.media") }}
-      <select :value="beat.src ?? ''" @change="setSrc(($event.target as HTMLSelectElement).value)">
-        <option value="">{{ tr("editing.storyboard.broll.missing") }}</option>
-        <optgroup v-for="w in ['projet', 'bibliothèque']" :key="w" :label="tr(`editing.storyboard.broll.where.${w === 'projet' ? 'project' : 'library'}`)">
-          <option v-for="v in visuals.filter((x) => x.where === w)" :key="v.src" :value="v.src" :title="v.description">
-            {{ v.kind === "video" ? "▶ " : "" }}{{ shortName(v.name) }}
-          </option>
-        </optgroup>
-      </select>
-    </label>
+    <BeatImage v-if="beat.type === 'motion' || beat.type === 'broll'" :beat="beat" :visuals="visuals" :popup="imagePopup"
+      @pick="(src) => emit('image', src)" @images="(srcs) => emit('images', srcs)" @popup="(t) => emit('imagePopup', t)" />
 
     <p v-if="anim?.status === 'error'" class="err">{{ tr("editing.anims.failed", { e: anim.error }) }}</p>
     <div class="row actions">
