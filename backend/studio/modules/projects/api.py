@@ -1301,13 +1301,15 @@ def add_images(pid: str, req: AddImagesRequest, beat: str = ""):
 @router.post("/{pid}/assets/image")
 def import_image(pid: str, file: UploadFile | None = File(None), url: str = Form("")):
     """Une image ajoutée au projet d'un geste (fichier envoyé, ou téléchargée depuis son adresse), rangée dans ses
-    images ; rend son `src` (comme la timeline), pour l'attacher tout de suite à un beat."""
+    images ; ou un fichier vidéo, rangé dans ses B-roll. Rend son `src` (comme la timeline), pour l'attacher tout de
+    suite à un beat."""
     _check(pid)
     folder = service.project_dir(pid) / service.ASSETS_DIR / "images"
     if file is not None:
-        if storyboard.media_kind(file.filename or "") != "image":
-            raise HTTPException(400, "pas une image (png, jpg, webp, gif, svg…)")
-        dest = _save_upload(file, folder)
+        kind = storyboard.media_kind(file.filename or "")
+        if not kind:
+            raise HTTPException(400, "ni une image (png, jpg, webp, gif, svg…) ni une vidéo")
+        dest = _save_upload(file, folder if kind == "image" else folder.parent / "broll")
     elif url.strip():
         try:
             got = asset_tasks.fetch_image(url.strip(), folder / f".import-{uuid.uuid4().hex[:10]}")

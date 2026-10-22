@@ -3,19 +3,20 @@
  * Choisir les images d'un beat sans passer par Médias : parmi les médias déjà là, en les important (fichier,
  * glisser-déposer, capture collée, adresse web), ou en les faisant chercher par Daryl à partir de la consigne du beat.
  * Une image importée est rangée dans les images du projet. Un motion en prend plusieurs (`multi` : la popup reste
- * ouverte, chaque choix s'ajoute) ; un B-roll un seul média (le choix ferme la popup).
+ * ouverte, chaque choix s'ajoute) ; un B-roll un seul média (le choix ferme la popup), qui peut aussi être une vidéo :
+ * un fichier importé, ou un extrait (ou la vidéo entière) d'un lien YouTube, posé dès son téléchargement fini.
  */
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import Modal from "../../../components/Modal.vue";
 import { toast } from "../../../lib/toast";
 import { upload } from "../../../lib/upload";
 import ImagesTab from "../../media/ImagesTab.vue";
+import YoutubeTab from "../../media/YoutubeTab.vue";
 import { store } from "../../store";
 import { isImage, type Beat, type Visual } from "./types";
 
-export type ImageTab = "media" | "import" | "search";
-const TABS: ImageTab[] = ["media", "import", "search"];
+export type ImageTab = "media" | "import" | "video" | "search";
 
 /** `tab` : l'onglet à l'ouverture (la recherche, rouverte depuis la file) */
 const props = defineProps<{ beat: Beat; visuals: Visual[]; multi: boolean; selected: string[]; tab?: ImageTab }>();
@@ -29,7 +30,9 @@ const emit = defineEmits<{
 const { t: tr } = useI18n();
 
 /** un motion n'intègre qu'une image ; un B-roll montre aussi une vidéo */
-const choices = computed(() => props.visuals.filter((v) => props.beat.type === "broll" || v.kind === "image"));
+const broll = computed(() => props.beat.type === "broll");
+const tabs = computed<ImageTab[]>(() => broll.value ? ["media", "import", "video", "search"] : ["media", "import", "search"]);
+const choices = computed(() => props.visuals.filter((v) => broll.value || v.kind === "image"));
 const tab = ref<ImageTab>(props.tab ?? (choices.value.length ? "media" : "import"));
 const shortName = (name: string) => name.replace(/\.[^.]+$/, "");
 
@@ -38,9 +41,13 @@ const over = ref(false);
 const link = ref("");
 const fileInput = ref<HTMLInputElement>();
 
+/** les vidéos que le studio lit (backend service.VIDEO_EXTENSIONS) */
+const VIDEO = /\.(mov|mp4|mxf|mkv|avi|webm|m4v|mts)$/i;
 async function importImage(file: File | null, url = "") {
   if (busy.value) return;
-  if (file && !isImage(file.name)) return toast(tr("editing.beat.image.notImage"), true);
+  if (file && !isImage(file.name) && !(broll.value && VIDEO.test(file.name))) {
+    return toast(tr(broll.value ? "editing.beat.image.notMedia" : "editing.beat.image.notImage"), true);
+  }
   busy.value = true;
   try {
     const { src } = await upload<{ src: string }>(`/api/projects/${store.project!.id}/assets/image`,
@@ -92,13 +99,24 @@ function click(src: string) {
   if (props.multi) emit("toggle", src);
   else emit("pick", src);
 }
+
+/** une vidéo téléchargée depuis la popup est posée sur le B-roll dès qu'elle est là (pas celles d'avant) */
+const downloads = computed(() => store.project?.runtime.assets.downloads ?? []);
+const before = new Set(downloads.value.map((d) => d.id));
+watch(downloads, (list) => {
+  const got = list.find((d) => !before.has(d.id) && d.status === "done" && d.mode === "video" && d.src);
+  if (!got) return;
+  before.add(got.id);
+  toast(tr("editing.beat.image.downloaded"));
+  choose([got.src!]);
+});
 </script>
 
 <template>
   <Modal :title="tr(`editing.beat.image.tabs.${tab}`)" @close="emit('close')">
     <template #nav>
       <span class="nav-title">{{ beat.type === "broll" ? tr("editing.beat.image.titleBroll") : tr("editing.beat.image.title") }}</span>
-      <button v-for="k in TABS" :key="k" class="src" :class="{ on: k === tab }" @click="tab = k">
+      <button v-for="k in tabs" :key="k" class="src" :class="{ on: k === tab }" @click="tab = k">
         <span class="label">{{ tr(`editing.beat.image.tabs.${k}`) }}</span>
         <span class="desc">{{ tr(`editing.beat.image.tabsDesc.${k}`) }}</span>
       </button>
@@ -107,7 +125,7 @@ function click(src: string) {
         <span class="mono count">{{ tr("editing.beat.image.chosen", selected.length) }}</span>
         <button class="btn dark md done" @click="emit('close')">{{ tr("editing.beat.image.done") }}</button>
       </template>
-      <span class="foot">{{ tr("editing.beat.image.foot") }}</span>
+      <span class="foot">{{ tr(broll ? "editing.beat.image.footBroll" : "editing.beat.image.foot") }}</span>
     </template>
 
     <template v-if="tab === 'media'">
@@ -121,7 +139,10 @@ function click(src: string) {
               <span class="frame hatch">
                 <span v-if="multi" class="check" :class="{ on: selected.includes(v.src) }">✓</span>
                 <img v-if="v.kind === 'image'" :src="v.url" :alt="v.name" loading="lazy">
-                <span v-else class="mono video">▶</span>
+                <template v-else>
+                  <video :src="`${v.url}#t=1`" preload="metadata" muted playsinline />
+                  <span class="mono video">▶</span>
+                </template>
               </span>
               <span class="cap">{{ shortName(v.name) }}</span>
             </button>
@@ -133,9 +154,9 @@ function click(src: string) {
     <div v-else-if="tab === 'import'" class="import">
       <div class="drop-zone" :class="{ over }" @click="fileInput?.click()"
         @dragover.prevent="over = true" @dragleave="over = false" @drop.prevent="onDrop">
-        {{ busy ? tr("editing.beat.image.importing") : tr("editing.beat.image.drop") }}
+        {{ busy ? tr("editing.beat.image.importing") : tr(broll ? "editing.beat.image.dropBroll" : "editing.beat.image.drop") }}
       </div>
-      <input ref="fileInput" type="file" accept="image/*" hidden @change="onPick">
+      <input ref="fileInput" type="file" :accept="broll ? 'image/*,video/*' : 'image/*'" hidden @change="onPick">
       <label class="f">
         {{ tr("editing.beat.image.url") }}
         <span class="row">
@@ -145,6 +166,7 @@ function click(src: string) {
       </label>
     </div>
 
+    <YoutubeTab v-else-if="tab === 'video'" />
     <ImagesTab v-else :beat="beat.id" :prefill="beat.show" @added="choose" />
   </Modal>
 </template>
@@ -165,7 +187,7 @@ function click(src: string) {
 .frame { position: relative; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; overflow: hidden; outline: 2px solid transparent; outline-offset: -2px; }
 .card:hover .frame { outline-color: var(--line-strong); }
 .card.on .frame { outline-color: var(--ink); }
-.frame img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.frame img, .frame video { max-width: 100%; max-height: 100%; object-fit: contain; }
 .check {
   position: absolute; top: 6px; left: 6px; width: 18px; height: 18px; border: 1px solid var(--line-strong); border-radius: 3px;
   background: #fff; color: transparent; font-size: 11px; line-height: 16px; text-align: center;
@@ -173,7 +195,7 @@ function click(src: string) {
 .check.on { background: var(--ink); border-color: var(--ink); color: #fff; }
 .count { font-size: 12px; color: var(--muted); padding: 0 10px 8px; }
 .done { margin: 0 10px 14px; }
-.video { font-size: 22px; color: var(--muted); }
+.video { position: absolute; font-size: 22px; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, .6); }
 .cap { font-size: 12.5px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .import { display: flex; flex-direction: column; gap: 22px; max-width: 640px; }
 .drop-zone { padding: 56px 18px; }

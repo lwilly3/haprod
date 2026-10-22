@@ -62,10 +62,14 @@ def _download_view(d: dict) -> dict | None:
     if not job:
         return None
     path = job.state.get("filepath")
+    name = Path(path).name if path else None
+    # le fichier comme la timeline le désigne (pour le poser aussitôt sur un plan)
+    category = d.get("category", "broll")
+    src = name and (f"library/{category}/{name}" if d.get("common") else f"{service.ASSETS_DIR}/{category}/{name}")
     return {"id": job.id, "video": d["video"], "dest": d["dest"], "status": job.status, "progress": job.progress,
             "error": job.error, "finished": job.finished, "mode": job.payload.get("mode"),
             "start": job.payload.get("start"), "end": job.payload.get("end"),
-            "name": Path(path).name if path else None, "transcribe": job.payload.get("transcribe", False)}
+            "name": name, "src": src, "transcribe": job.payload.get("transcribe", False)}
 
 
 # --- Résultats des jobs ----------------------------------------------------------------

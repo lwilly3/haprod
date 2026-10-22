@@ -219,6 +219,8 @@ async function pickMedia(id: string, src: string) {
   SB.edit((list) => {
     const b = list.find((x) => x.id === id);
     if (!b) return;
+    // un autre média : le plan le montre depuis son début
+    if (b.src !== src) b.start = 0;
     b.src = src;
     if (isImage(src) && !["full", "left", "right"].includes(b.place)) b.place = "full";
   }, 150);

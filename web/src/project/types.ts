@@ -106,6 +106,8 @@ export interface AssetDownload {
   id: string; video: string; dest: string; status: string; progress: number; error: string | null;
   finished: boolean; mode: "video" | "audio" | "thumbnail"; start: number | null; end: number | null;
   name: string | null; transcribe: boolean;
+  /** le fichier téléchargé comme la timeline le désigne (assets/broll/…, library/broll/…) */
+  src: string | null;
 }
 
 export interface Assets {
