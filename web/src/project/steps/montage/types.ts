@@ -90,17 +90,17 @@ export interface Beat {
   zoom?: { scale: number; x: number; y: number };
   /** broll : le média (vide : à trouver), la recherche toute prête, et pour une vidéo la seconde où le plan commence */
   src?: string; search?: string; start?: number;
-  /** motion : les images à intégrer à l'animation (facultatives) */
+  /** motion : les images et vidéos à intégrer à l'animation (facultatives) */
   images?: string[];
   /** motion et broll : les transitions d'entrée et de sortie au montage */
   enter?: Fx | null; exit?: Fx | null;
 }
 const IMAGE = /\.(png|jpe?g|webp|gif|svg)$/i;
 export const isImage = (src?: string) => !!src && IMAGE.test(src);
-/** Les images d'un motion (`src` : l'ancienne forme, une seule image). */
+/** Les images et vidéos d'un motion (`src` : l'ancienne forme, une seule image). */
 export const beatImages = (b: Beat): string[] => b.images ?? (b.type === "motion" && isImage(b.src) ? [b.src!] : []);
 /** L'image montrée sur la slide d'un beat : celle d'un B-roll, la première d'un motion. */
-export const slideImage = (b: Beat): string | undefined => b.type === "motion" ? beatImages(b)[0] : isImage(b.src) ? b.src : undefined;
+export const slideImage = (b: Beat): string | undefined => b.type === "motion" ? beatImages(b).find(isImage) : isImage(b.src) ? b.src : undefined;
 /** Le beat passe par une animation écrite par Daryl ; sinon (zoom, B-roll vidéo) il est posé tel quel. */
 export const needsAnim = (b: Beat) => b.type === "motion" || b.type === "transition" || (b.type === "broll" && isImage(b.src));
 /** La couleur de chaque type de beat (bande de rythme, cartes, timeline). */

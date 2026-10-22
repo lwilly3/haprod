@@ -225,7 +225,7 @@ async function pickMedia(id: string, src: string) {
     if (isImage(src) && !["full", "left", "right"].includes(b.place)) b.place = "full";
   }, 150);
 }
-/** les images de référence d'un motion */
+/** les images et vidéos de référence d'un motion */
 async function setImages(id: string, srcs: string[]) {
   await knowMedia(srcs);
   SB.edit((list) => {

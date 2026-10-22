@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
- * Les images d'un beat, sur une ligne : un motion en intègre autant qu'il faut (une capture à surligner, un portrait,
- * des logos…), en vignettes côte à côte qui défilent en largeur ; un B-roll montre son média. Le choix (médias,
- * import, recherche par Daryl) se fait dans une popup.
+ * Les médias d'un beat, sur une ligne : un motion intègre autant d'images et de vidéos qu'il faut (une capture à
+ * surligner, un portrait, des logos, un extrait…), en vignettes côte à côte qui défilent en largeur ; un B-roll montre
+ * son média. Le choix (médias, import, vidéo YouTube, recherche par Daryl) se fait dans une popup.
  */
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
@@ -22,7 +22,7 @@ const emit = defineEmits<{
 const { t: tr } = useI18n();
 
 /** la popup s'ouvre sur les médias s'il y en a à choisir, sinon sur l'import */
-const firstTab = (): ImageTab => props.visuals.some((v) => !multi.value || v.kind === "image") ? "media" : "import";
+const firstTab = (): ImageTab => props.visuals.length ? "media" : "import";
 const open = computed({ get: () => !!props.popup, set: (v: boolean) => emit("popup", v ? (props.popup ?? firstTab()) : null) });
 const multi = computed(() => props.beat.type === "motion");
 const images = computed(() => beatImages(props.beat));
@@ -53,7 +53,11 @@ function add(srcs: string[]) {
     <template v-if="multi">
       <div v-if="images.length" class="strip">
         <div v-for="src in images" :key="src" class="tile hatch" :title="nameOf(src)">
-          <img :src="visual(src)?.url" :alt="nameOf(src)" loading="lazy">
+          <img v-if="visual(src)?.kind !== 'video'" :src="visual(src)?.url" :alt="nameOf(src)" loading="lazy">
+          <template v-else>
+            <video :src="`${visual(src)!.url}#t=1`" preload="metadata" muted playsinline />
+            <span class="mono play">▶</span>
+          </template>
           <button class="rm" :title="tr('editing.beat.image.remove')" @click="toggle(src)">×</button>
         </div>
         <button class="tile add" :title="tr('editing.beat.image.addImages')" @click="open = true">+</button>
@@ -84,7 +88,8 @@ function add(srcs: string[]) {
 /* les vignettes côte à côte : au-delà de la largeur du panneau, elles défilent */
 .strip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
 .tile { position: relative; flex: 0 0 64px; height: 44px; border-radius: 3px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-.tile img { width: 100%; height: 100%; object-fit: cover; }
+.tile img, .tile video { width: 100%; height: 100%; object-fit: cover; }
+.play { position: absolute; font-size: 13px; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, .6); pointer-events: none; }
 .rm {
   position: absolute; top: 2px; right: 2px; width: 16px; height: 16px; padding: 0; border: none; border-radius: 50%;
   background: rgba(24, 25, 27, .7); color: #fff; font-size: 12px; line-height: 16px; cursor: pointer; opacity: 0;

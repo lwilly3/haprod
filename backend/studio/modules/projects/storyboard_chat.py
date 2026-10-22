@@ -152,9 +152,9 @@ def _beat_line(b: dict, composed: dict) -> str:
     elif kind == "transition":
         what = "transition"
     else:
-        images = storyboard.motion_images(b)
+        images = storyboard.motion_media(b)
         what = (f"motion · {b['kind']} · {b['place']}{' · base ' + b['anim'] if b.get('anim') else ''}"
-                + (f" · images de l'auteur : {', '.join(images)}" if images else ""))
+                + (f" · médias de l'auteur : {', '.join(images)}" if images else ""))
     ends = "".join(f" · {k} {b[k]['fx']}" for k in ("enter", "exit") if b.get(k))
     return (f"- {b['id']}{state} [{storyboard._clock(b['at'])} → {storyboard._clock(b['at'] + b['dur'])}] "
             f"{what}{ends}{' · son ' + b['sfx'] if b.get('sfx') else ''} · il dit « {b['says'][:160]} » · on montre : {b['show']}")

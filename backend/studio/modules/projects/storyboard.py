@@ -27,18 +27,20 @@ Fichier : montage/storyboard.json
                 "motion": {"enter", "hold", "exit"}, "sfx", "ref", "why", "on",
                 "zoom": {"scale", "x", "y"},       # zoom
                 "src", "search",                   # broll : le média (vide : à trouver), la recherche
-                "images"}]}                        # motion : les images à y intégrer (facultatives)
+                "images"}]}                        # motion : les images et vidéos à y intégrer (facultatives)
 `at` / `dur` en secondes de la timeline. Les contrôles (`check`) sont refaits à chaque lecture :
 le montage de l'A-roll peut avoir bougé depuis la génération.
 """
 import json
 import re
 import shutil
+import subprocess
 import time
 from pathlib import Path
 from urllib.parse import quote, unquote
 
 from ...core import jobs
+from ...core.system import tool
 from ...core.tasks import TaskContext
 from ..settings.service import language_name
 from ..transcript import cues
@@ -927,8 +929,8 @@ def retype(b: dict, kind) -> None:
     """Change le type d'un beat, avec ce qu'il faut au nouveau type (sa durée ne bouge pas)."""
     if kind not in TYPES or kind == b.get("type"):
         return
-    # les images suivent : celle d'un B-roll devient la référence du motion, la première du motion le média du B-roll
-    images = motion_images(b) if b.get("type") == "motion" else [b["src"]] if media_kind(b.get("src", "")) == "image" else []
+    # les médias suivent : celui d'un B-roll devient la référence du motion, la première du motion le média du B-roll
+    images = motion_media(b) if b.get("type") == "motion" else [b["src"]] if media_kind(b.get("src", "")) else []
     b["type"] = kind
     # ce qui ne sert qu'à l'ancien type s'en va
     for key, owner in (("zoom", "zoom"), ("src", "broll"), ("search", "broll"), ("start", "broll"), ("images", "motion")):
@@ -985,7 +987,7 @@ def edit(pid: str, changes: list[dict]) -> None:
         if b["type"] == "motion" and isinstance(c.get("images"), list):
             b.pop("src", None)
             images = [resolve_media(x, media) for x in c["images"] if isinstance(x, str)]
-            images = list(dict.fromkeys(x for x in images if media_kind(x) == "image"))
+            images = list(dict.fromkeys(x for x in images if media_kind(x)))
             if images:
                 b["images"] = images
             else:
@@ -1111,13 +1113,13 @@ def animated(pid: str, timeline: dict) -> dict[str, str]:
 
 
 def image_file(beat: dict, src: str | None = None) -> str:
-    """Le nom, dans montage/motion/, de l'image d'un B-roll animé (ou de `src`, une image d'un motion)."""
+    """Le nom, dans montage/motion/, de l'image d'un B-roll animé (ou de `src`, une image ou une vidéo d'un motion)."""
     return f"{MEDIA_DIR}/{beat['id']}-{Path(src or beat['src']).name}"
 
 
-def motion_images(beat: dict) -> list[str]:
-    """Les images à intégrer à un motion (`src` : l'ancienne forme, une seule image)."""
-    images = [x for x in beat.get("images") or [] if media_kind(x) == "image"]
+def motion_media(beat: dict) -> list[str]:
+    """Les images et vidéos à intégrer à un motion (`src` : l'ancienne forme, une seule image)."""
+    images = [x for x in beat.get("images") or [] if media_kind(x)]
     if media_kind(beat.get("src", "")) == "image" and beat["src"] not in images:
         images.insert(0, beat["src"])
     return images
@@ -1175,9 +1177,9 @@ def compose(pid: str, only: list[str] | None = None) -> dict:
         if not b.get("on") or (only is not None and b["id"] not in only) or b["id"] in written:
             continue
         if b["id"] in done:
-            # déjà posé, composition jamais écrite : on la redemande sans le reposer (avec les images choisies depuis)
+            # déjà posé, composition jamais écrite : on la redemande sans le reposer (avec les médias choisis depuis)
             if b.get("type") == "motion":
-                for src in motion_images(b):
+                for src in motion_media(b):
                     copy_image(pid, b, src)
             out["motions"].append(done[b["id"]])
             continue
@@ -1213,8 +1215,8 @@ def compose(pid: str, only: list[str] | None = None) -> dict:
                     out["missing"].append(b["id"])
                     continue
             elif kind == "motion":
-                # les images de référence aussi ; une introuvable est passée (la consigne reste)
-                for src in motion_images(b):
+                # les images et vidéos de référence aussi ; une introuvable est passée (la consigne reste)
+                for src in motion_media(b):
                     copy_image(pid, b, src)
             mid = next_id("motion")
             timeline["motion"].append({"id": mid, "at": b["at"], "dur": b["dur"], "title": b["show"][:60],
@@ -1272,22 +1274,51 @@ def image_brief(pid: str, b: dict) -> list[str]:
     return lines
 
 
-def motion_images_brief(pid: str, b: dict) -> list[str]:
-    """La fiche des images fournies pour un motion : à intégrer à l'animation décrite, pas à mettre en scène seules."""
-    files = [image_file(b, src) for src in motion_images(b)]
-    files = [f for f in files if (montage.motion_dir(pid) / f).is_file()]
+def video_still(path: Path) -> Path | None:
+    """Une image d'une vidéo, prise au tiers (à côté d'elle, en .jpg) : ce que Daryl peut regarder."""
+    dest = path.with_name(path.name + ".jpg")
+    if dest.is_file():
+        return dest
+    at = (media.probe(path).get("duration") or 0) / 3
+    proc = subprocess.run([tool("ffmpeg"), "-y", "-v", "error", "-ss", f"{at:.2f}", "-i", str(path), "-frames:v", "1",
+                           "-vf", "scale=960:-2", "-q:v", "3", str(dest)], capture_output=True, timeout=60)
+    return dest if proc.returncode == 0 and dest.is_file() else None
+
+
+def motion_media_brief(pid: str, b: dict) -> list[str]:
+    """La fiche des images et vidéos fournies pour un motion : à intégrer à l'animation décrite, pas à mettre en
+    scène seules."""
+    folder = montage.motion_dir(pid)
+    files = [image_file(b, src) for src in motion_media(b)]
+    files = [f for f in files if (folder / f).is_file()]
     if not files:
         return []
-    lines = [f"- {'Image fournie' if len(files) == 1 else 'Images fournies'} par l'auteur : regarde chacune (Read) "
-             "avant de composer et intègre-les à l'animation là où la consigne en parle (ce sont les visuels dont elle "
-             "parle : ne les remplace pas par des imitations en HTML)."]
-    for f in files:
-        info = media.probe(montage.motion_dir(pid) / f)
+    images = [f for f in files if media_kind(f) == "image"]
+    videos = [f for f in files if media_kind(f) == "video"]
+    lines = [f"- {'Média fourni' if len(files) == 1 else 'Médias fournis'} par l'auteur : regarde chacun (Read ; une "
+             "vidéo, par l'image tirée d'elle) avant de composer et intègre-les à l'animation là où la consigne en "
+             "parle (ce sont les visuels dont elle parle : ne les remplace pas par des imitations en HTML)."]
+    for f in images:
+        info = media.probe(folder / f)
         w, h = info.get("width"), info.get("height")
         sharp = f", {w}×{h} px : à l'écran jamais plus de {round(w * MAX_UPSCALE)} × {round(h * MAX_UPSCALE)} px" if w and h else ""
-        lines.append(f"  - src=\"{f}\"{sharp}")
-    lines.append(f"- Netteté : au-delà de ×{MAX_UPSCALE} sa taille (zooms compris), une image est floue. Pour lire un "
-                 "passage de près, on l'isole (le reste s'assombrit ou se floute) plutôt que de zoomer dans les pixels.")
+        lines.append(f"  - image src=\"{f}\"{sharp}")
+    for f in videos:
+        info = media.probe(folder / f)
+        w, h, d = info.get("width"), info.get("height"), info.get("duration")
+        size = f", {w}×{h} px" if w and h else ""
+        length = f", {d:.1f} s" if d else ""
+        still = video_still(folder / f)
+        seen = f" ; une image tirée d'elle : {still.relative_to(folder).as_posix()}" if still else ""
+        lines.append(f"  - vidéo src=\"{f}\"{size}{length}{seen}")
+    if images:
+        lines.append(f"- Netteté : au-delà de ×{MAX_UPSCALE} sa taille (zooms compris), une image est floue. Pour lire "
+                     "un passage de près, on l'isole (le reste s'assombrit ou se floute) plutôt que de zoomer dans les "
+                     "pixels.")
+    if videos:
+        lines.append("- Une vidéo se pose dans une balise <video> avec ce src, `muted`, data-start / data-duration (et "
+                     "data-media-start pour partir plus loin dans le média) ; elle joue dans son cadre (fenêtre, "
+                     "écran, carte), à sa taille nette, pas en image figée.")
     return lines
 
 
@@ -1318,7 +1349,7 @@ def brief(pid: str, ids: list[str]) -> str:
                 lines.append(f"- {FULL_SCREEN}")
             if b.get("anim"):
                 lines.append(f"- Base : l'animation du kit montage/motion/exemples/{b['anim']} (adapte-la, garde sa mécanique)")
-            lines += motion_images_brief(pid, b)
+            lines += motion_media_brief(pid, b)
         if b.get("enter") or b.get("exit"):
             lines.append("- Le montage ajoute " + " et ".join(
                 f"{'en entrée' if k == 'enter' else 'en sortie'} la transition « {transitions.label(b[k]['fx'])} » "
