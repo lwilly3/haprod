@@ -887,7 +887,13 @@ def bring_media(pid: str, comp: str) -> list[str]:
             continue
         dest = motion_dir(pid) / src
         origin = _media_origin(pid, _attr(tag, "data-from"))
-        if origin and (not dest.is_file() or dest.stat().st_size != origin.stat().st_size):
+        # la fiche du beat donne le média déjà copié à côté des compositions (media/<beat>-<nom>) : Daryl le
+        # reprend souvent en data-from en lui donnant un autre src
+        staged = _attr(tag, "data-from").replace("\\", "/").strip()
+        if not origin and staged.startswith(f"{MEDIA_DIR}/") and ".." not in staged.split("/") \
+                and (motion_dir(pid) / staged).is_file():
+            origin = motion_dir(pid) / staged
+        if origin and origin != dest and (not dest.is_file() or dest.stat().st_size != origin.stat().st_size):
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(origin, dest)
         if not dest.is_file():
