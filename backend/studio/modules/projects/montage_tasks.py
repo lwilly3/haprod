@@ -63,6 +63,8 @@ environ 75 % de l'entrée. Pas d'oscillation décorative (ni repeat: -1 ni yoyo)
 0,3 à 0,75 s d'immobilité.
 - La timeline doit couvrir toute la durée : ajoute `tl.to({}, {duration: <dur>}, 0)`, sinon l'image \
 devient noire avant la fin.
+- Jamais de balise <template> : le rendu prend le premier <template> pour la composition elle-même et la \
+rejette. Un élément à dupliquer se clone en JS depuis un élément caché (display: none).
 - Une vidéo ou une image de contexte.md dans la composition : `src="media/<id>-<nom court sans espace>.<ext>"` \
 et `data-from="<son src exact listé dans contexte.md>"`, sur la balise elle-même (<video>, <img>). Le studio \
 copie le fichier à cet endroit ; tu ne peux pas copier de fichier toi-même. Une vidéo : `muted`, avec \
