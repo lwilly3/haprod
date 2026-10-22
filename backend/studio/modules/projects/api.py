@@ -1501,6 +1501,14 @@ def put_montage(pid: str, req: MontageRequest):
     return {**_montage_view(pid), "base": base}
 
 
+@router.post("/{pid}/montage/renders")
+def retry_motion_renders(pid: str):
+    """Relance les rendus de motions ratés (et ceux qui manquent)."""
+    _check(pid)
+    montage.enqueue_motion_renders(pid)
+    return _montage_view(pid)
+
+
 @router.post("/{pid}/montage/undo")
 def undo_montage(pid: str):
     _check(pid)

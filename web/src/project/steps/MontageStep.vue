@@ -381,7 +381,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
             :image-popup="imagePopup" @image-popup="(tab: ImageTab | null) => (imagePopup = tab)" />
           <Inspector v-else v-model:selection="selection" class="insp" :tl="tl" :view="view" :available="M.available.value"
             :t="t" :total="M.total.value" @edit="edit" @comment="comment" @seek="seek" @beat="addBeat"
-            @insert="(m: AvailableMedia) => insertClip(m, t)" @media="M.loadAvailable()" />
+            @insert="(m: AvailableMedia) => insertClip(m, t)" @media="M.loadAvailable()" @rerender="M.retryRenders()" />
         </div>
 
         <div class="toolbar">

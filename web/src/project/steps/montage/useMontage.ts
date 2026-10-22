@@ -125,6 +125,15 @@ export function useMontage(pid: string) {
     }
   }
 
+  /** Relance les rendus de motions ratés. */
+  async function retryRenders() {
+    try {
+      receive(await post<MontageView>(`${base}/renders`));
+    } catch (e) {
+      toast((e as Error).message, true);
+    }
+  }
+
   /** Une demande à Daryl : la suite de la conversation `task`, sinon une nouvelle demande mise en file. `shot` :
    * l'image en pause dont on parle. Rend la demande (null si elle n'est pas partie). */
   async function send(text: string, selection: Selection | null, shot: Shot | null, task: string | null): Promise<string | null> {
@@ -179,7 +188,7 @@ export function useMontage(pid: string) {
     window.removeEventListener("focus", loadAvailable);
   });
 
-  return { view, tl, available, dirty, holding, busy, total, edit, shiftBeats, save, flush, undo, send, stop, close, exportResolve, load, loadAvailable };
+  return { view, tl, available, dirty, holding, busy, total, edit, shiftBeats, save, flush, undo, retryRenders, send, stop, close, exportResolve, load, loadAvailable };
 }
 
 export type MontageState = ReturnType<typeof useMontage>;

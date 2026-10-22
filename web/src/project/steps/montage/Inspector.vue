@@ -22,7 +22,7 @@ import {
 const props = defineProps<{
   tl: Timeline; view: MontageView; available: AvailableMedia[]; t: number; total: number;
 }>();
-const emit = defineEmits<{ edit: [(t: Timeline) => void]; comment: [string?]; seek: [number]; insert: [AvailableMedia]; media: []; beat: [] }>();
+const emit = defineEmits<{ edit: [(t: Timeline) => void]; comment: [string?]; seek: [number]; insert: [AvailableMedia]; media: []; beat: []; rerender: [] }>();
 const sel = defineModel<Selection | null>("selection", { required: true });
 const { t: tr } = useI18n();
 
@@ -225,6 +225,11 @@ const SOUND_ROLES = computed(() => [["sfx", tr("editing.inspector.sound")], ["mu
               : motionState.render === "error" ? tr("editing.inspector.renderError", { error: motionState.error ?? "" })
               : motionState.render === "rendering" ? tr("editing.inspector.renderProgress", { pct: Math.round(motionState.progress * 100) }) : tr("editing.inspector.renderPending") }}
           </span>
+          <div v-if="motionState?.render === 'error'" class="row">
+            <button class="btn sm" @click="emit('rerender')">{{ tr("editing.inspector.retryRender") }}</button>
+            <button class="btn sm" @click="emit('comment', tr('editing.inspector.askFixRender', { id: item.data.id, error: motionState.error ?? '' }))">
+              {{ tr("editing.inspector.fixRender") }}</button>
+          </div>
         </template>
 
         <template v-else-if="item.track === 'audio'">
