@@ -207,6 +207,18 @@ def sync(project: dict) -> bool:
     return changed
 
 
+# le « modèle » d'une image faite hors du studio et importée telle quelle
+UPLOAD_MODEL = "upload"
+
+
+def add_upload(project: dict, tid: str, file: str) -> None:
+    """Une image importée (déjà copiée dans vignettes/) rejoint la galerie de la variante et devient
+    son image retenue : on l'importe pour s'en servir."""
+    thumb = _thumb(project, tid)
+    project.setdefault("thumb_images", {}).setdefault(tid, []).insert(0, {"file": file, "model": UPLOAD_MODEL})
+    thumb["image"] = file
+
+
 def remove_image(project: dict, tid: str, file: str) -> None:
     """Retire une image de la galerie de la variante (le fichier reste dans vignettes/)."""
     images = project.setdefault("thumb_images", {})

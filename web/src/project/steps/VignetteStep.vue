@@ -12,8 +12,9 @@ import ConfirmX from "../../components/ConfirmX.vue";
 import Seg from "../../components/Seg.vue";
 import { post } from "../../lib/api";
 import { toast } from "../../lib/toast";
-import { act, failed, running, store, update } from "../store";
-import type { Thumb, ThumbIdea, ThumbImage } from "../types";
+import { droppedFiles, upload } from "../../lib/upload";
+import { act, failed, receive, running, store, update } from "../store";
+import type { Project, Thumb, ThumbIdea, ThumbImage } from "../types";
 import LibraryPicker from "./vignette/LibraryPicker.vue";
 import VariantTile from "./vignette/VariantTile.vue";
 import { refUrl } from "./vignette/refs";
@@ -134,7 +135,8 @@ function ideaAsVariant(idea: ThumbIdea) {
 
 // --- génération -----------------------------------------------------------------------
 const models = computed(() => project.value.runtime.thumbs.models);
-const modelLabel = (id: string) => models.value.find((m) => m.id === id)?.label ?? id;
+// « upload » : une image faite hors du studio (backend thumbs.UPLOAD_MODEL)
+const modelLabel = (id: string) => id === "upload" ? tr("thumbnail.uploaded") : models.value.find((m) => m.id === id)?.label ?? id;
 const chosen = ref<string[]>(JSON.parse(localStorage.getItem(MODELS_KEY) ?? '["nano-banana-pro", "seedream-5-pro"]'));
 watch(chosen, (v) => localStorage.setItem(MODELS_KEY, JSON.stringify(v)));
 
@@ -235,6 +237,35 @@ function onKey(e: KeyboardEvent) {
 }
 onMounted(() => window.addEventListener("keydown", onKey));
 onUnmounted(() => window.removeEventListener("keydown", onKey));
+
+// --- une vignette faite ailleurs : importée dans la galerie, et retenue pour la variante ---
+const fileInput = ref<HTMLInputElement | null>(null);
+const uploading = ref(false);
+const dragging = ref(false);
+
+async function importImage(file: File | undefined) {
+  const t = current.value;
+  if (!t?.id || !file || uploading.value) return;
+  uploading.value = true;
+  try {
+    receive(await upload<Project>(`/api/projects/${project.value.id}/thumbs/${t.id}/upload`, [file], "file"));
+  } catch (e) {
+    toast((e as Error).message, true);
+  } finally {
+    uploading.value = false;
+  }
+}
+
+function onFile(e: Event) {
+  const input = e.target as HTMLInputElement;
+  importImage(input.files?.[0]);
+  input.value = "";
+}
+
+function onDrop(e: DragEvent) {
+  dragging.value = false;
+  importImage(droppedFiles(e)[0]);
+}
 
 async function toLibrary(file: string) {
   try {
@@ -367,8 +398,16 @@ const big = computed(() => feed.value === "desktop");
           <span v-else-if="!chosen.length" class="hint">{{ tr("thumbnail.pickModel") }}</span>
         </div>
 
-        <div class="col results">
-          <span class="col-title">{{ tr("thumbnail.results") }}<span v-if="images(current).length" class="faint"> · {{ images(current).length }}</span></span>
+        <div
+          class="col results" :class="{ dragging }"
+          @dragover.prevent="dragging = true" @dragleave.self="dragging = false" @drop.prevent="onDrop">
+          <div class="results-head">
+            <span class="col-title">{{ tr("thumbnail.results") }}<span v-if="images(current).length" class="faint"> · {{ images(current).length }}</span></span>
+            <button class="link-btn small" :disabled="uploading" :title="tr('thumbnail.importTitle')" @click="fileInput?.click()">
+              {{ uploading ? tr("thumbnail.importing") : tr("thumbnail.import") }}
+            </button>
+            <input ref="fileInput" type="file" accept=".png,.jpg,.jpeg,.gif" hidden @change="onFile">
+          </div>
           <div v-if="!images(current).length && !statuses.length" class="empty hatch">
             <span class="faint">{{ tr("thumbnail.resultsEmpty", { v: current.v }) }}</span>
           </div>
@@ -560,6 +599,8 @@ const big = computed(() => feed.value === "desktop");
 .brief { padding-right: 28px; border-right: 1px solid var(--line-soft); }
 @media (max-width: 1100px) { .brief { padding-right: 0; border-right: 0; } }
 .col-title { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.results-head { display: flex; justify-content: space-between; align-items: baseline; }
+.results.dragging { outline: 2px dashed var(--ink); outline-offset: 6px; border-radius: 4px; }
 .ideas-link { align-self: flex-start; font-size: 12.5px; margin-top: 4px; }
 .brief .run { padding-top: 14px; margin-top: 4px; border-top: 1px solid var(--line-soft); }
 .empty { aspect-ratio: 16 / 9; max-width: 480px; display: grid; place-items: center; border-radius: 4px; font-size: 13px; }

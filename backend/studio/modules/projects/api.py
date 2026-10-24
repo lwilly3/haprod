@@ -788,6 +788,27 @@ def propose_thumbs(pid: str, tid: str, req: ThumbIdeasRequest):
     return _view(pid)
 
 
+@router.post("/{pid}/thumbs/{tid}/upload")
+def upload_thumb_image(pid: str, tid: str, file: UploadFile = File(...)):
+    """Une vignette faite hors du studio, ajoutée à la galerie de la variante (et retenue pour elle)."""
+    _check(pid)
+    ext = Path(file.filename or "").suffix.lower()
+    # envoyée telle quelle à YouTube si elle est assez légère : seulement les formats qu'il accepte
+    if ext not in (".png", ".jpg", ".jpeg", ".gif"):
+        raise HTTPException(400, "il faut une image png, jpg ou gif")
+    if not any(t.get("id") == tid for t in service.load(pid)["thumbs"]):
+        raise HTTPException(404, "variante inconnue")
+    dest = _save_upload(file, service.project_dir(pid) / service.VIGNETTES_DIR)
+    with service.editing(pid) as project:
+        runtime.sync(project)
+        try:
+            thumbs.add_upload(project, tid, dest.name)
+        except ValueError as e:
+            dest.unlink(missing_ok=True)
+            raise HTTPException(404, str(e)) from e
+    return _view(pid)
+
+
 @router.delete("/{pid}/thumbs/{tid}/images/{name}")
 def remove_thumb_image(pid: str, tid: str, name: str):
     _check(pid)
