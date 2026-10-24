@@ -89,14 +89,22 @@ def video_title(project: dict, thumb: dict) -> str:
         or next((t["t"] for t in project["titles"] if t.get("pick")), None) or project["title"]
 
 
-def build_edit_prompt(instruction: str, portraits: int) -> str:
-    """Le prompt d'une retouche : l'image 1 est la vignette à modifier, le reste ne bouge pas."""
+def _span(first: int, n: int) -> str:
+    return f"Image {first}" if n == 1 else f"Images {first} to {first + n - 1}"
+
+
+def build_edit_prompt(instruction: str, portraits: int, refs: int = 0) -> str:
+    """Le prompt d'une retouche : l'image 1 est la vignette à modifier, le reste ne bouge pas. Suivent les
+    portraits, puis les images de référence données pour cette retouche."""
     lines = ["Image 1 is a YouTube video thumbnail (16:9). Edit it as asked below and change nothing else: "
              "same composition, framing, person, pose, colors, lighting and text, unless the request says otherwise."]
     if portraits:
-        span = "Image 2" if portraits == 1 else f"Images 2 to {portraits + 1}"
-        lines.append(f"{span}: photos of the person in the thumbnail, only to keep their face exactly "
+        lines.append(f"{_span(2, portraits)}: photos of the person in the thumbnail, only to keep their face exactly "
                      "recognizable if it has to change. Do not add them as new elements.")
+    if refs:
+        what = "a reference image" if refs == 1 else "reference images"
+        lines.append(f"{_span(2 + portraits, refs)}: {what} for the requested change. Use only what the request "
+                     "describes from them (an element to add or replace, a logo, an object, a style).")
     lines += ["", f"Requested change: {instruction.strip()}",
               "", "Any text in the image must stay perfectly spelled."]
     return "\n".join(lines)
@@ -140,8 +148,10 @@ def start(project: dict, tid: str, models: list[str]) -> None:
     _launch(project, tid, models, prompt, portraits + styles)
 
 
-def start_edit(project: dict, tid: str, file: str, instruction: str, models: list[str]) -> None:
-    """Retouche une image de la galerie de `tid` : elle part en image 1, avec les portraits pour garder le visage."""
+def start_edit(project: dict, tid: str, file: str, instruction: str, models: list[str],
+               refs: list[str] | None = None) -> None:
+    """Retouche une image de la galerie de `tid` : elle part en image 1, avec les portraits pour garder le visage
+    et les images de référence de cette retouche (bibliothèque ou médias du projet, comme les références)."""
     thumb = _thumb(project, tid)
     if file not in {i["file"] for i in project.get("thumb_images", {}).get(tid, [])}:
         raise ValueError("image inconnue")
@@ -150,9 +160,13 @@ def start_edit(project: dict, tid: str, file: str, instruction: str, models: lis
     base = service.project_dir(project["id"]) / service.VIGNETTES_DIR / file
     if not base.is_file():
         raise ValueError(f"fichier introuvable : {file}")
-    portraits = [_ref_path(project, r) for r in thumb.get("portraits") or []][:MAX_REFS - 1]
-    _launch(project, tid, models, build_edit_prompt(instruction, len(portraits)), [base, *portraits],
-            source=file, edit=instruction.strip())
+    extra = [_ref_path(project, r) for r in refs or []]
+    if len(extra) > MAX_REFS - 1:
+        raise ValueError(f"{MAX_REFS - 1} images de référence au plus pour une retouche")
+    # les références demandées passent avant les portraits : ceux-ci ne font que garder le visage
+    portraits = [_ref_path(project, r) for r in thumb.get("portraits") or []][:MAX_REFS - 1 - len(extra)]
+    _launch(project, tid, models, build_edit_prompt(instruction, len(portraits), len(extra)),
+            [base, *portraits, *extra], source=file, edit=instruction.strip())
 
 
 def ideas_payload(project: dict, tid: str, note: str) -> dict:

@@ -736,6 +736,7 @@ def generate_thumb(pid: str, tid: str, req: ThumbGenerateRequest):
 class ThumbEditRequest(BaseModel):
     instruction: str
     models: list[str]
+    refs: list[str] = []
 
 
 @router.post("/{pid}/thumbs/{tid}/images/{name}/edit")
@@ -746,7 +747,7 @@ def edit_thumb_image(pid: str, tid: str, name: str, req: ThumbEditRequest):
     with service.editing(pid) as project:
         runtime.sync(project)
         try:
-            thumbs.start_edit(project, tid, name, req.instruction, req.models)
+            thumbs.start_edit(project, tid, name, req.instruction, req.models, req.refs)
         except ValueError as e:
             raise HTTPException(400, str(e)) from e
     return _view(pid)

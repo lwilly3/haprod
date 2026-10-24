@@ -45,6 +45,8 @@ export default {
   removeTitle: "Retirer de la galerie",
   retouchPlaceholder: "Ce qu’il faut changer, le reste ne bouge pas. Ex. : l’air plus surpris, fond plus sombre, le texte en jaune",
   retouch: "Retoucher cette image",
+  retouchRefs: "Images de référence pour la retouche",
+  retouchRefsNone: "Aucune : seulement la consigne. Ex. : un logo à mettre, un objet à reprendre",
   retouchStarted: "Retouche lancée : elle arrivera en tête de la galerie",
   ideas: {
     title: "Compositions proposées par Daryl",

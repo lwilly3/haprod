@@ -198,6 +198,9 @@ const EDIT_MODELS_KEY = "studio.thumbEditModels";
 const editChosen = ref<string[]>(JSON.parse(localStorage.getItem(EDIT_MODELS_KEY) ?? '["nano-banana-2"]'));
 watch(editChosen, (v) => localStorage.setItem(EDIT_MODELS_KEY, JSON.stringify(v)));
 const instruction = ref("");
+// des images en plus pour cette retouche seulement (un logo à mettre, un objet à reprendre…)
+const editRefs = ref<string[]>([]);
+const pickingEditRefs = ref(false);
 
 function toggleEditModel(id: string) {
   editChosen.value = editChosen.value.includes(id) ? editChosen.value.filter((m) => m !== id) : [...editChosen.value, id];
@@ -213,16 +216,17 @@ async function retouch() {
   const t = current.value, img = zoomed.value;
   if (!t?.id || !img || !canEdit.value) return;
   if (await act(`/thumbs/${t.id}/images/${encodeURIComponent(img.file)}/edit`,
-                { instruction: instruction.value, models: editChosen.value })) {
+                { instruction: instruction.value, models: editChosen.value, refs: editRefs.value })) {
     toast(tr("thumbnail.retouchStarted"));
     instruction.value = "";
+    editRefs.value = [];
     zoom.value = null;
   }
 }
 
 function onKey(e: KeyboardEvent) {
   if (ideasOpen.value && e.key === "Escape") ideasOpen.value = false;
-  if (!zoomed.value) return;
+  if (!zoomed.value || pickingEditRefs.value) return;
   const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
   if (e.key === "Escape") zoom.value = null;
   else if (typing) return;
@@ -475,6 +479,19 @@ const big = computed(() => feed.value === "desktop");
             v-model="instruction" class="textarea soft" rows="2"
             :placeholder="tr('thumbnail.retouchPlaceholder')"
             @keydown.ctrl.enter="retouch" />
+          <div class="refs">
+            <div class="refs-head">
+              <label class="label">{{ tr("thumbnail.retouchRefs") }}</label>
+              <button class="link-btn" @click="pickingEditRefs = true">{{ tr("thumbnail.pickFromLibrary") }}</button>
+            </div>
+            <div class="chips">
+              <div v-for="rel in editRefs" :key="rel" class="chip">
+                <img :src="refUrl(project.id, rel)" alt="" :title="rel.split('/').pop()">
+                <button class="x-btn" :title="tr('common.remove')" @click="editRefs = editRefs.filter((r) => r !== rel)">×</button>
+              </div>
+              <span v-if="!editRefs.length" class="faint none">{{ tr("thumbnail.retouchRefsNone") }}</span>
+            </div>
+          </div>
           <div class="retouch-run">
             <button
               v-for="m in models" :key="m.id" class="model" :class="{ on: editChosen.includes(m.id) }"
@@ -487,6 +504,11 @@ const big = computed(() => feed.value === "desktop");
         </div>
       </div>
     </template>
+
+    <!-- après la visionneuse, pour passer par-dessus -->
+    <LibraryPicker
+      v-if="pickingEditRefs" :pid="project.id" category="images" :title="tr('thumbnail.retouchRefs')"
+      :selected="editRefs" :max="MAX_REFS - 1" @done="editRefs = $event; pickingEditRefs = false" @cancel="pickingEditRefs = false" />
   </div>
 </template>
 

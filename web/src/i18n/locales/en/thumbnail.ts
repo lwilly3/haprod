@@ -45,6 +45,8 @@ export default {
   removeTitle: "Remove from the gallery",
   retouchPlaceholder: "What to change, everything else stays. E.g. more surprised look, darker background, yellow text",
   retouch: "Touch up this image",
+  retouchRefs: "Reference images for the touch-up",
+  retouchRefsNone: "None: the instruction only. E.g. a logo to add, an object to copy",
   retouchStarted: "Touch-up started: it will appear at the top of the gallery",
   ideas: {
     title: "Layouts suggested by Daryl",
