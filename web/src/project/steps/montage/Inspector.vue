@@ -256,7 +256,7 @@ const SOUND_ROLES = computed(() => [["sfx", tr("editing.inspector.sound")], ["mu
           <div class="row">
             <button v-for="c in TEXT_COLORS" :key="c" class="swatch" :class="{ on: (item.data as TextNote).color === c }" :style="{ background: c }"
               :title="c" @click="set<TextNote>((x) => { x.color = c; })" />
-            <input type="color" class="picker" :value="(item.data as TextNote).color" :title="tr('editing.inspector.textColor')"
+            <input type="color" class="color-picker" :value="(item.data as TextNote).color" :title="tr('editing.inspector.textColor')"
               @input="set<TextNote>((x) => { x.color = ($event.target as HTMLInputElement).value.toUpperCase(); })">
             <span class="spacer" />
             <button class="link-btn" @click="set<TextNote>((x) => { x.x = 0.5; x.y = 0.8; })">{{ tr("editing.inspector.textReset") }}</button>
@@ -333,7 +333,7 @@ fieldset { border: none; margin: 0; padding: 0; display: flex; flex-direction: c
 .input.area { height: auto; padding: 8px 10px; resize: vertical; font-family: inherit; line-height: 1.4; }
 .swatch { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--line-strong); cursor: pointer; padding: 0; }
 .swatch.on { outline: 2px solid var(--ink); outline-offset: 1px; }
-.picker { width: 26px; height: 22px; padding: 0; border: none; background: none; cursor: pointer; }
+.color-picker { width: 26px; height: 22px; padding: 0; border: none; background: none; cursor: pointer; }
 .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .actions .link-btn { font-size: 12.5px; }
 .hint { margin: 0; font-size: 12px; color: var(--faint); line-height: 1.5; }
