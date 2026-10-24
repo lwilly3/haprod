@@ -9,7 +9,7 @@ import { toast } from "../lib/toast";
 import { stepGroups } from "./nav";
 import { bars, doneCount, firstCur, stepById, STEPS } from "./steps";
 import { open, removeProject, store } from "./store";
-import type { ProjectStorage } from "./types";
+import type { ProjectStorage, UnusedStorage } from "./types";
 
 const { t, locale } = useI18n();
 const route = useRoute();
@@ -17,17 +17,24 @@ const router = useRouter();
 const pid = computed(() => String(route.params.pid));
 const project = computed(() => (store.project?.id === pid.value ? store.project : null));
 const storage = ref<ProjectStorage | null>(null);
+const unused = ref<UnusedStorage | null>(null);
 
 watch(pid, async (id) => {
   storage.value = null;
+  unused.value = null;
   try {
     await open(id);
   } catch {
     router.replace("/");
     return;
   }
-  api<ProjectStorage>(`/api/projects/${id}/storage`).then((s) => { storage.value = s; }).catch(() => {});
+  loadStorage(id);
 }, { immediate: true });
+
+function loadStorage(id: string) {
+  api<ProjectStorage>(`/api/projects/${id}/storage`).then((s) => { storage.value = s; }).catch(() => {});
+  api<UnusedStorage>(`/api/projects/${id}/storage/unused`).then((u) => { unused.value = u; }).catch(() => {});
+}
 
 watch([project, locale], ([p]) => {
   if (p) document.title = `${p.title} · Studio`;
@@ -61,6 +68,27 @@ const categories = computed(() => {
     ...c, label: t(`overview.categories.${c.key}`), size: bytes(c.bytes), color: COLORS[c.key], w: `${(c.bytes / total) * 100}%`,
   }));
 });
+
+const unusedCategories = computed(() => (unused.value?.categories ?? []).filter((c) => c.bytes > 0).map((c) => ({
+  ...c, label: t(`overview.unusedCategories.${c.key}`), size: bytes(c.bytes),
+})));
+
+const purging = ref(false);
+const confirmingPurge = ref(false);
+async function purge() {
+  const id = pid.value;
+  purging.value = true;
+  try {
+    const r = await api<{ freed: number; unused: UnusedStorage }>(`/api/projects/${id}/storage/purge`, { method: "POST" });
+    toast(t("overview.purged", { size: bytes(r.freed) }));
+    confirmingPurge.value = false;
+    loadStorage(id);
+  } catch (e) {
+    toast(t("overview.purgeFailed", { error: String(e) }), true);
+  } finally {
+    purging.value = false;
+  }
+}
 
 const confirming = ref(false);
 async function remove() {
@@ -134,6 +162,28 @@ async function remove() {
             <span v-else class="mono">{{ t("common.loading") }}</span>
           </section>
 
+          <section v-if="unused">
+            <div class="row-between">
+              <span class="eyebrow">{{ t("overview.unused") }}</span>
+              <span class="mono">{{ unused.total ? bytes(unused.total) : t("overview.unusedNone") }}</span>
+            </div>
+            <template v-if="unused.total">
+              <div class="cats">
+                <div v-for="c in unusedCategories" :key="c.key" class="cat unused">
+                  <span>{{ c.label }}</span><span class="mono">{{ c.count }} · {{ c.size }}</span>
+                </div>
+              </div>
+              <button v-if="!confirmingPurge" class="btn sm" @click="confirmingPurge = true">
+                {{ t("overview.purgeBtn", { size: bytes(unused.total) }) }}
+              </button>
+              <div v-else class="confirm">
+                <span>{{ t("overview.purgeConfirm", { size: bytes(unused.total) }) }}</span>
+                <button class="btn sm" :disabled="purging" @click="confirmingPurge = false">{{ t("overview.cancel") }}</button>
+                <button class="btn sm dark" :disabled="purging" @click="purge">{{ t("overview.purge") }}</button>
+              </div>
+            </template>
+          </section>
+
           <div class="danger">
             <div class="danger-row">
               <div class="danger-text">
@@ -200,6 +250,8 @@ section { display: flex; flex-direction: column; gap: 12px; }
   display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 10px; align-items: center;
   padding: 7px 0; border-bottom: 1px solid var(--line-soft); font-size: 13.5px;
 }
+.cat.unused { grid-template-columns: minmax(0, 1fr) auto; }
+.side section > .btn { align-self: flex-start; }
 .swatch { width: 10px; height: 10px; }
 .danger { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid #F0C8C9; border-radius: 4px; }
 .danger-row { display: flex; gap: 12px; align-items: center; }

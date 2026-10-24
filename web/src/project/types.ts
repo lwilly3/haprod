@@ -184,6 +184,12 @@ export interface ProjectStorage {
   categories: { key: "rushes" | "source" | "derush" | "renders" | "media" | "other"; bytes: number }[];
 }
 
+/** Ce qui ne sert plus dans le dossier du projet, que la purge supprime (GET /storage/unused). */
+export interface UnusedStorage {
+  total: number;
+  categories: { key: "assets" | "motion_renders" | "motion_media" | "derush" | "videos"; count: number; bytes: number }[];
+}
+
 /** Ce qui se modifie directement (PATCH). */
 export type ProjectPatch = Partial<Pick<Project,
   "title" | "status" | "brief" | "angle_sel" | "titles" | "thumbs" | "thumb_sel" | "research" | "shots" | "rush_sort" | "publish">> &

@@ -16,7 +16,7 @@ from pydantic import BaseModel
 from ...core import jobs, system
 from ..animations import kit
 from ..youtube import service as youtube
-from . import (asset_tasks, assets, autoderush, derush, kit_adapt, library, migrate, montage, publish, render, roast, runtime, script,
+from . import (asset_tasks, assets, autoderush, cleanup, derush, kit_adapt, library, migrate, montage, publish, render, roast, runtime, script,
                service, storyboard, storyboard_chat, thumbs, timeline, transitions)
 from . import beat_anim
 
@@ -293,6 +293,20 @@ def storage(pid: str):
     sizes = service.storage(pid)
     return {"total": sum(sizes.values()), "free": shutil.disk_usage(service.PROJECTS_DIR).free,
             "categories": [{"key": k, "bytes": v} for k, v in sizes.items()]}
+
+
+@router.get("/{pid}/storage/unused")
+def unused_storage(pid: str):
+    """Ce qui ne sert plus dans le dossier du projet (rendus de motions retirés, rushes retirés…), par catégorie."""
+    _check(pid)
+    return cleanup.summary(pid)
+
+
+@router.post("/{pid}/storage/purge")
+def purge_storage(pid: str):
+    _check(pid)
+    freed = cleanup.purge(pid)
+    return {"freed": freed, "unused": cleanup.summary(pid)}
 
 
 @router.delete("/{pid}")

@@ -305,6 +305,11 @@ def storage(pid: str) -> dict[str, int]:
     return sizes
 
 
+def forget_storage(pid: str) -> None:
+    """Après une suppression : la prochaine lecture de la place occupée refait le compte."""
+    _storage_cache.pop(pid, None)
+
+
 # --- Modifications depuis l'interface ------------------------------------------
 
 # ce que l'interface peut remplacer tel quel
