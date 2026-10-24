@@ -26,6 +26,10 @@ RENDER_OPTIONS = ["--workers", "12"]
 GPU_OPTIONS = ["--gpu"]
 
 _PERCENT = re.compile(r"(\d{1,3})%\s+(.*)")
+# les avertissements du CLI quand une sous-composition n'a pas enregistré window.__timelines[id]
+_UNREGISTERED = re.compile(r"Sub-composition timelines not registered|still waiting on the failed script")
+# et l'erreur de son script (une par worker : dédoublonnée)
+_SCRIPT_ERROR = re.compile(r"Composition script failed (.*)|\[Browser:PAGEERROR\] (.*)")
 STAGES = {"Capturing": "capture des images", "Encoding": "encodage", "Assembling": "assemblage",
           "Extracting": "lecture de la vidéo", "Compiling": "préparation", "Render complete": "terminé"}
 
@@ -122,6 +126,9 @@ def render(directory: Path, output: Path, on_progress: Callable[[float, str], No
                             cwd=directory, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             text=True, encoding="utf-8", errors="replace")
     tail: list[str] = []
+    # une composition dont le script plante n'enregistre pas sa timeline : le CLI rend quand même, image figée
+    page_errors: list[str] = []
+    unregistered = False
     try:
         # le CLI redessine sa barre avec \r : le mode texte en fait des lignes
         for line in proc.stdout:
@@ -130,6 +137,11 @@ def render(directory: Path, output: Path, on_progress: Callable[[float, str], No
             if not line:
                 continue
             tail = (tail + [line])[-40:]
+            failed = _SCRIPT_ERROR.search(line)
+            if failed:
+                page_errors.append((failed.group(1) or failed.group(2)).strip())
+            if _UNREGISTERED.search(line):
+                unregistered = True
             found = _PERCENT.search(line)
             if found:
                 label = found.group(2)
@@ -139,6 +151,11 @@ def render(directory: Path, output: Path, on_progress: Callable[[float, str], No
             # les dernieres lignes hors traces techniques : c'est la que le CLI explique l'echec
             errors = [t for t in tail if not t.startswith("[INFO]")] or tail
             raise RuntimeError("le rendu HyperFrames a échoué : " + " | ".join(errors[-5:])[-800:])
+        if unregistered:
+            output.unlink(missing_ok=True)
+            why = " | ".join(dict.fromkeys(page_errors))[-800:] or "aucune erreur de script remontée"
+            raise RuntimeError(f"une composition n'a pas enregistré sa timeline (son script a planté ?), "
+                               f"le rendu serait figé : {why}")
     finally:
         if proc.poll() is None:
             _kill_tree(proc)
