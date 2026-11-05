@@ -1,0 +1,1062 @@
+{
+  "version": 1,
+  "syncedAt": "2026-10-24T20:18:25.323Z",
+  "entries": [
+    {
+      "type": "skill",
+      "name": "commit-convention",
+      "agent": "claude",
+      "sourceHash": "64df5dc72bc2e35483513cb6553f6a71f41a23d5a0e734cb40aa6d2cb647d4d6",
+      "files": [
+        {
+          "path": ".claude/skills/commit-convention/SKILL.md",
+          "sha256": "37156acb67ba642311530590190a642f6ab18066f6b15f48742f6b1d74c81fbc"
+        }
+      ],
+      "configEntries": [],
+      "via": [
+        "add"
+      ]
+    },
+    {
+      "type": "skill",
+      "name": "docs",
+      "agent": "claude",
+      "sourceHash": "hide-global",
+      "files": [],
+      "configEntries": [
+        {
+          "file": ".claude/settings.json",
+          "key": "skillOverrides.docs",
+          "sha256": "9f3becba6e4b1583b3e19441dde4d59622537d9bd54a94d22262785e485384d0"
+        }
+      ],
+      "via": [
+        "hideGlobal"
+      ]
+    },
+    {
+      "type": "skill",
+      "name": "docx",
+      "agent": "claude",
+      "sourceHash": "hide-global",
+      "files": [],
+      "configEntries": [
+        {
+          "file": ".claude/settings.json",
+          "key": "skillOverrides.docx",
+          "sha256": "9f3becba6e4b1583b3e19441dde4d59622537d9bd54a94d22262785e485384d0"
+        }
+      ],
+      "via": [
+        "hideGlobal"
+      ]
+    },
+    {
+      "type": "skill",
+      "name": "google-workspace",
+      "agent": "claude",
+      "sourceHash": "hide-global",
+      "files": [],
+      "configEntries": [
+        {
+          "file": ".claude/settings.json",
+          "key": "skillOverrides.google-workspace",
+          "sha256": "9f3becba6e4b1583b3e19441dde4d59622537d9bd54a94d22262785e485384d0"
+        }
+      ],
+      "via": [
+        "hideGlobal"
+      ]
+    },
+    {
+      "type": "skill",
+      "name": "gsap",
+      "agent": "claude",
+      "sourceHash": "ef2658b3705d3fd5c8e38d197b31521553a0bee3b40bda2ab70bf22bd6b88854",
+      "files": [
+        {
+          "path": ".claude/skills/gsap/references/effects.md",
+          "sha256": "e4a3e157c746963d341d7fb9a5a721ff5952b51a52a1d79843a749a8de8b6693"
+        },
+        {
+          "path": ".claude/skills/gsap/scripts/extract-audio-data.py",
+          "sha256": "7709b60d42730fc93a348c205ab565158d240b70051d109fcc844b215d56fa4f"
+        },
+        {
+          "path": ".claude/skills/gsap/SKILL.md",
+          "sha256": "d65cfadd0040f3b72377b43e5ccc088925a1397f19fcd258abcf4ed72100aa16"
+        }
+      ],
+      "configEntries": [],
+      "via": [
+        "video-editing-hyperframe"
+      ]
+    },
+    {
+      "type": "skill",
+      "name": "hyperframes-animation",
+      "agent": "claude",
+      "sourceHash": "683eaae3193c872fd0756f1f0737236445001e2bea88a18ccf1fa1eafe48b066",
+      "files": [
+        {
+          "path": ".claude/skills/hyperframes-animation/adapters/animate-text.md",
+          "sha256": "82f0e94d031480d186df792f0e2f8535276d805d699e5c84b9a7b736d107b10a"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/adapters/animejs.md",
+          "sha256": "31ebe3dacacfa75a0d85cb38a2672e397fa90e892cfc7c290a2bd2b72935836c"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/adapters/css-animations.md",
+          "sha256": "07774ef47d6dbbcf7d702a93ef0b5b8ce927b34d8488ea4e465fe713f2be888a"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/adapters/gsap-easing-and-stagger.md",
+          "sha256": "825e8d2524ad166d8c29d59d72caa9e81c3a0368bcfbe059c86371a64d3494d0"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/adapters/gsap-timeline-and-labels.md",
+          "sha256": "96aaef95ff4e546dfff9d2090ca07d3d921d99b01348ef4adccae7686a515dca"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/adapters/gsap-transforms-and-perf.md",
+          "sha256": "c65a274948b163c1e865a7d43d3ff18d614e189bb56380f93a53b47374068983"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/adapters/gsap.md",
+          "sha256": "378c5990fdb5b7d58f5710560a7a87f29662041b1336207a800ad110a5f067c7"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/adapters/html-in-canvas-patterns.md",
+          "sha256": "5e7c801c65d8f34f38c535bc9ed6808ebb6f475f166347bf71a453eb87614e9a"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/adapters/lottie.md",
+          "sha256": "03e905b7b0bec4abba22c2b1630435dde024dbd5500eb00b043bce986c278c8d"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/adapters/three.md",
+          "sha256": "eba02859f6e6c2d458e0becef9684b4c727d4e508c81e99e4dc7385a9507b858"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/adapters/typegpu.md",
+          "sha256": "13489ca7637177710d000e328326ffc0aea89453dbec72172dab4ba34fc682b1"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/adapters/waapi.md",
+          "sha256": "a3a0f2acf5743b6bcf436152d0e7f175e2eb0f52bed48927c6d833c270d46534"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/blueprints-index.md",
+          "sha256": "a99e44d572f7536ce31831a14a380864a93e5d5c1ed7ae9f1682dff96c28e526"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/blueprints/comparison-split.md",
+          "sha256": "af2af2ddf86aba21ed8b2016b7b1bd4b1ced52b4ac98f17eff487dca1097599a"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/blueprints/constellation-hub.md",
+          "sha256": "d8b9bbbe87d2d28b93cc23c15d97c09cf4bf5b9a442a1ea449042e23bfc6804f"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/blueprints/cta-morph-press.md",
+          "sha256": "8be90f5d34a24500fa14ca2e1b813974c645bbadccf113fb8f93faa60496e01e"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/blueprints/cursor-ui-demo.md",
+          "sha256": "472c56010e39a06825c361c3f42b89cb1eaf09be0b711addb02b27102e8700aa"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/blueprints/dataviz-countup.md",
+          "sha256": "8688c3d3e32ada860d53bf3ff7f5ad8dc1a56016db12369caa2331534d59ab74"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/blueprints/device-surface-showcase.md",
+          "sha256": "4976bbac08adad9cbc8cef08bcf12ccaeb57c0a2d5f50bb0df72649f0b17bb72"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/blueprints/grid-card-assemble.md",
+          "sha256": "2302ad889acfe9fe10e5ed66f3a022ffa5c8378c6a05be5b5585b7f795aff56e"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/blueprints/kinetic-type-beats.md",
+          "sha256": "23aa55a4a16faaefcb80ae238654a8916100cdb8141c9b611f9f905c99cb0506"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/blueprints/logo-assemble-lockup.md",
+          "sha256": "b53493fd2eabf23e666d013acd9d00130cfeb735b475835f803a052ce883115b"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/blueprints/overwhelm-surround.md",
+          "sha256": "ecb37bd185d7951db5bfa755dc79cab1e43bb2fc204618b7b1d25317838ef847"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/blueprints/spatial-pan-stations.md",
+          "sha256": "25f6d0512bc63ae332e9c4ed8b530052f429441f37664456a88712abd4c1606f"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/blueprints/ticker-takeover.md",
+          "sha256": "58e7a19b1aca8f3a85affbc24005d1b26ffd9b953053166783afa428f524b5d8"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/blueprints/titlecard-reveal.md",
+          "sha256": "ba1bbb2bb1f43f7ae85c2d67a1e0b5d7d8b6396e758f432d458e0286ba074b64"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/blueprints/typewriter-reveal.md",
+          "sha256": "be324c142dc5bf89649df3c59aa8a7e218ca99d8afe1222f4028a314a237245c"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/blueprints/video-text-pivot.md",
+          "sha256": "6472224469cfb1801989510bec88a997819fa51cd4a5260bc23eee0fd7f086ed"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/assets/avatars/01.png",
+          "sha256": "0cd55ec712f6fd88eda3f1972b979cf2a7a312f15c99db94579fb3f99b9cb8a1"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/assets/avatars/02.avif",
+          "sha256": "11c77a8a62a97ecf8f36e8ab8b8bab16f8ec7e7aff96d157a29f54dcc22ab72a"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/assets/avatars/03.png",
+          "sha256": "1a101f8e4feee6ba42c7b063d2986b63ab9c3bb4ca33c4f675deb8c362965f32"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/assets/avatars/04.webp",
+          "sha256": "f7487adb6f94d75d7911b327b0cb0600e9e829ca56a54c37cf27c8e09968e885"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/assets/avatars/05.webp",
+          "sha256": "c8a0293c0b5c101fe08f6ea82c6406fe1b693a91cf51778d60c5bdcd547db834"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/assets/avatars/06.webp",
+          "sha256": "79f3620cec250c0915181a661c350034b0f44ca85ab670d715c8ae25f41ab473"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/assets/avatars/07.webp",
+          "sha256": "f97362045a3ac188d88f033ad21b4600be646b08438870acf1e1f854894ca124"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/assets/avatars/08.webp",
+          "sha256": "96605613b69ced167ed1e452de62b403001a9415892b24e3004ddeed2649c6f6"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/assets/avatars/09.jpg",
+          "sha256": "1bdf6958b2bc5a205a4a2d5bd54bc328fae725fbf5f3c7202b28fc230fc0c7ce"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/assets/avatars/10.webp",
+          "sha256": "a5054a23f2199977dbba1b994f7d5aa507432529d4cee7e0533d4369b8cdf1bc"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/assets/background-tech-data-flow.mp4",
+          "sha256": "f5d7c64dffda80b3b15bd116e4f2fda2231ae5d7997f2753ba01051aa243ce79"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/assets/brands/github.avif",
+          "sha256": "d6711618492e8f240df0898ee79d5cc277d883e8d612b0619c9aa82dbcd10d99"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/assets/brands/nvidia.avif",
+          "sha256": "e66ae041f22e4af7b672813ec0e60d26964e547a58f8b6e01e259c01ac11185a"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/assets/brands/visa.avif",
+          "sha256": "01ddb8924519d17d11dc5e94e2b87967c0919dc70952a1e07668603fcae67dff"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/assets/brands/zoominfo.avif",
+          "sha256": "35eb77247c08c15b0b84aaa882c85397be3a4d5c2ed9da98137a7545a90da3e7"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/assets/hyperframes-showcase-hypecard.mp4",
+          "sha256": "59894d108c5634cce855f4b9593d48ee0884955b1607e0f1c1c4e973e2eb101e"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/assets/logo-hyperframes.png",
+          "sha256": "2eba7073c4d8016e7b74013e7a12cb3142c5c73d71768fc02cab70ae9202aedd"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/brand-reveal-assemble-zoom.html",
+          "sha256": "6ef0274922bf33c9362c638476d97c475931941263f03934ce06f677c8301e5f"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/comparison-split-cards.html",
+          "sha256": "6fbf71a6620971f67d984d08346758a088d45297b68f2098d05a516001daa2b8"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/concept-demo-decode-pan.html",
+          "sha256": "003f8bbde732f9c982493ba3a531c8d861bdb3119fe772dc3bad135924b355ac"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/cta-morph-press.html",
+          "sha256": "4d423157e55cc7c46d112d3471bac207a2072f5f7d190f506809bc6c7ac68644"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/cta-orbit-collapse.html",
+          "sha256": "d41514f8bb0a4808a66f719bdc3b2118f16a476d47ac71b7db14a73e723f7aee"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/demo-page-scroll-spotlight.html",
+          "sha256": "aa1252821669b2f81d7925bac2869ee9a06650abec152c9ab0c978df1f9b2808"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/hook-counter-burst.html",
+          "sha256": "4766950cad912becd81d293ee23475caf4eac8c02dbde31c4c4f7ed015cb127b"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/messaging-multi-phrase.html",
+          "sha256": "dbfa5e74f09b0e2b45cb28cd100915143aab7f59ad3a2dffb46f5f88c3cccd77"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/metric-video-text-pivot.html",
+          "sha256": "5d0ede336552e9ac402bd7bf7dc84d95c9f76699d0e8ebb78f2dfeac3c7ebc36"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/problem-mockup-overwhelm.html",
+          "sha256": "127d94b53a48d36bf1a5eb5a9fd4e44b0c4cb3a5478c19783aff940f6683106d"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/proof-logo-chain.html",
+          "sha256": "b607d15d84d7666cb519626f1292fa42902f1c58e38766c2c8b5dc75825e7cc2"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/takeover-ticker-displace.html",
+          "sha256": "8d39a9028d8302ccd185d6fa2c5a6da1f097b4e9af083d18a1f0063a96989d22"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/examples/workflow-approve-press.html",
+          "sha256": "2b04b61cc30113195f3a8173aec2a3abcaf13ddd5b7d577baea44aacae65990d"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules-index.md",
+          "sha256": "942bf8bc7bc4706936b77e27c7257c1cfe778bea3b644a1b3e089ee4f310367b"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/3d-page-scroll.md",
+          "sha256": "b7ad271fb9e36b5e78743fe049be108422315bc4fab90806a0e85aed4984d059"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/3d-text-depth-layers.md",
+          "sha256": "d6c8f1f2e04cff2d4f017bf103f1066e4668528b47f8793cd637ac1e079fceff"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/ai-tracking-box.md",
+          "sha256": "c814464ad391c89d89c01bf10c8bd70e330a18ef7fe12a68c957e4eedab158cd"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/ambient-glow-bloom.md",
+          "sha256": "20ca897cb1057afdc1274f6a64dbdc8c3e97e45974fbe3d56708f6c65aa9c185"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/asr-keyword-glow.md",
+          "sha256": "902c0a9fc6931d3f9ba8964d8e45495a80cc1088523397b137e63247d06d540c"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/avatar-cloud-network.md",
+          "sha256": "782fc4d80e4f37f8e053cf345af4cc9d50fd2397da7d5b0de825f8ea6b63a31d"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/camera-cursor-tracking.md",
+          "sha256": "784da7c1bb4b9e5f58916fe7109c95ebab9e9cc8144a629caada20a1a0219157"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/card-morph-anchor.md",
+          "sha256": "1b93357a85d73205140baefe30de278e02aec0a20bcf8b9181541a8d5b842833"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/center-outward-expansion.md",
+          "sha256": "5fa1047e16e626f1c9b397cec80418d1befffbd447771436fd00af562190743e"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/context-sensitive-cursor.md",
+          "sha256": "6677c7bf802fb46774b8d67497983fe8ef22429f9e1c48e03563f6069e42bb2e"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/coordinate-target-zoom.md",
+          "sha256": "e76d8b06c3d15da584b4d1c1bc2690bbb4ecb97595baba8673d4c34af7a067b1"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/counting-dynamic-scale.md",
+          "sha256": "5b468962a12318be22721a7760f3ad7f7e516502a17e8b34a551f8e8723acfde"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/css-marker-patterns.md",
+          "sha256": "9705c6fd30c03974172a57d79a1825cfbdf9d0c9b8d5bb94eb61732c18184d54"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/cursor-click-ripple.md",
+          "sha256": "e095aada6dce26112d5afd98abaf96531c9eacca5d9ac321cb670956862e2fb7"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/depth-of-field-blur.md",
+          "sha256": "3acd9b77efeeb4e5604d0c22009ee8b3f89d0e1b55e828f336afd10638fc81b4"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/depth-scatter-assemble.md",
+          "sha256": "f8feddc4a23255ba25e936da8ef0a82deab7c5cd66976afbd28c1bd906dabedf"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/discrete-text-sequence.md",
+          "sha256": "b3b2874bba225567991fbae5f7977840a1c49814301dbad047df3ff44a54f1cc"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/dynamic-content-sequencing.md",
+          "sha256": "42b1b3e4840032686b3021028663caddd869647ef60bda7fd5e4ad6c32800199"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/gsap-effects.md",
+          "sha256": "6c2386767af9c31ab7e511095e641499956ae47822f81a5cafc7ff9dfbb63292"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/hacker-flip-3d.md",
+          "sha256": "33da181de8b7d8b4eeacfb8bcad4f4e7c714f15b56f3886ce170764ecbfe488c"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/kinetic-beat-slam.md",
+          "sha256": "e264f1d3d8b022841857197d4f8e6247cf7d9a869ca293d9b86bf5b90fd26646"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/motion-blur-streak.md",
+          "sha256": "d88fdd2902c441aa946a7052af465abc1bcb6f7ad95b3ebe890f20d9458e1a4a"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/multi-phase-camera.md",
+          "sha256": "f1314f53bd3047a074e301be4fcf6ee1801032f10d53e91b8d7a093c65b183f9"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/orbit-3d-entry.md",
+          "sha256": "dc6016a01ed764618294aca2eb3e0c473ee899f2fddde1defb37ebbf7a08c7aa"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/physics-press-reaction.md",
+          "sha256": "ebd7e692105c5e1aa9f9377b1f20398e121311e1d8f9963926bd150f5b8d7b5f"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/press-release-spring.md",
+          "sha256": "480d827c5dfc4e5d913a0f9e420efa5e8099ea278f83cfb6c6ac04dde4a1b595"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/reactive-displacement.md",
+          "sha256": "9538c030a4381cb7256dcb3534c2a9f780c3fe3d64792261de6e99928a1a42f5"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/scale-swap-transition.md",
+          "sha256": "76075cf82b9cb2d15269f14261d255dcbf3d46fd2e8443936559b0799eaeb6cf"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/sine-wave-loop.md",
+          "sha256": "25fafafa16a7afed9bb0aa1d2f011486f39bda439b742eef00f320b894618a85"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/split-tilt-cards.md",
+          "sha256": "e25313fbee84ef8597a17729fd9daded3364ced2bc185909debade67c95cf921"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/spring-pop-entrance.md",
+          "sha256": "e4a96490257585c059c5996d53872a1d8073a6b2b0f9b779dfc527ddf227cbfa"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/stat-bars-and-fills.md",
+          "sha256": "9ba06916fe29e05d6b0b2aaccd1f571513153cf4b10170975bfa66fca22a3bcb"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/svg-icon-enrichment.md",
+          "sha256": "95399e2393e155af85b8822e8f4b752e59c77de6f5b0080118065161fd12cbcc"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/svg-path-draw.md",
+          "sha256": "708afa7eb0843a60a62a8ca4282bb1f20e9f5058bd86b08876fa2ae90eb027ab"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/vertical-spring-ticker.md",
+          "sha256": "f356d0e38e92d2106317d74d351951cbe7017fea36e9f0cf40583f5c0db137cd"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/rules/viewport-change.md",
+          "sha256": "86600df8e88e3814fe6fad360cfe524abc65d6689b11a49d8038a7fd368914fa"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/scripts/animation-map.mjs",
+          "sha256": "99ee44c78ffe700ec9c43ae6029be94fc322bb313d78dcfcc7b00109006ca89e"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/scripts/package-loader.mjs",
+          "sha256": "437cadcea3773798679996286c1eefe3d5b0361c6816ca82cef191d066f045fb"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/scripts/package-loader.test.mjs",
+          "sha256": "beb88750ec35aa701b92bd8e6e90220797c78127c8447416956f8dd3259e34dd"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/SKILL.md",
+          "sha256": "a703e597d9270888245a5b496ddf34a05541a768a1c32d685e115bd7bf4f1f61"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/techniques.md",
+          "sha256": "59eca990aad2beade34e47b3c5ea7f03df894574bf9264dd2bd42188542420e7"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/transitions/catalog.md",
+          "sha256": "3914ec091c1f16bfee5c53d38ed6af1dfab74caedf561788dc39e67c6d7ca239"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/transitions/css-3d.md",
+          "sha256": "e1c3888dd0a2d4b36d25200c1e5ef9038649ae63953865e4b2c4c40fb028d7dd"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/transitions/css-blur.md",
+          "sha256": "fd3eef889a517e1dd985ca816f36f1abfb43420a4b664d4fcc453554cdf561f9"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/transitions/css-cover.md",
+          "sha256": "ba4e5926791c9e6a0a069e20afc91324acb018903f43b4b3f2866d9654f5b7eb"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/transitions/css-destruction.md",
+          "sha256": "7cce7bbd9ebc64176c9ff4fe40ec97273c9c171524d89f853c0651e713949361"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/transitions/css-dissolve.md",
+          "sha256": "47c11ca0a715675c2788aa4a162a652b5dc5f1773b058ea93e9907af56a4eb7c"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/transitions/css-distortion.md",
+          "sha256": "7140650692926959bd5459ca5c478a9b4f137cc76fb92b9138e3b0d353677c06"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/transitions/css-grid.md",
+          "sha256": "c62b17058aa7ba42d34df29436b6b4233e47ff2b72f2c7ce0963c75bdec45144"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/transitions/css-light.md",
+          "sha256": "53f0422d3f6dd2584a30501f84e4f09c9b515f605d51ed264a2061567dda15db"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/transitions/css-mechanical.md",
+          "sha256": "4fed48fa659a4b215a996beeea619d244e6c893700178b1f969c17f2ee0a8612"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/transitions/css-other.md",
+          "sha256": "2156e4fcc3b42cba9e0d9e268944269057fb48ff15fc1983e3ff9386fa2a8cf8"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/transitions/css-push.md",
+          "sha256": "d526a9612483472de4d865ae27061c98842a5155973dd0cec37fac4998dc1b97"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/transitions/css-radial.md",
+          "sha256": "5d8f20de439e3f2c8d45df11c8acbe31dc1b9342e2d54bbe66b451cf81ca0a1b"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/transitions/css-scale.md",
+          "sha256": "3c0cb33d6c844a7265379225f3241d8964afcc908ee757a1ebfb1700a5320ea7"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/transitions/overview.md",
+          "sha256": "ec878d479d16addcd88c770b39fc88fa5219086478aee39e9f96a1096a58b084"
+        },
+        {
+          "path": ".claude/skills/hyperframes-animation/transitions/TRANSITION-REGISTRY.md",
+          "sha256": "fb9358d5d4219d2df9d81b02bd8c8e06fd62ed29557bd0c798d8223354c103ef"
+        }
+      ],
+      "configEntries": [],
+      "via": [
+        "video-editing-hyperframe"
+      ]
+    },
+    {
+      "type": "skill",
+      "name": "hyperframes-cli",
+      "agent": "claude",
+      "sourceHash": "d98d54b77d4005882c0a1e73e3715f6b2821e6b8fa9db766dbef05cbcbfc05f9",
+      "files": [
+        {
+          "path": ".claude/skills/hyperframes-cli/references/doctor-browser.md",
+          "sha256": "1d43f5b4fa6e176a6c019e68fc69167d06c4c2ee11a0fac93b8299b01c2442c2"
+        },
+        {
+          "path": ".claude/skills/hyperframes-cli/references/init-and-scaffold.md",
+          "sha256": "cf9a3a78a6d8b9549d65336387ab0d03e5e258c58f2372814726b2537f476d45"
+        },
+        {
+          "path": ".claude/skills/hyperframes-cli/references/lambda.md",
+          "sha256": "535fe913fe8dbcd5aeb8bbe756e726f75bb022628cc2b6760a76c3ce654d3e0b"
+        },
+        {
+          "path": ".claude/skills/hyperframes-cli/references/lint-validate-inspect.md",
+          "sha256": "f8ed20eb307829e2847d34df492c859983eefa3e4caa9d66d44e5ec8da303a51"
+        },
+        {
+          "path": ".claude/skills/hyperframes-cli/references/preview-render.md",
+          "sha256": "74aa86a0651b32970b9099e5ecf107cdbe3c7dc81325ab64bc29fa55e1956bae"
+        },
+        {
+          "path": ".claude/skills/hyperframes-cli/references/upgrade-info-misc.md",
+          "sha256": "8fed434e1082c3b917a3b9d1cdfdf71bf321363002590c393f2c023cbf25aaba"
+        },
+        {
+          "path": ".claude/skills/hyperframes-cli/SKILL.md",
+          "sha256": "e25301d9a9f92df7d96076a22209f899038ff1b8eab756a391a317637f055f12"
+        }
+      ],
+      "configEntries": [],
+      "via": [
+        "video-editing-hyperframe"
+      ]
+    },
+    {
+      "type": "skill",
+      "name": "hyperframes-core",
+      "agent": "claude",
+      "sourceHash": "8e60ebefbd2a190ca09b55eed3b6a6ea29ef63da59d45dc0913065343088f63b",
+      "files": [
+        {
+          "path": ".claude/skills/hyperframes-core/references/composition-patterns.md",
+          "sha256": "cd4d6e73230fd41554323254260477d99c7dae94daa0ee2817271490060323cc"
+        },
+        {
+          "path": ".claude/skills/hyperframes-core/references/data-attributes.md",
+          "sha256": "50001a600e569b22b329c9b4b61102da114617039c4013b226a19e31f8dd014a"
+        },
+        {
+          "path": ".claude/skills/hyperframes-core/references/determinism-rules.md",
+          "sha256": "396bb0940c168396fa2ae55ec828da54c03a52c4bb8e48226cc48bb19b8f674c"
+        },
+        {
+          "path": ".claude/skills/hyperframes-core/references/full-screen-motion.md",
+          "sha256": "662ab555a1400e224bee0007dc57f2882429ae274afe0930587cf3b96ed738f3"
+        },
+        {
+          "path": ".claude/skills/hyperframes-core/references/minimal-composition.md",
+          "sha256": "dcfd186be84c433b04fb07eeb334a4d871d12eecef69dea5540e4d127ae4967b"
+        },
+        {
+          "path": ".claude/skills/hyperframes-core/references/script-format.md",
+          "sha256": "b767bd0a51269065bca5ded44f10ee38d138f5b7a3b511bf21b5c217edac4c6e"
+        },
+        {
+          "path": ".claude/skills/hyperframes-core/references/storyboard-format.md",
+          "sha256": "b9b8e8421d50ab13c556c474cdd8e5d883dc7454f052aa1a71431b1353e58d98"
+        },
+        {
+          "path": ".claude/skills/hyperframes-core/references/sub-compositions.md",
+          "sha256": "ec95b34ba56015d7609beeb1bfbd044aa6937e47fb48b0e75686388817b66006"
+        },
+        {
+          "path": ".claude/skills/hyperframes-core/references/subagent-dispatch.md",
+          "sha256": "5c1a9f207cc10f9cea3f1e2ec6f15884388b1770ccbcc0115e3710fd20d40efa"
+        },
+        {
+          "path": ".claude/skills/hyperframes-core/references/tailwind.md",
+          "sha256": "796f1536a852c5883c139dbdf0d17ac19109b109592edfa3eb64af4b879daa63"
+        },
+        {
+          "path": ".claude/skills/hyperframes-core/references/tracks-and-clips.md",
+          "sha256": "e8686d88bacc757d5b4c4fa7ac0c19df7ff375aa45c9e53b3c05db11526fdc6d"
+        },
+        {
+          "path": ".claude/skills/hyperframes-core/references/variables-and-media.md",
+          "sha256": "da62b9a8e265a5fe243e00f27ac4f7c754130221b4e93cc34ad98f5852770bcf"
+        },
+        {
+          "path": ".claude/skills/hyperframes-core/SKILL.md",
+          "sha256": "5fd576f2de2ae2c110e21cda2f4d6d95c5aa746fb77baa63248301e65e5f976a"
+        }
+      ],
+      "configEntries": [],
+      "via": [
+        "video-editing-hyperframe"
+      ]
+    },
+    {
+      "type": "skill",
+      "name": "hyperframes-keyframes",
+      "agent": "claude",
+      "sourceHash": "32489a3f3001255eac32e1af858273ae984b55df05406ce1d170ae39e912bd2f",
+      "files": [
+        {
+          "path": ".claude/skills/hyperframes-keyframes/references/keyframe-patterns.md",
+          "sha256": "780f7ba0c5a287d7515bb8bcb00c066c3fc320f8da6bc0995a5d652deb71e9bf"
+        },
+        {
+          "path": ".claude/skills/hyperframes-keyframes/SKILL.md",
+          "sha256": "b0850e0e538e5b94ed03471f4e98620fe4d2863ed7b115164dda0292e83838f7"
+        }
+      ],
+      "configEntries": [],
+      "via": [
+        "video-editing-hyperframe"
+      ]
+    },
+    {
+      "type": "skill",
+      "name": "hyperframes-registry",
+      "agent": "claude",
+      "sourceHash": "62984a677583cb55beebbb5784e1caeabf7ac3e5a09e66bb5dd7205d5ab411bf",
+      "files": [
+        {
+          "path": ".claude/skills/hyperframes-registry/examples/add-block.md",
+          "sha256": "0e3353755c4ef55e53570d1266a4a43b2c5aef9bbe41276430e38cfa6580b83a"
+        },
+        {
+          "path": ".claude/skills/hyperframes-registry/examples/add-component.md",
+          "sha256": "d06992d31eec617a91f5c34630c9274c52dd07898bd24f10a869d0d1cab5af29"
+        },
+        {
+          "path": ".claude/skills/hyperframes-registry/references/contributing.md",
+          "sha256": "c9863f2c6ff2350837f9bf07fca5ccda17756161a4f4584c892ccd927100e789"
+        },
+        {
+          "path": ".claude/skills/hyperframes-registry/references/demo-html-pattern.md",
+          "sha256": "dfc50cd33eff2c2be75437786fc3e851ab0085f7d453fb35b3380ecf9a6e9f04"
+        },
+        {
+          "path": ".claude/skills/hyperframes-registry/references/discovery.md",
+          "sha256": "ed2fbabb2cf53352d54d57dbfb9afcafc6e73047c6e7298a7ec48246699513ba"
+        },
+        {
+          "path": ".claude/skills/hyperframes-registry/references/install-locations.md",
+          "sha256": "83793e7d6aeea9a751755e4bd23ea48182ff9af082287b98a1192343d2571dd1"
+        },
+        {
+          "path": ".claude/skills/hyperframes-registry/references/templates.md",
+          "sha256": "c1cd5f9328dd2fb02ab8103a814255f8d3fed4ce62d5da17cacf06fe2cec6696"
+        },
+        {
+          "path": ".claude/skills/hyperframes-registry/references/wiring-blocks.md",
+          "sha256": "397f9ad5a9244d173b97bb5a5dfe76ea3cbccfb8dde16cba8b3dabc6044b011a"
+        },
+        {
+          "path": ".claude/skills/hyperframes-registry/references/wiring-components.md",
+          "sha256": "6c8341c29fdae6de4f9fd1560a668d11cf34731b81fe5a06c9aeb4a000047b2a"
+        },
+        {
+          "path": ".claude/skills/hyperframes-registry/SKILL.md",
+          "sha256": "1abaa095aae1b680b5b6e80032e66694fc401ccbfea9526aabcf727c841c9012"
+        }
+      ],
+      "configEntries": [],
+      "via": [
+        "video-editing-hyperframe"
+      ]
+    },
+    {
+      "type": "skill",
+      "name": "motion-graphics",
+      "agent": "claude",
+      "sourceHash": "10e1c1eeaed37c02254c272a7f735f91bb9340e9567642cacc389445b6433ae6",
+      "files": [
+        {
+          "path": ".claude/skills/motion-graphics/agents/builder.md",
+          "sha256": "3faf8080738911b7acdea21432ab795a1f85716df79e8b8044d27147baaf0505"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/agents/director.md",
+          "sha256": "58d418b1a1f2082274e6450d0741ebfb0b8037b4e2ece4b71742ab77e344b284"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/agents/finalize.md",
+          "sha256": "201a849f32330201717cf7aed01fd2d243991915f726a34384a7ace55e35b937"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/catalog-map.md",
+          "sha256": "3e6cd7894b214b4c3219dc5b4a707131b8c04648590d6b114c3e828c9ddf64bf"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/categories/asset-fusion/module.md",
+          "sha256": "f482521fd24fc6091df8be86044344d64b126c528216fdf4de8f6971c68eeb9c"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/categories/charts/module.md",
+          "sha256": "16b2bacb9e0b80347347043d3885fc323257426bd8d77a14a6ed9af6007bf6b4"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/categories/kinetic-type/module.md",
+          "sha256": "7adab01bfabe1d690c2376435f548310e38b4584305ccf49b52449b55e8cf7db"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/categories/logo-reveal/module.md",
+          "sha256": "059c8b4c015271cb054a5d73f8aa4a1f3d7c8687fa3180144aecb49423b4b1ae"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/categories/lower-thirds/module.md",
+          "sha256": "4759e9d3e062a661718fa81ccc5115b6a86bcf706c374a71b37eb8b9f5d44609"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/categories/maps/bake-basemap.mjs",
+          "sha256": "1f59814e759cdf662f2de7fa752ff85dadbaddfe6d96189542968b0bf62a8931"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/categories/maps/module.md",
+          "sha256": "570b14a76d46c75e219e51220187c29a35c9889c5b68e0ebe7ee38f60756237f"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/categories/news/module.md",
+          "sha256": "d0dfaa1a98c1f11e010cb652c093d09e35d23b46e0b1acc17cbf2ecc87890f5a"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/categories/stat/module.md",
+          "sha256": "ec2be020cb891d28f453728bf836a93a648e33bd77679e24cf2bf705852b0e81"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/categories/tweet/module.md",
+          "sha256": "e374b6c2eb56eb25dff05cab09872311ffc175d50369f6d02152e893219e4016"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/categories/webpage/module.md",
+          "sha256": "a70d01fa1d9edf0c1c3969cfd1f70e5d807adc21a5fa1af3377e330e8424caa0"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/grounding/locate.mjs",
+          "sha256": "28c1f686f7b5764b342799ad183428b200bf7479072ef4c6a2d351f7ab6c3a41"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/grounding/PROTOCOL.md",
+          "sha256": "01a5bd32b14c13d5b7a396184f633d11e61c24910470461c4351b03d1a3a65a5"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/phases/source/guide.md",
+          "sha256": "9a5866cf3e1d29946a2cc3c648e8eed959daccbb6c48a1b2b8aeab469c1e27cd"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/references/builder-contract.md",
+          "sha256": "487ca25974718656c9723940e5305ddb4606b5b1276a8532f31a13a76b67edce"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/references/motion-vocabulary.md",
+          "sha256": "9f33ed29eee45f688a07d6a4edb84cbf7d803b93e8f7d9ab0f96de5d0afd5cc6"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/references/shot-plan-ir.md",
+          "sha256": "ff52b844703121fef7bcac79fd4523fc9bcf6537a18390b7a3031f64270137d3"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/samples/asset-fusion/_ref-circle-highlight.html",
+          "sha256": "1c6d33b1fc191735fe035a9a104be58236f9cb1fde33a0445ae08808204118b5"
+        },
+        {
+          "path": ".claude/skills/motion-graphics/SKILL.md",
+          "sha256": "ddb9dded84b13dbd08a9dd44eb6f6fcbf14b2280ace937aa516314de6be128a3"
+        }
+      ],
+      "configEntries": [],
+      "via": [
+        "video-editing-hyperframe"
+      ]
+    },
+    {
+      "type": "skill",
+      "name": "music-bed",
+      "agent": "claude",
+      "sourceHash": "f28f34b947055c54debe7bd8f93c01bb61ed20cbb78c89bff16bdc306f2f1756",
+      "files": [
+        {
+          "path": ".claude/skills/music-bed/scripts/apply.py",
+          "sha256": "3d3d5d9ab5a52bc20aa7b6642cbbf1d3f2657138d7650284fcafadb7543fe54f"
+        },
+        {
+          "path": ".claude/skills/music-bed/scripts/build.py",
+          "sha256": "673a3834570a5bc49a79862a065bd848842dda6fb95e59f9fab69235745cda9b"
+        },
+        {
+          "path": ".claude/skills/music-bed/scripts/common.py",
+          "sha256": "87a9511ace83bed038623eebe2757fde8b338cc4f2bda992e44f9f7d9e963892"
+        },
+        {
+          "path": ".claude/skills/music-bed/scripts/profile.py",
+          "sha256": "18a3ea8137c9367b68014947633d8b7437f11a41c7fbff34fc3e41e1881890c8"
+        },
+        {
+          "path": ".claude/skills/music-bed/scripts/remix_render.py",
+          "sha256": "c031b838983869293f89aa05a12d658e107b6d62f801a17cdf61ed8682132c64"
+        },
+        {
+          "path": ".claude/skills/music-bed/scripts/voice.py",
+          "sha256": "c9ab7bd915637aeea1bc67d8815d73e9402edcef8c40a3d49424019a28632d26"
+        },
+        {
+          "path": ".claude/skills/music-bed/SKILL.md",
+          "sha256": "cf6d74ff7d5d51ed307e137827a3004802d26b44e8f6a88ff238d628c3b5dcec"
+        }
+      ],
+      "configEntries": [],
+      "via": [
+        "add"
+      ]
+    },
+    {
+      "type": "skill",
+      "name": "pdf",
+      "agent": "claude",
+      "sourceHash": "hide-global",
+      "files": [],
+      "configEntries": [
+        {
+          "file": ".claude/settings.json",
+          "key": "skillOverrides.pdf",
+          "sha256": "9f3becba6e4b1583b3e19441dde4d59622537d9bd54a94d22262785e485384d0"
+        }
+      ],
+      "via": [
+        "hideGlobal"
+      ]
+    },
+    {
+      "type": "skill",
+      "name": "pptx",
+      "agent": "claude",
+      "sourceHash": "hide-global",
+      "files": [],
+      "configEntries": [
+        {
+          "file": ".claude/settings.json",
+          "key": "skillOverrides.pptx",
+          "sha256": "9f3becba6e4b1583b3e19441dde4d59622537d9bd54a94d22262785e485384d0"
+        }
+      ],
+      "via": [
+        "hideGlobal"
+      ]
+    },
+    {
+      "type": "skill",
+      "name": "replace-aroll-take",
+      "agent": "claude",
+      "sourceHash": "4e03d51e232e488b5c284671a4a52b0967bc0f7be1ae1edf36ea4a128f772a5f",
+      "files": [
+        {
+          "path": ".claude/skills/replace-aroll-take/scripts/common.py",
+          "sha256": "1e73e37eaf23e3e3cc313cda65bb4a6328d20a1eb806512c5ad795b2c94e29fc"
+        },
+        {
+          "path": ".claude/skills/replace-aroll-take/scripts/remap.py",
+          "sha256": "42b0ac6de45ddc62e22df9bc79e6d626a546eb9c36ee327c789a7fb0d9769e53"
+        },
+        {
+          "path": ".claude/skills/replace-aroll-take/scripts/replace.py",
+          "sha256": "0ed264e591987c75bf167f396a27dff2ee0ed83595b091fdae3031880ff639f3"
+        },
+        {
+          "path": ".claude/skills/replace-aroll-take/scripts/transcribe.py",
+          "sha256": "c631113832d54ebb81c0eef5d5448e7f9010228e980c57539dcba81220a7b111"
+        },
+        {
+          "path": ".claude/skills/replace-aroll-take/scripts/zone.py",
+          "sha256": "a5275a1b33427758bbcd99f0be9e875da4995069ec56445f524839f61a85c9e0"
+        },
+        {
+          "path": ".claude/skills/replace-aroll-take/SKILL.md",
+          "sha256": "d5c8aeb01d0d38a8a2be4d02a27830975b2f07a9578f59ec543dce87f08ceaed"
+        }
+      ],
+      "configEntries": [],
+      "via": [
+        "add"
+      ]
+    },
+    {
+      "type": "skill",
+      "name": "snatch-cut",
+      "agent": "claude",
+      "sourceHash": "3f6421bdb8947438b6291ec3cd65451dc33042344b4c34e1c7b7ca63413dfcb9",
+      "files": [
+        {
+          "path": ".claude/skills/snatch-cut/references/example-spec.json",
+          "sha256": "16a7b6b64a99cf696cd7c4b31db3303be06c475a7427f3cf958ef6481d1ddab8"
+        },
+        {
+          "path": ".claude/skills/snatch-cut/references/snatch-breakdown.md",
+          "sha256": "f90064f9a71a1738b386449d25ecef56452f30b60081399f36db1b341376a178"
+        },
+        {
+          "path": ".claude/skills/snatch-cut/scripts/analyze.py",
+          "sha256": "63808ddc773bc9f6803bb59291822f37f647f15af3e01fe65b216d2648b5a767"
+        },
+        {
+          "path": ".claude/skills/snatch-cut/scripts/render.py",
+          "sha256": "54cf482f87ec36119c4cc1a6c6b7c3af676736ef9b323c7e3f8dd069e0fdaadf"
+        },
+        {
+          "path": ".claude/skills/snatch-cut/SKILL.md",
+          "sha256": "537da32c20421d64baa72a5a3bf9334f166984f0bcf0664ca544e551059d7c7c"
+        }
+      ],
+      "configEntries": [],
+      "via": [
+        "add"
+      ]
+    },
+    {
+      "type": "skill",
+      "name": "three",
+      "agent": "claude",
+      "sourceHash": "d40f783d8687f93b19657c193811c78304f84dd276ad344c38045e57b03de187",
+      "files": [
+        {
+          "path": ".claude/skills/three/SKILL.md",
+          "sha256": "12dd949a36e878fae99aedee3b22de2fe11be32598970166c7c171a223a8fde1"
+        }
+      ],
+      "configEntries": [],
+      "via": [
+        "video-editing-hyperframe"
+      ]
+    },
+    {
+      "type": "skill",
+      "name": "xlsx",
+      "agent": "claude",
+      "sourceHash": "hide-global",
+      "files": [],
+      "configEntries": [
+        {
+          "file": ".claude/settings.json",
+          "key": "skillOverrides.xlsx",
+          "sha256": "9f3becba6e4b1583b3e19441dde4d59622537d9bd54a94d22262785e485384d0"
+        }
+      ],
+      "via": [
+        "hideGlobal"
+      ]
+    },
+    {
+      "type": "mcp",
+      "name": "epidemic-sound",
+      "agent": "claude",
+      "sourceHash": "3a86527f9c01fed6010690910fcd0096adc73342f8292df2a88cb1e134b0897a",
+      "files": [],
+      "configEntries": [
+        {
+          "file": ".mcp.json",
+          "key": "mcpServers.epidemic-sound",
+          "sha256": "b31c9815368abeade44ec3d4ea99afcc2c365db93822b07e5f82b0cdb86b2041"
+        }
+      ],
+      "via": [
+        "add"
+      ]
+    },
+    {
+      "type": "mcp",
+      "name": "gitnexus",
+      "agent": "claude",
+      "sourceHash": "hide-global",
+      "files": [],
+      "configEntries": [
+        {
+          "file": ".claude/settings.json",
+          "key": "deniedMcpServers[gitnexus]",
+          "sha256": "15dc07cb7e3b42a1d9f6d13d803c9033d83b1009ca65ef36a9d67e9bbeb6c956"
+        }
+      ],
+      "via": [
+        "hideGlobal"
+      ]
+    }
+  ]
+}

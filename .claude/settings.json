@@ -1,0 +1,15 @@
+{
+  "skillOverrides": {
+    "docs": "off",
+    "docx": "off",
+    "google-workspace": "off",
+    "pdf": "off",
+    "pptx": "off",
+    "xlsx": "off"
+  },
+  "deniedMcpServers": [
+    {
+      "serverName": "gitnexus"
+    }
+  ]
+}

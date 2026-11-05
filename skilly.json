@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "targets": [
+    "claude"
+  ],
+  "presets": [
+    "video-editing-hyperframe"
+  ],
+  "add": {
+    "skill": [
+      "snatch-cut",
+      "commit-convention",
+      "music-bed",
+      "replace-aroll-take"
+    ],
+    "mcp": [
+      "epidemic-sound"
+    ]
+  },
+  "exclude": {},
+  "onDemand": {
+    "skills": []
+  },
+  "hideGlobal": {
+    "skills": [
+      "docs",
+      "docx",
+      "google-workspace",
+      "pdf",
+      "pptx",
+      "xlsx"
+    ],
+    "mcp": [
+      "gitnexus"
+    ]
+  }
+}
