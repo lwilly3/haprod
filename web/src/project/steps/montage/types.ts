@@ -207,11 +207,11 @@ export function prevJoined(tl: Timeline, track: "broll" | "motion", id: string):
  * ou entre deux plans collés, sinon dans les premières / dernières secondes du plan. null : pas de transition, ou
  * une sortie remplacée par l'enchaînement avec le plan suivant.
  */
-export function fxSpan(tl: Timeline, track: Track, id: string, fx: FxEnd, sourceDuration = Infinity): [number, number] | null {
+export function fxSpan(tl: Timeline, track: Track, id: string, fx: FxEnd): [number, number] | null {
   if (track === "aroll") {
     const i = tl.aroll.findIndex((c) => c.id === id), tr = tl.aroll[i]?.transition;
     if (i < 1 || !tr) return null;
-    const cut = clipStarts(tl)[i], half = Math.min(tr.dur, fxMax(tl, track, id, fx, sourceDuration)) / 2;
+    const cut = clipStarts(tl)[i], half = Math.min(tr.dur, fxMax(tl, track, id, fx)) / 2;
     return [cut - half, cut + half];
   }
   if (track !== "broll" && track !== "motion") return null;
@@ -235,16 +235,14 @@ export function fxSpan(tl: Timeline, track: Track, id: string, fx: FxEnd, source
 
 /**
  * La plus longue durée qu'une transition peut jouer, comme au rendu : entre deux clips de l'A-roll, la moitié de
- * chacun et la marge de la source de part et d'autre de la coupe ; entre deux plans collés, le plus court des
+ * chacun (un côté sans assez de marge tient son image de bord) ; entre deux plans collés, le plus court des
  * deux ; une entrée ou une sortie, la moitié du plan.
  */
-export function fxMax(tl: Timeline, track: Track, id: string, fx: FxEnd, sourceDuration = Infinity): number {
+export function fxMax(tl: Timeline, track: Track, id: string, fx: FxEnd): number {
   if (track === "aroll") {
     const i = tl.aroll.findIndex((c) => c.id === id), prev = tl.aroll[i - 1], cur = tl.aroll[i];
     if (!prev || !cur) return 0;
-    // un clip inséré d'un autre média n'a pas de marge connue : pas de transition avec lui
-    if (prev.src || cur.src) return 0;
-    return 2 * Math.min((prev.out - prev.in) / 2, (cur.out - cur.in) / 2, Math.max(0, sourceDuration - prev.out), cur.in);
+    return 2 * Math.min((prev.out - prev.in) / 2, (cur.out - cur.in) / 2);
   }
   const span = spanOf(tl, track, id);
   if (!span) return 0;

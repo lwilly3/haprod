@@ -184,7 +184,7 @@ const SOUND_ROLES = computed(() => [["sfx", tr("editing.inspector.sound")], ["mu
               @dblclick="set<ArollClip>((x) => { delete x.gain_db; })">
           </label>
           <p v-if="(item.data as ArollClip).src" class="hint">{{ tr("editing.inspector.insertedHint") }}</p>
-          <TransitionPicker v-else-if="tl.aroll[0]?.id !== item.data.id" :title="tr('transitions.withPrev')"
+          <TransitionPicker v-if="tl.aroll[0]?.id !== item.data.id" :title="tr('transitions.withPrev')"
             :model-value="(item.data as ArollClip).transition" @update:model-value="(v) => set<ArollClip>((x) => { x.transition = v ?? null; })" />
           <p class="hint">{{ tr("editing.inspector.arollHint") }}</p>
         </template>

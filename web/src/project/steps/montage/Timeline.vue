@@ -186,7 +186,7 @@ type FxTrack = "aroll" | "broll" | "motion";
 const fxV = computed(() => {
   const out: { track: FxTrack; id: string; fx: FxEnd; name: string; a: number; b: number; centered: boolean }[] = [];
   const add = (track: FxTrack, id: string, fx: FxEnd, name: string, centered: boolean) => {
-    const span = fxSpan(props.tl, track, id, fx, props.sourceDuration);
+    const span = fxSpan(props.tl, track, id, fx);
     if (span && visible(span[0], span[1])) out.push({ track, id, fx, name, a: span[0], b: span[1], centered });
   };
   for (const c of props.tl.aroll) if (c.transition) add("aroll", c.id, "transition", c.transition.fx, true);
@@ -375,7 +375,7 @@ function applyFx(tl: Timeline, d: NonNullable<typeof drag>, t: number) {
   const centered = d.fx === "transition" || (d.fx === "enter" && !!prevJoined(d.origin, d.track as "broll" | "motion", d.id));
   let dur = centered ? 2 * Math.abs(t - (span[0] + span[1]) / 2) : d.fx === "enter" ? t - span[0] : span[1] - t;
   // au pas de 0,05 s, sans dépasser ce que le rendu peut jouer
-  const max = Math.min(FX_DUR[1], Math.floor(fxMax(d.origin, d.track, d.id, d.fx!, props.sourceDuration) * 20) / 20);
+  const max = Math.min(FX_DUR[1], Math.floor(fxMax(d.origin, d.track, d.id, d.fx!) * 20) / 20);
   dur = Math.round(Math.max(FX_DUR[0], Math.min(max, dur)) * 20) / 20;
   if (d.fx === "transition") {
     const c = tl.aroll.find((k) => k.id === d.id);

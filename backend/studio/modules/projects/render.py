@@ -232,11 +232,12 @@ def segments(aroll: list[dict], zooms: list[dict], fps: Fraction, source_duratio
     """
     Découpe l'A-roll en morceaux, bornes en images de la timeline :
     {start, end, clip: index du clip, src: début dans son média, fade: début de la plage entrante (transition) | None,
-     clip_b: index du clip entrant, fx: la transition (xfade), zoom: bool}.
+     clip_b: index du clip entrant, fx: la transition (xfade), cut: la coupe (images depuis start),
+     held: un côté tient son image de bord, zoom: bool}.
 
-    Une transition est centrée sur la coupe et mange la marge de part et d'autre (comme dans Resolve) :
-    sa durée est réduite si la source n'a pas assez de marge. Pas de transition avec un clip inséré d'un autre
-    média (comme dans l'interface).
+    Une transition est centrée sur la coupe et mange la marge de part et d'autre (comme dans Resolve), au plus
+    la moitié de chaque clip. Un côté sans assez de marge (un clip inséré utilisé en entier, le début ou la fin de
+    la source) tient sa première ou sa dernière image ; le son coupe alors net à la coupe (L-cut).
     """
     def frame(t: float) -> int:
         return round(t * fps)
@@ -252,11 +253,9 @@ def segments(aroll: list[dict], zooms: list[dict], fps: Fraction, source_duratio
     for i in range(1, len(aroll)):
         tr = aroll[i].get("transition")
         prev, cur = aroll[i - 1], aroll[i]
-        if not tr or prev.get("src") or cur.get("src"):
+        if not tr:
             continue
-        d = tr["dur"]
-        half = min(d / 2, (prev["out"] - prev["in"]) / 2, (cur["out"] - cur["in"]) / 2,
-                   max(0.0, prev.get("length", source_duration) - prev["out"]), cur["in"])
+        half = min(tr["dur"] / 2, (prev["out"] - prev["in"]) / 2, (cur["out"] - cur["in"]) / 2)
         n = int(half * fps)
         if n >= 1:
             windows[cuts[i] - n] = (cuts[i] + n, i)
@@ -282,7 +281,10 @@ def segments(aroll: list[dict], zooms: list[dict], fps: Fraction, source_duratio
         if a in windows and windows[a][0] == b:
             i = windows[a][1]
             prev, cur = aroll[i - 1], aroll[i]
+            reach = float(Fraction(cuts[i] - a) / fps)
+            held = (prev.get("length", source_duration) - prev["out"] < reach - 1e-3) or cur["in"] < reach - 1e-3
             out.append({"start": a, "end": b, "zoom": zoomed, "fx": cur["transition"]["fx"], "clip": i - 1, "clip_b": i,
+                        "cut": cuts[i] - a, "held": held,
                         "src": float(prev["in"] + (Fraction(a) / fps - Fraction(starts[i - 1]))),
                         "fade": float(cur["in"] + (Fraction(a) / fps - Fraction(starts[i])))})
         else:
@@ -341,42 +343,59 @@ def segment_args(p: dict, seg: dict, dest: Path) -> list[str]:
     read = f"{float(length) + 0.5:.3f}"
     args = [tool("ffmpeg"), "-y", "-v", "error", "-nostats", "-progress", "pipe:1",
             "-ss", f"{seg['src']:.6f}", "-t", read, "-i", clip_a["path"]]
+    # le clip entrant sans assez de marge avant : sa première image tenue jusqu'à son début
+    lead = max(0.0, -seg["fade"]) if seg["fade"] is not None else 0.0
     if seg["fade"] is not None:
-        args += ["-ss", f"{seg['fade']:.6f}", "-t", read, "-i", clip_b["path"]]
+        args += ["-ss", f"{max(0.0, seg['fade']):.6f}", "-t", read, "-i", clip_b["path"]]
+    if seg.get("held"):
+        # son coupé à la coupe : le son du clip entrant lu depuis son point d'entrée
+        args += ["-ss", f"{clip_b['in']:.6f}", "-t", read, "-i", clip_b["path"]]
 
-    def prep(clip: dict) -> str:
+    def prep(clip: dict, lead: float = 0.0) -> str:
         """
         Une entrée à la cadence et en couleurs BT.709 (un clip SD inséré est en BT.601) : un A-roll aux
         propriétés uniformes, sinon ffmpeg réinitialise ses filtres en cours de passe finale et y perd des images.
         """
         convert = ("scale=iw:ih:in_color_matrix=bt601:out_color_matrix=bt709:out_range=tv,"
                    if clip.get("colorspace") in BT601 else "")
+        # `lead` : la première image tenue avant le début ; la dernière est tenue après la fin du fichier (une
+        # transition qui déborde d'un clip sans marge)
+        hold = f"tpad=start_mode=clone:start_duration={lead:.6f}," if lead > 0 else ""
         # ramené à 0 avant la cadence : après la recherche dans la source, la première image arrive un peu après 0,
         # fps la placerait une image plus loin, et le recollage laisserait un trou d'une image dans l'A-roll
         return (f"setpts=PTS-STARTPTS,fps={rate},{convert}"
                 f"setparams=colorspace=bt709:color_primaries=bt709:color_trc=bt709:range=tv,"
-                f"setsar=1,format=yuv420p,tpad=stop_mode=clone:stop_duration=0.5,trim=end_frame={n}")
+                f"setsar=1,format=yuv420p,{hold}tpad=stop_mode=clone:stop_duration={float(length) + 0.5:.3f},"
+                f"trim=end_frame={n}")
 
     fit = (f"scale={w}:{h}:force_original_aspect_ratio=decrease:flags=lanczos,"
            f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p")
     zoom = (zoom_filter(p["zooms"], seg["start"], fps) + ",") if seg["zoom"] else ""
     sound = f"aresample={AUDIO_RATE},aformat=sample_fmts=s16:channel_layouts=stereo,apad,atrim=end_sample={samples}"
-    silence = f"anullsrc=r={AUDIO_RATE}:cl=stereo,atrim=end_sample={samples}"
 
-    def voice(n: int, clip: dict, label: str) -> str:
-        """Le son d'une entrée, à son volume ; du silence si le fichier n'en a pas."""
+    def voice(n: int, clip: dict, label: str, count: int = samples, after: str = "") -> str:
+        """Le son d'une entrée, à son volume, sur `count` échantillons ; du silence si le fichier n'en a pas."""
         if not clip.get("audio", True):
-            return f"{silence}[{label}]"
+            return f"anullsrc=r={AUDIO_RATE}:cl=stereo,atrim=end_sample={count}{after}[{label}]"
         gain = f"volume={clip['gain_db']}dB," if clip.get("gain_db") else ""
-        return f"[{n}:a]{gain}{sound}[{label}]"
+        return (f"[{n}:a]{gain}aresample={AUDIO_RATE},aformat=sample_fmts=s16:channel_layouts=stereo,apad,"
+                f"atrim=end_sample={count}{after}[{label}]")
 
     if seg["fade"] is None:
         graph = [f"[0:v]{prep(clip_a)},{zoom}{fit}[v]", voice(0, clip_a, "a")]
     else:
-        graph = [f"[0:v]{prep(clip_a)}[va]", f"[1:v]{prep(clip_b)}[vb]",
-                 f"[va][vb]xfade=transition={seg['fx']}:duration={float(length):.6f}:offset=0,{zoom}{fit}[v]",
-                 voice(0, clip_a, "aa"), voice(1, clip_b, "ab"),
-                 f"[aa][ab]acrossfade=ns={samples}:c1=tri:c2=tri,{sound}[a]"]
+        graph = [f"[0:v]{prep(clip_a)}[va]", f"[1:v]{prep(clip_b, lead)}[vb]",
+                 f"[va][vb]xfade=transition={seg['fx']}:duration={float(length):.6f}:offset=0,{zoom}{fit}[v]"]
+        if seg.get("held"):
+            # une image tenue d'un côté : le son coupe net à la coupe (L-cut), un fondu de 10 ms contre le clic
+            before = _samples(seg["start"] + seg["cut"], fps) - _samples(seg["start"], fps)
+            edge = min(AUDIO_RATE // 100, before, samples - before)
+            graph += [voice(0, clip_a, "aa", before, f",afade=t=out:start_sample={before - edge}:nb_samples={edge}"),
+                      voice(2, clip_b, "ab", samples - before, f",afade=t=in:nb_samples={edge}"),
+                      "[aa][ab]concat=n=2:v=0:a=1[a]"]
+        else:
+            graph += [voice(0, clip_a, "aa"), voice(1, clip_b, "ab"),
+                      f"[aa][ab]acrossfade=ns={samples}:c1=tri:c2=tri,{sound}[a]"]
     script = dest.with_suffix(".txt")
     script.write_text(";\n".join(graph), encoding="utf-8")
     return args + ["-filter_complex_script", str(script), "-map", "[v]", "-map", "[a]", "-frames:v", str(n),

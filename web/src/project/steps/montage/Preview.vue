@@ -18,7 +18,7 @@ import { fxFrame, layersAt } from "../../../lib/transitions";
 import LayerVideo from "./LayerVideo.vue";
 import { releaseMedia } from "../../../lib/media";
 import {
-  clipStarts, isImage, slideImage, tcd, TEXT_BORDER, TEXT_FADE, TEXT_FONT, type AnimState, type Beat, type MontageView, type TextNote, type Timeline, type Visual,
+  type ArollClip, clipStarts, isImage, slideImage, tcd, TEXT_BORDER, TEXT_FADE, TEXT_FONT, type AnimState, type Beat, type MontageView, type TextNote, type Timeline, type Visual,
 } from "./types";
 
 const props = defineProps<{
@@ -107,35 +107,43 @@ const videoStyle = computed(() => ({
 
 // --- transitions de l'A-roll : un second lecteur joue l'autre côté de la coupe (avant la coupe, le clip qui
 // arrive ; après, la fin prolongée de celui qui part). Mêmes bornes qu'au rendu (render.segments) : centrée sur
-// la coupe, réduite si la source n'a pas assez de marge.
+// la coupe ; un côté sans assez de marge (un clip inséré utilisé en entier) tient son image de bord.
+const clipUrl = (c: ArollClip) => (c.src ? props.view.media[c.src]?.url : props.view.source?.url) ?? "";
+const clipLength = (c: ArollClip) => (c.src ? props.view.media[c.src]?.duration ?? c.out : props.view.source?.duration ?? Infinity);
 const cuts = computed(() => {
-  const starts = clipStarts(props.tl), total = props.view.source?.duration ?? 0;
+  const starts = clipStarts(props.tl);
   return props.tl.aroll.flatMap((cur, i) => {
     const prev = props.tl.aroll[i - 1], tr = cur.transition;
-    // pas de transition avec un clip inséré d'un autre média (comme fxMax)
-    if (!prev || !tr || prev.src || cur.src) return [];
-    const half = Math.min(tr.dur / 2, (prev.out - prev.in) / 2, (cur.out - cur.in) / 2, Math.max(0, total - prev.out), cur.in);
-    return half > 0.02 ? [{ fx: tr.fx, at: starts[i], half, out: prev.out, in: cur.in }] : [];
+    if (!prev || !tr) return [];
+    const half = Math.min(tr.dur / 2, (prev.out - prev.in) / 2, (cur.out - cur.in) / 2);
+    return half > 0.02 ? [{ fx: tr.fx, at: starts[i], half, prev, cur }] : [];
   });
 });
+// une image avant la fin : la dernière qu'un lecteur sait afficher
+const FRAME = 1 / 30;
 const arollFx = computed(() => {
   const c = cuts.value.find((x) => Math.abs(t.value - x.at) < x.half);
   if (!c) return null;
   const f = fxFrame(c.fx, (t.value - (c.at - c.half)) / (2 * c.half), "pair");
   const before = t.value < c.at;
+  // l'autre côté : le clip qui arrive (avant son début, sa première image), ou celui qui part (après sa fin, la dernière)
+  const want = before ? c.cur.in + (t.value - c.at) : c.prev.out + (t.value - c.at);
+  const last = clipLength(c.prev) - FRAME;
+  const time = before ? Math.max(0, want) : Math.min(last, want);
   // A dessous, l'aplat, B dessus
   return {
     main: { ...(before ? f.a : f.b), zIndex: before ? 1 : 3 },
     ghost: { ...(before ? f.b : f.a), zIndex: before ? 3 : 1 },
     veil: f.veil ? { ...f.veil, zIndex: 2 } : null,
-    time: before ? c.in + (t.value - c.at) : c.out + (t.value - c.at),
+    url: clipUrl(before ? c.cur : c.prev), time, held: time !== want,
   };
 });
 // hors transition, le second lecteur attend déjà au début de la prochaine
-const ghostTime = computed(() => arollFx.value?.time ?? (() => {
+const ghost = computed(() => {
+  if (arollFx.value) return { url: arollFx.value.url, time: arollFx.value.time };
   const next = cuts.value.find((x) => x.at - x.half > t.value);
-  return next ? next.in - next.half : 0;
-})());
+  return next ? { url: clipUrl(next.cur), time: Math.max(0, next.cur.in - next.half) } : null;
+});
 
 // --- B-roll : les plans visibles à t, avec leurs transitions (deux à la fois pendant un enchaînement)
 const brolls = computed(() => {
@@ -310,8 +318,8 @@ defineExpose({ capture });
       <div class="aroll-box layer" :style="videoStyle" @click="player.toggle()">
         <video ref="el" class="aroll" preload="auto" playsinline :style="arollFx?.main" />
         <div v-if="arollFx?.veil" class="veil" :style="arollFx.veil" />
-        <LayerVideo v-if="view.source && cuts.length" class="aroll ghost" :class="{ idle: !arollFx }" :src="view.source.url"
-          :time="ghostTime" :playing="playing && !!arollFx" :style="arollFx?.ghost" />
+        <LayerVideo v-if="ghost" class="aroll ghost" :class="{ idle: !arollFx }" :src="ghost.url"
+          :time="ghost.time" :playing="playing && !!arollFx && !arollFx.held" :style="arollFx?.ghost" />
       </div>
       <template v-for="l in brollLayers" :key="l.id">
         <div v-if="l.veil && !l.over" class="veil layer" :style="l.veil" />

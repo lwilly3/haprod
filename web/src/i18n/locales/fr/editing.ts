@@ -61,7 +61,7 @@ export default {
     sourceVideo: "Vidéo source",
     inSource: "{from} → {to} dans la source · {dur}",
     arollHint: "Lame (B) ou Ctrl+B pour couper à la tête de lecture ; supprimer un clip referme le trou.",
-    insertedHint: "Clip inséré d’un autre média, avec son propre son ; tire ses bords pour le raccourcir. Pas de transition avec lui : un whoosh fait l’affaire.",
+    insertedHint: "Clip inséré d’un autre média, avec son propre son ; tire ses bords pour le raccourcir. Une transition avec ses voisins tient sa première ou sa dernière image s’il est utilisé en entier.",
     insertAroll: "→ A-roll",
     insertArollTitle: "Insérer dans l’A-roll à {tc} (la suite est décalée d’autant)",
     scale: "Échelle",

@@ -61,7 +61,7 @@ export default {
     sourceVideo: "Source video",
     inSource: "{from} → {to} in the source · {dur}",
     arollHint: "Blade (B) or Ctrl+B to cut at the playhead; deleting a clip closes the gap.",
-    insertedHint: "Clip inserted from another file, with its own sound; drag its edges to shorten it. No transition with it: a whoosh does the job.",
+    insertedHint: "Clip inserted from another file, with its own sound; drag its edges to shorten it. A transition with its neighbours holds its first or last frame if it is used whole.",
     insertAroll: "→ A-roll",
     insertArollTitle: "Insert into the A-roll at {tc} (everything after moves along)",
     scale: "Scale",
