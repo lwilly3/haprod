@@ -4,7 +4,7 @@ Storyboard de l'habillage de la vidéo longue : Daryl propose d'abord une liste 
 
 Quatre types de beats :
 - motion : un visuel animé (HyperFrames) au-dessus de la vidéo, à sa place à l'écran ;
-- zoom : un recadrage progressif de l'A-roll (piste zooms), posé tel quel ;
+- zoom : un recadrage de l'A-roll (piste zooms), posé tel quel : progressif (smooth), net (cut) ou lent (slow) ;
 - broll : un plan de coupe. Une vidéo va sur la piste B-roll ; une image est animée comme un motion
   (plein écran ou sur un côté) ; sans média, c'est une suggestion « à trouver » (`search`) ;
 - transition : un enchaînement animé plein écran, court, au changement de partie.
@@ -25,7 +25,7 @@ Fichier : montage/storyboard.json
     {"density", "note", "message", "created",
      "beats": [{"id", "type", "at", "dur", "anchor", "until", "says", "show", "kind", "place",
                 "motion": {"enter", "hold", "exit"}, "sfx", "ref", "why", "on",
-                "zoom": {"scale", "x", "y"},       # zoom
+                "zoom": {"scale", "x", "y", "style"},  # zoom (style : montage.ZOOM_STYLES)
                 "src", "search",                   # broll : le média (vide : à trouver), la recherche
                 "images"}]}                        # motion : les images et vidéos à y intégrer (facultatives)
 `at` / `dur` en secondes de la timeline. Les contrôles (`check`) sont refaits à chaque lecture :
@@ -70,10 +70,14 @@ SEARCH_BEFORE, SEARCH_AFTER, UNTIL_SPAN = 20, 200, 80
 TYPES = ["motion", "zoom", "broll", "transition"]
 # les types qui occupent l'écran (un seul à la fois) ; un zoom recadre l'A-roll en dessous
 SCREEN = ("motion", "broll", "transition")
-# zoom : grossissement, décalage du centre, durée ; il arrive à peine avant le mot
+# zoom : style, grossissement, décalage du centre, durée ; il arrive à peine avant le mot. Un zoom lent (slow)
+# grossit peu, sur plus longtemps
+ZOOM_STYLES = montage.ZOOM_STYLES
 ZOOM_SCALE = (1.05, 1.5)
 ZOOM_DEFAULT = 1.25
+ZOOM_SLOW_DEFAULT = 1.1
 ZOOM_DUR = (1.5, 8.0)
+ZOOM_SLOW_DUR = (4.0, 15.0)
 ZOOM_LEAD = 0.1
 # transition : courte, l'écran couvert au milieu, juste avant les premiers mots de la nouvelle partie
 TRANSITION_DUR = 1.2
@@ -147,10 +151,14 @@ SCHEMA = {
                                 "description": "Motion et broll : la transition de sortie, ou vide."},
                     "zoom": {
                         "type": "object",
-                        "description": "Zoom seulement : le grossissement et le décalage du centre.",
-                        "required": ["scale", "x", "y"],
+                        "description": "Zoom seulement : le style, le grossissement et le décalage du centre.",
+                        "required": ["style", "scale", "x", "y"],
                         "properties": {
-                            "scale": {"type": "number", "description": "1.12 (léger) à 1.35 (serré)."},
+                            "style": {"type": "string", "enum": list(ZOOM_STYLES),
+                                      "description": "smooth : montée et descente douces ; cut : saut net (aparté, "
+                                                     "chute) ; slow : poussée lente sur toute la durée."},
+                            "scale": {"type": "number", "description": "smooth / cut : 1.12 (léger) à 1.35 (serré) ; "
+                                                                       "slow : 1.05 à 1.15."},
                             "x": {"type": "number", "description": "Décalage horizontal du centre, en fraction de "
                                                                    "l'image (−0.3 à 0.3, positif : vers la droite)."},
                             "y": {"type": "number", "description": "Décalage vertical (positif : vers le bas)."},
@@ -276,10 +284,11 @@ def zoom_of(raw) -> dict:
         except (TypeError, ValueError):
             return default
 
-    scale = max(ZOOM_SCALE[0], min(num("scale", ZOOM_DEFAULT), ZOOM_SCALE[1]))
+    style = raw.get("style") if raw.get("style") in ZOOM_STYLES else "smooth"
+    scale = max(ZOOM_SCALE[0], min(num("scale", ZOOM_SLOW_DEFAULT if style == "slow" else ZOOM_DEFAULT), ZOOM_SCALE[1]))
     room = (scale - 1) / 2
     return {"scale": round(scale, 3), "x": round(max(-room, min(num("x", 0.0), room)), 3),
-            "y": round(max(-room, min(num("y", 0.0), room)), 3)}
+            "y": round(max(-room, min(num("y", 0.0), room)), 3), "style": style}
 
 
 SYSTEM = """\
@@ -291,11 +300,15 @@ storyboard, le montage se fait ensuite. Tout est dans le message ; tu ne lis que
 Les types de beats (`type`) — ne propose que ceux que le message demande :
 - motion : un visuel animé posé au-dessus de la vidéo (détails plus bas). C'est le seul type que \
 compte la densité demandée.
-- zoom : un recadrage progressif sur lui, pour appuyer une phrase forte, une chute, une confidence, \
-une émotion. `zoom` : `scale` de 1.12 (léger) à 1.35 (serré), `x` / `y` pour garder son visage au \
-centre du cadre (regarde les images de la vidéo). 2 à 6 secondes, environ un toutes les 20 à 40 \
-secondes, jamais pendant un motion plein écran, un B-roll ou une transition (il peut accompagner un \
-motion sur le côté ou en bandeau). `show` : ce qu'il appuie, en quelques mots.
+- zoom : un recadrage sur lui, pour appuyer une phrase forte, une chute, une confidence, une émotion. \
+`zoom.style` : `smooth` (montée et descente douces, le cas courant), `cut` (le cadre saute d'un coup, \
+sans mouvement : un aparté face caméra, une chute, une réaction, un « bref »), `slow` (une poussée lente \
+sur toute la durée puis retour net : une explication posée, une confidence, une tension qui monte). \
+`scale` : smooth / cut de 1.12 (léger) à 1.35 (serré), slow de 1.05 à 1.15 ; `x` / `y` pour garder son \
+visage au centre du cadre (regarde les images de la vidéo). smooth / cut 2 à 6 secondes, slow 5 à 15 \
+secondes ; varie les styles. Environ un toutes les 20 à 40 secondes, jamais pendant un motion plein \
+écran, un B-roll ou une transition (il peut accompagner un motion sur le côté ou en bandeau). `show` : \
+ce qu'il appuie, en quelques mots.
 - broll : un plan de coupe qui montre ce dont il parle (un lieu, un objet, une personne, une action, \
 un site) à la place de son visage, 3 à 8 secondes. `media` = le src exact d'un média visuel de la \
 liste quand l'un d'eux convient (d'après son nom et sa description) : une vidéo passe en plein écran ; \
@@ -584,7 +597,7 @@ def prompt(project: dict, timeline: dict, lines: list[dict], total: float, densi
                   *(f"- {_clock(a)} → {_clock(b)} {what}" for a, b, what in sorted(taken)), ""]
     if "zoom" in types and timeline["zooms"]:
         parts += ["Zooms déjà dans la timeline (pas d'autre zoom dessus) :",
-                  *(f"- {_clock(z['at'])} → {_clock(z['at'] + z['dur'])} ×{z['scale']:.2f}" for z in timeline["zooms"]), ""]
+                  *(f"- {_clock(z['at'])} → {_clock(z['at'] + z['dur'])} {z.get('style', 'smooth')} ×{z['scale']:.2f}" for z in timeline["zooms"]), ""]
     if "broll" in types:
         if visual:
             parts += ["Les médias visuels disponibles (`media` = le src exact) :",
@@ -799,7 +812,8 @@ def make_beat(spec: dict, words: list[cues.Word], a: int, b: int | None, total: 
     else:
         at = max(0.0, start - (ZOOM_LEAD if kind == "zoom" else LEAD))
         end = words[b].end + TAIL if b is not None else at + DEFAULT_DUR
-        lo, hi = {"zoom": ZOOM_DUR, "broll": BROLL_DUR}.get(kind, (MIN_DUR, MAX_DUR))
+        slow = kind == "zoom" and zoom_of(spec.get("zoom"))["style"] == "slow"
+        lo, hi = {"zoom": ZOOM_SLOW_DUR if slow else ZOOM_DUR, "broll": BROLL_DUR}.get(kind, (MIN_DUR, MAX_DUR))
         if plan:
             # un plan du script garde la durée de son passage
             hi = MAX_SCRIPT_DUR

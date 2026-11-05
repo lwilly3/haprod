@@ -298,18 +298,29 @@ def _num(x: float) -> str:
     return f"{x:.6f}".rstrip("0").rstrip(".") or "0"
 
 
-def zoom_filter(zooms: list[dict], start: int, fps: Fraction) -> str:
+def zoom_filter(zooms: list[dict], start: int, end: int, fps: Fraction) -> str:
     """
-    Le recadrage des zooms (perspective, image par image), comme l'aperçu : l'image est agrandie
-    de `scale` autour de son centre puis décalée de −x, −y (en fraction de l'image) ; montée et
-    descente de ZOOM_RAMP. Le cadre reste dans l'image.
+    Le recadrage des zooms qui touchent les images [start, end[ (perspective, image par image), comme
+    l'aperçu : l'image est agrandie de `scale` autour de son centre puis décalée de −x, −y (en fraction
+    de l'image), selon la courbe de son style (montage.zoom_amount). Le cadre reste dans l'image.
     """
-    t = f"((in+{start})*{fps.denominator}/{fps.numerator})"
+    # `in` compte les images à partir de 1 dans perspective
+    t = f"((in-1+{start})*{fps.denominator}/{fps.numerator})"
+    first, last = float(Fraction(start) / fps), float(Fraction(end) / fps)
     k_terms = []
     for z in zooms:
         a, b = z["at"], z["at"] + z["dur"]
-        ramp = min(montage.ZOOM_RAMP, z["dur"] / 3) or 1e-3
-        k = f"between({t},{_num(a)},{_num(b)})*clip(min(({t}-{_num(a)})/{_num(ramp)},({_num(b)}-{t})/{_num(ramp)}),0,1)"
+        if b <= first or a >= last:
+            continue
+        rise, fall = montage.zoom_ramps(z)
+        terms = [*([f"({t}-{_num(a)})/{_num(rise)}"] if rise else []), *([f"({_num(b)}-{t})/{_num(fall)}"] if fall else [])]
+        inside = f"gte({t},{_num(a)})*lt({t},{_num(b)})"
+        if not terms:
+            k = inside
+        else:
+            ramp = f"clip({terms[0] if len(terms) == 1 else f'min({terms[0]},{terms[1]})'},0,1)"
+            # smooth : adouci (smoothstep) ; slow : vitesse constante
+            k = f"{inside}*{ramp}" if z.get("style") == "slow" else f"{inside}*{ramp}*{ramp}*(3-2*{ramp})"
         k_terms.append((z, k))
     s = "+".join(f"{_num(z['scale'] - 1)}*{k}" for z, k in k_terms) or "0"
     x = "+".join(f"{_num(z['x'])}*{k}" for z, k in k_terms) or "0"
@@ -370,7 +381,7 @@ def segment_args(p: dict, seg: dict, dest: Path) -> list[str]:
 
     fit = (f"scale={w}:{h}:force_original_aspect_ratio=decrease:flags=lanczos,"
            f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p")
-    zoom = (zoom_filter(p["zooms"], seg["start"], fps) + ",") if seg["zoom"] else ""
+    zoom = (zoom_filter(p["zooms"], seg["start"], seg["end"], fps) + ",") if seg["zoom"] else ""
     sound = f"aresample={AUDIO_RATE},aformat=sample_fmts=s16:channel_layouts=stereo,apad,atrim=end_sample={samples}"
 
     def voice(n: int, clip: dict, label: str, count: int = samples, after: str = "") -> str:

@@ -100,6 +100,14 @@ export default {
     addAtCursor: "Add at playhead · {tc}",
     zoomLight: "Light zoom",
     zoomStrong: "Strong zoom",
+    zoomCut: "Punch-in",
+    zoomSlow: "Slow push",
+    zoomStyles: { smooth: "Smooth", cut: "Punch-in", slow: "Slow push" },
+    zoomStyleHint: {
+      smooth: "Eases in and out (0.4 s): to stress a line.",
+      cut: "The frame jumps at once, in and out: an aside to camera, a punchline, a reaction.",
+      slow: "Pushes in slowly over its whole length, then snaps back: a calm explanation, rising tension. Keep it subtle (×1.05 to ×1.15).",
+    },
     addText: "+ Text",
     addTextTitle: "A handwritten note on screen (fix a word that is hard to hear)",
     textPlaceholder: "What you actually say…",
@@ -245,6 +253,7 @@ export default {
       transition: "What it shows (the section title)…",
     },
     zoom: {
+      style: "Style",
       scale: "Magnification",
       scales: { 0: "Light", 1: "Medium", 2: "Tight" },
       frame: "Kept frame",

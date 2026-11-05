@@ -67,9 +67,10 @@ l'image change, et ce qu'on y voit. Rien n'est composé ici : tu proposes, il va
 
 Quatre types de beats (`type`) :
 - motion : un visuel animé au-dessus de la vidéo, à sa `place` ;
-- zoom : un recadrage progressif sur lui (`zoom` : `scale` 1.12 léger à 1.35 serré, `x` / `y` pour \
-garder son visage au centre du cadre), 2 à 6 s, pour appuyer une phrase forte ; jamais sous un \
-visuel plein écran ;
+- zoom : un recadrage sur lui pour appuyer une phrase forte (`zoom` : `style` smooth = montée et descente \
+douces, cut = saut net pour un aparté face caméra ou une chute, slow = poussée lente sur toute la durée ; \
+`scale` 1.12 léger à 1.35 serré, 1.05 à 1.15 en slow ; `x` / `y` pour garder son visage au centre du \
+cadre), 2 à 6 s (slow : 5 à 15 s) ; jamais sous un visuel plein écran ;
 - broll : un plan de coupe, 3 à 8 s. `media` = le src exact d'un média visuel de la liste (une vidéo \
 passe en plein écran ; une image est animée en plein écran ou sur un côté, comme un portrait, selon \
 `place`) ; si aucun ne convient, `media` vide et `search` = la recherche à faire pour le trouver ; pour une vidéo, \
@@ -145,7 +146,7 @@ def _beat_line(b: dict, composed: dict) -> str:
     kind = b.get("type", "motion")
     if kind == "zoom":
         z = b.get("zoom") or {}
-        what = f"zoom ×{z.get('scale', 1):.2f} (x {z.get('x', 0):+.2f}, y {z.get('y', 0):+.2f})"
+        what = f"zoom {z.get('style', 'smooth')} ×{z.get('scale', 1):.2f} (x {z.get('x', 0):+.2f}, y {z.get('y', 0):+.2f})"
     elif kind == "broll":
         what = f"broll · {b['place']} · " + (f"média {b['src']}" + (f" dès {b['start']:g} s" if b.get("start") else "")
                                              if b.get("src") else f"à trouver : {b.get('search') or '?'}")

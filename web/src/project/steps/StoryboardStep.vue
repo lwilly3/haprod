@@ -19,7 +19,7 @@ import { act, store } from "../store";
 import { usePlaylist, type Piece } from "./derush/usePlaylist";
 import Preview from "./montage/Preview.vue";
 import StoryboardChat from "./storyboard/StoryboardChat.vue";
-import { BEAT_TYPES, isImage, tcd, TYPE_COLOR, type Beat, type BeatType, type BeatWarning } from "./montage/types";
+import { BEAT_TYPES, isImage, tcd, TYPE_COLOR, ZOOM_STYLES, type Beat, type BeatType, type BeatWarning, type ZoomStyle } from "./montage/types";
 import { useMontage } from "./montage/useMontage";
 import { useStoryboard } from "./montage/useStoryboard";
 
@@ -119,7 +119,7 @@ function setStart(b: Beat, value: number) {
 function setType(b: Beat, type: BeatType) {
   SB.edit(() => {
     b.type = type;
-    if (type === "zoom") b.zoom ??= { scale: 1.25, x: 0, y: 0 };
+    if (type === "zoom") b.zoom ??= { scale: 1.25, x: 0, y: 0, style: "smooth" };
     if (type === "broll") {
       b.src ??= "";
       b.search ??= "";
@@ -135,7 +135,7 @@ const clampZ = (v: number, s: number) => Math.round(Math.max(-room(s), Math.min(
 function setZoom(b: Beat, patch: Partial<NonNullable<Beat["zoom"]>>) {
   SB.edit(() => {
     const z = { ...(b.zoom ?? { scale: 1.25, x: 0, y: 0 }), ...patch };
-    b.zoom = { scale: z.scale, x: clampZ(z.x, z.scale), y: clampZ(z.y, z.scale) };
+    b.zoom = { scale: z.scale, x: clampZ(z.x, z.scale), y: clampZ(z.y, z.scale), style: z.style ?? "smooth" };
   }, 150);
 }
 /** le cadre gardé, dans l'image entière (comme l'aperçu : agrandi autour du centre, puis décalé) */
@@ -390,6 +390,12 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
 
             <!-- comment : selon le type -->
             <div v-if="b.type === 'zoom'" class="how">
+              <label :title="tr(`editing.inspector.zoomStyleHint.${b.zoom?.style ?? 'smooth'}`)">
+                <span class="label">{{ tr("editing.storyboard.zoom.style") }}</span>
+                <select :value="b.zoom?.style ?? 'smooth'" @change="setZoom(b, { style: ($event.target as HTMLSelectElement).value as ZoomStyle })">
+                  <option v-for="s in ZOOM_STYLES" :key="s" :value="s">{{ tr(`editing.inspector.zoomStyles.${s}`) }}</option>
+                </select>
+              </label>
               <label>
                 <span class="label">{{ tr("editing.storyboard.zoom.scale") }}</span>
                 <select :value="b.zoom?.scale" @change="setZoom(b, { scale: +($event.target as HTMLSelectElement).value })">

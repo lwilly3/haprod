@@ -18,7 +18,7 @@ import { fxFrame, layersAt } from "../../../lib/transitions";
 import LayerVideo from "./LayerVideo.vue";
 import { releaseMedia } from "../../../lib/media";
 import {
-  type ArollClip, clipStarts, isImage, slideImage, tcd, TEXT_BORDER, TEXT_FADE, TEXT_FONT, type AnimState, type Beat, type MontageView, type TextNote, type Timeline, type Visual,
+  type ArollClip, clipStarts, isImage, slideImage, tcd, TEXT_BORDER, TEXT_FADE, TEXT_FONT, type AnimState, type Beat, type MontageView, type TextNote, type Timeline, type Visual, zoomAmount,
 } from "./types";
 
 const props = defineProps<{
@@ -82,8 +82,7 @@ watch([arollGain, playing], () => {
 }, { immediate: true });
 onUnmounted(() => { audio?.ctx.close().catch(() => {}); });
 
-// --- zoom de l'A-roll (montée et descente progressives, comme à l'export)
-const RAMP = 0.4;
+// --- zoom de l'A-roll (sa courbe selon son style, comme à l'export)
 // les beats du storyboard qui sont faits sans animation : vus tels qu'ils seront posés
 const beatAt = (type: Beat["type"]) => props.beats?.find((b) => b.type === type && t.value >= b.at && t.value < b.at + b.dur
   && (type !== "broll" || (!!b.src && !isImage(b.src))));
@@ -96,9 +95,7 @@ const zoom = computed(() => {
   const z = props.tl.zooms.find((k) => t.value >= k.at && t.value < k.at + k.dur)
     ?? (zb?.zoom ? { at: zb.at, dur: zb.dur, ...zb.zoom } : null);
   if (!z) return { s: 1, x: 0, y: 0 };
-  const ramp = Math.min(RAMP, z.dur / 3);
-  const k = Math.min(1, (t.value - z.at) / ramp, (z.at + z.dur - t.value) / ramp);
-  const e = k * k * (3 - 2 * k);
+  const e = zoomAmount(z, t.value);
   return { s: 1 + (z.scale - 1) * e, x: z.x * e, y: z.y * e };
 });
 const videoStyle = computed(() => ({

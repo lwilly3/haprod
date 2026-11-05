@@ -103,7 +103,7 @@ et l'efface aussitôt écrit.
 Temps de la timeline en secondes (`at`, `dur`, `t`) ; `in`/`out` : temps dans le média.
 {{
   "aroll":   [{{"id": "a1", "in": 0, "out": 264.25, "transition": null}}, {{"id": "a2", "src": "assets/broll/extrait.mp4", "in": 0, "out": 3.9, "transition": null, "gain_db": -3}}, {{"id": "a3", "in": 264.25, "out": 754.2, "transition": null}}],
-  "zooms":   [{{"id": "z1", "at": 31.2, "dur": 4.5, "scale": 1.25, "x": 0, "y": -0.05}}],
+  "zooms":   [{{"id": "z1", "at": 31.2, "dur": 4.5, "scale": 1.25, "x": 0, "y": -0.05}}, {{"id": "z2", "at": 88.0, "dur": 2.0, "scale": 1.3, "x": 0, "y": 0, "style": "cut"}}],
   "broll":   [{{"id": "b1", "src": "assets/broll/ville.mp4", "at": 42.0, "in": 3.0, "out": 7.5, "enter": {{"fx": "wipeleft", "dur": 0.5}}}}],
   "motion":  [{{"id": "m1", "at": 60.4, "dur": 7.0, "title": "nom court", "kind": "schéma", "idea": "ce qu'il montre"}}],
   "audio":   [{{"id": "s1", "src": "library/sfx/whoosh.wav", "at": 60.2, "in": 0, "out": 1.1, "gain_db": -10, "role": "sfx"}}],
@@ -123,8 +123,10 @@ insère le clip et décale tout ce qui suit (zooms, B-roll, motions, sons, marqu
 RELIS {work}/timeline.json (elle a changé) avant toute autre modification : le clip y est, avec son id ; les temps \
 d'après sont décalés de sa durée. Ajoute alors ce qui l'accompagne (un whoosh à l'entrée et à la sortie, \
 par exemple) en temps de la timeline à jour.
-- zooms : recadrage progressif de l'A-roll (montée et descente de 0,4 s faites à l'export). \
-scale 1.1 à 1.4 ; x, y : décalage du centre en fraction de l'image (−0.5 à 0.5).
+- zooms : recadrage de l'A-roll. `style` : absent = smooth (montée et descente adoucies de 0,4 s), \
+"cut" (le cadre saute d'un coup à l'entrée et à la sortie : aparté face caméra, chute, réaction), "slow" \
+(poussée lente à vitesse constante sur toute la durée, retour net à la fin : explication posée, tension ; \
+5 à 15 s, scale 1.05 à 1.15). scale 1.1 à 1.4 ; x, y : décalage du centre en fraction de l'image (−0.5 à 0.5).
 - broll : plan de coupe muet qui couvre l'A-roll (la voix continue). `src` : EXACTEMENT un \
 chemin listé dans contexte.md ; in/out dans la durée du média. 2 à 6 s en général.
 - motion : `id` nouveau, pris dans les ids qui te sont réservés pour cette demande, dans l'ordre : \
@@ -408,7 +410,7 @@ def _frame_scope(pid: str, t: float, image: str | None) -> str:
     from .storyboard_chat import grab_frame
 
     timeline = montage.load(pid)
-    on = [f"zoom {z['id']} ×{z['scale']:.2f}" for z in timeline["zooms"] if z["at"] <= t < z["at"] + z["dur"]]
+    on = [f"zoom {z['id']} {z.get('style', 'smooth')} ×{z['scale']:.2f}" for z in timeline["zooms"] if z["at"] <= t < z["at"] + z["dur"]]
     on += [f"B-roll {b['id']} ({b['src']})" for b in timeline["broll"] if b["at"] <= t < b["at"] + b["out"] - b["in"]]
     on += [f"motion {m['id']} « {m['title']} » (montage/motion/{m['id']}.html, à {t - m['at']:.2f} s de son début)"
            for m in timeline["motion"] if m["at"] <= t < m["at"] + m["dur"]]

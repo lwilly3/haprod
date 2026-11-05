@@ -100,6 +100,14 @@ export default {
     addAtCursor: "Ajouter au curseur · {tc}",
     zoomLight: "Zoom léger",
     zoomStrong: "Zoom fort",
+    zoomCut: "Zoom net",
+    zoomSlow: "Zoom lent",
+    zoomStyles: { smooth: "Progressif", cut: "Net", slow: "Lent" },
+    zoomStyleHint: {
+      smooth: "Monte et redescend en douceur (0,4 s) : pour appuyer une phrase.",
+      cut: "Le cadre saute d’un coup, à l’entrée comme à la sortie : un aparté face cam, une chute, une réaction.",
+      slow: "Pousse lentement sur toute sa durée, puis revient d’un coup : une explication posée, une tension qui monte. Garde-le discret (×1,05 à ×1,15).",
+    },
     addText: "+ Texte",
     addTextTitle: "Un texte écrit à la main, à l’écran (corriger un mot mal audible)",
     textPlaceholder: "Ce que tu dis vraiment…",
@@ -245,6 +253,7 @@ export default {
       transition: "Ce qu’elle affiche (le titre de la partie)…",
     },
     zoom: {
+      style: "Style",
       scale: "Grossissement",
       scales: { 0: "Léger", 1: "Moyen", 2: "Serré" },
       frame: "Cadre gardé",

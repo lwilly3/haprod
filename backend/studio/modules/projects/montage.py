@@ -21,7 +21,8 @@ timeline.json (temps de la timeline en secondes, sauf `in` / `out` : temps dans 
 
     {
       "aroll":   [{"id", "src"?, "in", "out", "transition", "gain_db"?}], # la vidéo source, bout à bout ; transition avec le précédent
-      "zooms":   [{"id", "at", "dur", "scale", "x", "y", "beat"?}], # zoom sur l'A-roll ; x, y : décalage du centre (fraction)
+      "zooms":   [{"id", "at", "dur", "scale", "x", "y", "style"?, "beat"?}], # zoom sur l'A-roll ; x, y : décalage du centre (fraction) ;
+                                                                             # style : smooth (défaut), cut ou slow (ZOOM_STYLES)
       "broll":   [{"id", "src", "at", "in", "out", "enter"?, "exit"?, "beat"?}], # plans de coupe, au-dessus de l'A-roll (muets)
       "motion":  [{"id", "at", "dur", "title", "kind", "idea", "enter"?, "exit"?, "beat"?}],  # motion design, au-dessus du B-roll
       "audio":   [{"id", "src", "at", "in", "out", "gain_db", "role": "sfx" | "music", "motion"?}],
@@ -95,8 +96,32 @@ PREFIX = {"aroll": "a", "zooms": "z", "broll": "b", "motion": "m", "audio": "s",
 # texte posé à la main : bornes de la taille (fraction de la hauteur de l'image) et de l'inclinaison (degrés)
 TEXT_SIZE = (0.03, 0.25)
 TEXT_ANGLE = 20
-# zoom : montée et descente progressives aux bords
+# zoom, selon son style : smooth monte et descend en ZOOM_RAMP (adouci), cut saute d'un coup (aparté face cam),
+# slow pousse lentement sur toute sa durée puis revient d'un coup (comme une coupe)
 ZOOM_RAMP = 0.4
+ZOOM_STYLES = ("smooth", "cut", "slow")
+
+
+def zoom_ramps(z: dict) -> tuple[float, float]:
+    """La montée et la descente d'un zoom, en secondes (0 : instantanée)."""
+    style = z.get("style") or "smooth"
+    if style == "cut":
+        return 0.0, 0.0
+    if style == "slow":
+        return z["dur"], 0.0
+    ramp = min(ZOOM_RAMP, z["dur"] / 3)
+    return ramp, ramp
+
+
+def zoom_amount(z: dict, t: float) -> float:
+    """Où en est le zoom à l'instant `t`, de 0 (pas de zoom) à 1 (tout le grossissement) : [at, at + dur[."""
+    a, b = z["at"], z["at"] + z["dur"]
+    if not a <= t < b:
+        return 0.0
+    rise, fall = zoom_ramps(z)
+    k = min(1.0, (t - a) / rise if rise else 1.0, (b - t) / fall if fall else 1.0)
+    # smooth : adouci (smoothstep) ; slow : vitesse constante, comme une poussée de caméra
+    return k if (z.get("style") or "smooth") == "slow" else k * k * (3 - 2 * k)
 # forme d'onde : une valeur par 1/PEAKS_RATE s
 PEAKS_RATE = 20
 # vignettes de la vidéo source : au plus FILMSTRIP_MAX images, une toutes les `step` s
@@ -265,6 +290,7 @@ def clean(pid: str, raw: dict, source_duration: float) -> dict:
             out["zooms"].append({"id": ident("zooms", z.get("id")), "at": at, "dur": min(dur, total - at),
                                  "scale": max(1.0, min(_num(z.get("scale"), 1.2), 3.0)),
                                  "x": max(-0.5, min(_num(z.get("x")), 0.5)), "y": max(-0.5, min(_num(z.get("y")), 0.5)),
+                                 **({"style": z["style"]} if z.get("style") in ZOOM_STYLES[1:] else {}),
                                  **({"beat": str(z["beat"])[:20]} if z.get("beat") else {})})
 
     for track in ("broll", "audio"):
@@ -972,29 +998,37 @@ def _size(project: dict) -> tuple[int, int]:
 
 # --- Export FCPXML -------------------------------------------------------------------------
 
+# un saut de zoom (style cut, retour d'un slow) : sur une image, Resolve interpolant entre deux images clés
+ZOOM_STEP = 0.04
+
+
 def _zoom_at(zooms: list[dict], t: float) -> dict:
-    """Le recadrage à l'instant `t` de la timeline (montée et descente linéaires)."""
+    """Le recadrage à l'instant `t` de la timeline."""
     for z in zooms:
-        a, b = z["at"], z["at"] + z["dur"]
-        if a <= t <= b:
-            ramp = min(ZOOM_RAMP, z["dur"] / 3)
-            k = min(1.0, (t - a) / ramp, (b - t) / ramp) if ramp else 1.0
+        k = zoom_amount(z, t)
+        if k:
             return {"scale": round(1 + (z["scale"] - 1) * k, 4), "x": round(z["x"] * k, 4), "y": round(z["y"] * k, 4)}
     return {"scale": 1.0, "x": 0.0, "y": 0.0}
 
 
 def _zoom_keys(zooms: list[dict], clip_start: float, clip_len: float) -> list[dict]:
-    """Les zooms qui touchent un clip, en images clés relatives au début du clip."""
-    keys: list[dict] = []
+    """Les zooms qui touchent un clip, en images clés relatives au début du clip (interpolées en ligne droite)."""
+    keys: dict[float, dict] = {}
     for z in zooms:
         a, b = z["at"], z["at"] + z["dur"]
         if b <= clip_start or a >= clip_start + clip_len:
             continue
-        ramp = min(ZOOM_RAMP, z["dur"] / 3)
-        for t in (a, a + ramp, b - ramp, b):
-            local = t - clip_start
+        rise, fall = zoom_ramps(z)
+        times = {a, a + rise, b - fall, b}
+        if not rise:
+            times.add(a - ZOOM_STEP)
+        if not fall:
+            times.add(b - ZOOM_STEP)
+        for t in times:
+            local = round(t - clip_start, 3)
             if 0 < local < clip_len:
-                keys.append({"t": round(local, 3), **_zoom_at(zooms, t)})
+                keys[local] = {"t": local, **_zoom_at(zooms, t)}
+    keys = [keys[t] for t in sorted(keys)]
     if keys:
         # un zoom déjà commencé (ou pas fini) à la coupe : le clip démarre (finit) au bon cadrage
         keys.insert(0, {"t": 0.0, **_zoom_at(zooms, clip_start)})

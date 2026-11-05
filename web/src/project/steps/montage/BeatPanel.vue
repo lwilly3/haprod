@@ -28,7 +28,7 @@ const placeable = computed(() => props.beat.type === "zoom" || (props.beat.type 
 function setType(type: BeatType) {
   emit("change", (b) => {
     b.type = type;
-    if (type === "zoom") b.zoom ??= { scale: 1.25, x: 0, y: 0 };
+    if (type === "zoom") b.zoom ??= { scale: 1.25, x: 0, y: 0, style: "smooth" };
     if (type === "broll") {
       b.src ??= "";
       b.search ??= "";

@@ -15,8 +15,9 @@ import { toast } from "../../../lib/toast";
 import MediaPicker from "./MediaPicker.vue";
 import { addMedia as addMediaTo, addText as addTextTo, remove } from "./ops";
 import {
-  fxSpan, newId, prevJoined, spanOf, tcd, trackLabel,
+  fxSpan, newId, prevJoined, spanOf, tcd, trackLabel, ZOOM_STYLES,
   type AvailableMedia, type ArollClip, type Broll, type MediaTab, type Marker, type MontageView, type Motion, type Selection, type Sound, type TextNote, type Timeline, type Zoom,
+  type ZoomStyle,
 } from "./types";
 
 const props = defineProps<{
@@ -95,10 +96,17 @@ const picker = ref<MediaTab | null>(null);
 const MEDIA_BUTTONS = computed(() => [["rush", tr("editing.inspector.addRush")], ["broll", tr("editing.inspector.addBroll")],
   ["sfx", tr("editing.inspector.addSfx")], ["musique", tr("editing.inspector.addMusic")]] as const);
 
-function addZoom(scale: number) {
+function addZoom(scale: number, style: ZoomStyle = "smooth", dur = 3) {
   let id = "";
-  emit("edit", (tl) => { id = newId(tl, "z"); tl.zooms.push({ id, at: round(at.value), dur: 3, scale, x: 0, y: 0 }); });
+  emit("edit", (tl) => {
+    id = newId(tl, "z");
+    tl.zooms.push({ id, at: round(at.value), dur, scale, x: 0, y: 0, ...(style === "smooth" ? {} : { style }) });
+  });
   if (id) sel.value = { item: { track: "zooms", id } };
+}
+const zoomStyles = computed(() => ZOOM_STYLES.map((s) => [s, tr(`editing.inspector.zoomStyles.${s}`)] as const));
+function setZoomStyle(style: ZoomStyle) {
+  set<Zoom>((x) => { if (style === "smooth") delete x.style; else x.style = style; });
 }
 function addText() {
   let id = "";
@@ -190,6 +198,8 @@ const SOUND_ROLES = computed(() => [["sfx", tr("editing.inspector.sound")], ["mu
         </template>
 
         <template v-else-if="item.track === 'zooms'">
+          <Seg size="sm" :options="zoomStyles" :model-value="(item.data as Zoom).style ?? 'smooth'" @update:model-value="setZoomStyle" />
+          <p class="hint">{{ tr(`editing.inspector.zoomStyleHint.${(item.data as Zoom).style ?? "smooth"}`) }}</p>
           <label class="f">{{ tr("editing.inspector.scale") }} <b class="mono">×{{ (item.data as Zoom).scale.toFixed(2) }}</b>
             <input type="range" min="1.05" max="2" step="0.01" :value="(item.data as Zoom).scale" @input="set<Zoom>((x) => { x.scale = num($event); })">
           </label>
@@ -301,6 +311,8 @@ const SOUND_ROLES = computed(() => [["sfx", tr("editing.inspector.sound")], ["mu
         <div class="row">
           <button class="btn sm" @click="addZoom(1.15)">{{ tr("editing.inspector.zoomLight") }}</button>
           <button class="btn sm" @click="addZoom(1.35)">{{ tr("editing.inspector.zoomStrong") }}</button>
+          <button class="btn sm" :title="tr('editing.inspector.zoomStyleHint.cut')" @click="addZoom(1.3, 'cut', 2)">{{ tr("editing.inspector.zoomCut") }}</button>
+          <button class="btn sm" :title="tr('editing.inspector.zoomStyleHint.slow')" @click="addZoom(1.1, 'slow', 8)">{{ tr("editing.inspector.zoomSlow") }}</button>
           <button class="btn sm" :title="tr('editing.inspector.addTextTitle')" @click="addText">{{ tr("editing.inspector.addText") }}</button>
           <button class="btn sm" :title="tr('editing.inspector.addBeatTitle')" @click="emit('beat')">{{ tr("editing.inspector.addBeat") }}</button>
           <button class="btn sm" @click="addChapter">{{ tr("editing.inspector.addChapter") }}</button>

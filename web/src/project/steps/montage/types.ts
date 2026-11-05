@@ -8,7 +8,25 @@ import type { Fx } from "../../../lib/transitions";
  * (absent : 0 dB)
  */
 export interface ArollClip { id: string; src?: string; in: number; out: number; transition: Fx | null; gain_db?: number }
-export interface Zoom { id: string; at: number; dur: number; scale: number; x: number; y: number }
+/**
+ * Le style d'un zoom (backend montage.ZOOM_STYLES) : smooth monte et descend en ZOOM_RAMP (adouci), cut saute
+ * d'un coup (aparté face cam), slow pousse lentement sur toute sa durée puis revient d'un coup.
+ */
+export type ZoomStyle = "smooth" | "cut" | "slow";
+export const ZOOM_STYLES: ZoomStyle[] = ["smooth", "cut", "slow"];
+export interface Zoom { id: string; at: number; dur: number; scale: number; x: number; y: number; style?: ZoomStyle }
+const ZOOM_RAMP = 0.4;
+/** Où en est un zoom à l'instant `t`, de 0 à 1 (backend montage.zoom_amount, et le rendu). */
+export function zoomAmount(z: { at: number; dur: number; style?: ZoomStyle }, t: number): number {
+  const a = z.at, b = z.at + z.dur;
+  if (t < a || t >= b) return 0;
+  const style = z.style ?? "smooth";
+  const ramp = Math.min(ZOOM_RAMP, z.dur / 3);
+  const [rise, fall] = style === "cut" ? [0, 0] : style === "slow" ? [z.dur, 0] : [ramp, ramp];
+  const k = Math.min(1, rise ? (t - a) / rise : 1, fall ? (b - t) / fall : 1);
+  // smooth : adouci (smoothstep) ; slow : vitesse constante, comme une poussée de caméra
+  return style === "slow" ? k : k * k * (3 - 2 * k);
+}
 /** enter / exit : la transition depuis et vers ce qui est dessous (absente : coupe franche) */
 export interface Broll { id: string; src: string; at: number; in: number; out: number; enter?: Fx | null; exit?: Fx | null }
 export interface Motion { id: string; at: number; dur: number; title: string; kind: string; idea: string; enter?: Fx | null; exit?: Fx | null }
@@ -87,7 +105,7 @@ export interface Beat {
   /** script : un plan d'animation du script (plan = son id) ; daryl : ajouté par Daryl ; user : posé à la main */
   origin?: "script" | "daryl" | "user"; plan?: string | null;
   /** zoom : grossissement et décalage du centre (fraction de l'image) */
-  zoom?: { scale: number; x: number; y: number };
+  zoom?: { scale: number; x: number; y: number; style?: ZoomStyle };
   /** broll : le média (vide : à trouver), la recherche toute prête, et pour une vidéo la seconde où le plan commence */
   src?: string; search?: string; start?: number;
   /** motion : les images et vidéos à intégrer à l'animation (facultatives) */

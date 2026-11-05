@@ -17,7 +17,7 @@ import { fxName } from "../../../lib/transitions";
 import { MEDIA_DRAG, trimAroll } from "./ops";
 import {
   clipStarts, clone, fxMax, type AvailableMedia, fxSpan, prevJoined, spanOf, type Broll, type FxEnd, type Motion, type MontageView, type Selection, type Timeline,
-  type Track,
+  type Track, type ZoomStyle,
 } from "./types";
 
 const props = defineProps<{
@@ -171,6 +171,7 @@ const arollV = computed(() => props.tl.aroll.map((c, i) => ({ c, a: starts.value
 const itemsV = <T extends { id: string; at: number }>(list: T[], end: (x: T) => number) =>
   list.map((it) => ({ it, a: it.at, b: it.at + end(it) })).filter((v) => visible(v.a, v.b));
 const zoomsV = computed(() => itemsV(props.tl.zooms, (z) => z.dur));
+const ZOOM_GLYPH: Record<ZoomStyle, string> = { smooth: "", cut: "▮ ", slow: "◢ " };
 const brollV = computed(() => itemsV(props.tl.broll, (b) => b.out - b.in));
 const motionV = computed(() => itemsV(props.tl.motion, (m) => m.dur));
 const textsV = computed(() => itemsV(props.tl.texts, (x) => x.dur));
@@ -624,11 +625,11 @@ function motionState(id: string) {
         </div>
 
         <!-- zooms -->
-        <div v-for="v in zoomsV" :key="v.it.id" class="item zoom" :class="{ on: isSel('zooms', v.it.id) }"
+        <div v-for="v in zoomsV" :key="v.it.id" class="item zoom" :class="[v.it.style ?? 'smooth', { on: isSel('zooms', v.it.id) }]"
           :style="{ top: `${tops.zooms + 2}px`, height: `${rowH.zooms - 4}px`, left: `${x(v.a)}px`, width: `${Math.max(3, x(v.b - v.a))}px` }"
-          :title="`Zoom ×${v.it.scale}`" @pointerdown="down($event, 'zooms', v.it.id)" @dblclick="goTo(v.a)">
+          :title="`Zoom ${tr(`editing.inspector.zoomStyles.${v.it.style ?? 'smooth'}`)} ×${v.it.scale}`" @pointerdown="down($event, 'zooms', v.it.id)" @dblclick="goTo(v.a)">
           <i class="edge l" @pointerdown="down($event, 'zooms', v.it.id, 'left')" />
-          <span>×{{ v.it.scale.toFixed(2) }}</span>
+          <span>{{ ZOOM_GLYPH[v.it.style ?? "smooth"] }}×{{ v.it.scale.toFixed(2) }}</span>
           <i class="edge r" @pointerdown="down($event, 'zooms', v.it.id, 'right')" />
         </div>
 
@@ -741,6 +742,9 @@ function motionState(id: string) {
 .item.motion { background: #7C5CE0; color: #fff; font-weight: 600; }
 .item.motion.pending { background: repeating-linear-gradient(135deg, #9C84EA 0 6px, #8A70E5 6px 12px); }
 .item.zoom { background: #E8B02F; color: var(--ink); font-weight: 600; }
+/* la forme du zoom : net (plus sombre), lent (une rampe qui monte jusqu'au bout) */
+.item.zoom.cut { background: #D9971E; }
+.item.zoom.slow { background: linear-gradient(90deg, #F6DFA6, #E8B02F); }
 .item.broll { background: #3B82C4; color: #fff; }
 .item.music { background: #2F9E83; color: #fff; }
 .item.sfx { background: #D9663B; color: #fff; }
