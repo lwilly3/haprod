@@ -61,7 +61,9 @@ export function useMontage(pid: string) {
     edits++;
     dirty.value = true;
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(flush, delay);
+    // pendant un glisser, rien ne part : un arrêt de la souris enregistrerait un état intermédiaire, et l'annulation
+    // y reviendrait au lieu de défaire le geste (le relâcher enregistre)
+    saveTimer = setTimeout(() => { if (!holding.value) flush(); }, delay);
   }
 
   // les insertions dans l'A-roll pas encore envoyées : le serveur y décale les beats du storyboard (et l'annulation

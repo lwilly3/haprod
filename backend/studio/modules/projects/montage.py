@@ -631,7 +631,8 @@ def _save(pid: str, raw: dict, keep_history: bool, shifts: list[dict] | None, ba
         if older is not None:
             mine = _keep(pid, json.dumps(cleaned, ensure_ascii=False, indent=1).encode("utf-8"))
             cleaned = clean(pid, merge(older, cleaned, load(pid))[0], duration)
-        if keep_history:
+        # rien n'a changé : pas d'étape d'annulation qui ne défait rien
+        if keep_history and (shifts or cleaned != load(pid)):
             snapshot(pid)
         _write(pid, cleaned)
         for shift in shifts or []:
