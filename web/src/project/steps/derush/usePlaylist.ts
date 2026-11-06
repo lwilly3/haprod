@@ -72,7 +72,8 @@ export function usePlaylist(pieces: Ref<Piece[]>) {
       v.src = p.src;
       // appliqué une fois le fichier chargé (position de départ par défaut)
       v.currentTime = at;
-    } else if (Math.abs(v.currentTime - at) > 0.05) v.currentTime = at;
+    // à l'arrêt, le moindre écart compte : une image ne dure que 33 à 40 ms (pas à pas)
+    } else if (Math.abs(v.currentTime - at) > (playing.value ? 0.05 : 0.001)) v.currentTime = at;
     if (playing.value) v.play().catch(() => {});
   }
 

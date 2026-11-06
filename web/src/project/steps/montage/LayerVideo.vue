@@ -10,7 +10,7 @@ function sync() {
   const v = el.value;
   if (!v) return;
   const want = Math.max(0, props.time);
-  if (Math.abs(v.currentTime - want) > (props.playing ? 0.3 : 0.04)) v.currentTime = want;
+  if (Math.abs(v.currentTime - want) > (props.playing ? 0.3 : 0.001)) v.currentTime = want;
   if (props.playing && v.paused) v.play().catch(() => {});
   if (!props.playing && !v.paused) v.pause();
 }
