@@ -79,8 +79,9 @@ ZOOM_SLOW_DEFAULT = 1.1
 ZOOM_DUR = (1.5, 8.0)
 ZOOM_SLOW_DUR = (4.0, 15.0)
 ZOOM_LEAD = 0.1
-# transition : courte, l'écran couvert au milieu, juste avant les premiers mots de la nouvelle partie
-TRANSITION_DUR = 1.2
+# transition : juste avant les premiers mots de la nouvelle partie ; posée en pause (la voix s'arrête dessous), elle
+# dure assez pour lire son titre et voir son animation (à 1,2 s, on ne lit rien)
+TRANSITION_DUR = 3.0
 TRANSITION_LEAD = 0.9
 # un beat posé à la main : sa durée par défaut, et sa durée minimale
 HAND_DUR = 3.0
@@ -316,9 +317,16 @@ une image est mise en scène, en plein écran (`place` full) ou sur un côté co
 `right`) : dans `motion`, des gestes nets calés sur ses mots (ce qui s'isole, se surligne, se détache, \
 au mot qui le nomme), pas « fondu + lent zoom ». Sinon `media` vide, `search` = la recherche à faire pour le trouver (mots-clés concrets, en \
 {lang}) et `show` = le plan idéal ; l'auteur le trouvera ou le tournera.
-- transition : un enchaînement animé plein écran, court, au changement de partie ou de chapitre, \
-une par changement au plus. `anchor` = les premiers mots de la nouvelle partie ; `show` = ce qu'elle \
-affiche (le titre de la partie, en quelques mots) ; `until` = les mêmes mots que `anchor`.
+- transition : un carton animé plein écran au changement de partie ou de chapitre, une par \
+changement au plus. La vidéo s'arrête dessous (image noire, voix coupée) environ 3 secondes, le temps \
+de lire le titre, puis la voix reprend sur `anchor`. `anchor` = les premiers mots de la PREMIÈRE \
+PHRASE de la nouvelle partie, au début de cette phrase ; `show` = ce qu'elle affiche (le titre de la \
+partie, en quelques mots) ; `until` = les mêmes mots que `anchor`. Ce qui précède l'ancre doit être \
+une pensée finie : la phrase d'avant se termine (point, point d'interrogation) et clôt la partie \
+précédente. Lis les deux ou trois phrases autour : une chute, un commentaire ou une conclusion \
+courte qui suit (« Et ça, c'est pas bon. », « Voilà. », « Bref, ça marchait. ») appartient encore à \
+la partie précédente, la transition vient APRÈS elle. Jamais au milieu d'une phrase ni entre une \
+question et sa réponse, une idée et son explication ; sans frontière nette, pas de transition.
 `kind`, `anim` et `motion` ne servent qu'aux motions (et `place` aux motions et aux images) ; `sfx` \
 aux motions, B-roll et transitions.
 
@@ -1187,6 +1195,8 @@ def compose(pid: str, only: list[str] | None = None) -> dict:
 
     out = {"motions": [], "placed": [], "skipped": [], "missing": []}
     changed = False
+    # les transitions posées : l'A-roll s'arrête sous chacune (une pause), une fois tout posé
+    pauses: list[tuple[str, dict]] = []
     for b in board["beats"]:
         if not b.get("on") or (only is not None and b["id"] not in only) or b["id"] in written:
             continue
@@ -1237,6 +1247,8 @@ def compose(pid: str, only: list[str] | None = None) -> dict:
                                        "kind": "image" if kind == "broll" else "transition" if kind == "transition"
                                        else b["kind"], "idea": b["show"], **_ends(b), "beat": b["id"]})
             out["motions"].append(mid)
+            if kind == "transition":
+                pauses.append((mid, b))
         sound = sfx.get(b.get("sfx") or "")
         if sound:
             timeline["audio"].append({"id": next_id("audio"), "src": sound["src"],
@@ -1247,11 +1259,62 @@ def compose(pid: str, only: list[str] | None = None) -> dict:
                                       **({"motion": mid} if mid else {})})
         out["placed"].append(b["id"])
         changed = True
+    shifts = _pause_transitions(pid, timeline, pauses)
     if changed:
         for track in ("zooms", "broll", "motion", "audio"):
             timeline[track].sort(key=lambda x: x["at"])
-        montage.save(pid, timeline)
+        montage.save(pid, timeline, shifts=shifts)
     return out
+
+
+def _gap_cut(words: list[cues.Word], aroll: list[dict], at: float, anchor: str) -> float:
+    """
+    Où couper l'A-roll pour la transition posée à `at` : dans le silence juste avant le premier mot de la nouvelle
+    partie (`anchor`, retrouvé près de `at`), sur une coupe du dérush s'il y en a une dans ce silence, sinon en son
+    milieu. Jamais dans le plus long silence des environs : c'est souvent celui d'avant une chute qui clôt la partie
+    précédente (« …les compromis qui sont faits. ‖ Et ça, c'est pas bon. »), que la pause couperait de sa phrase.
+    Sans ancre retrouvée : `at` + TRANSITION_LEAD (là où make_beat a vu le premier mot).
+    """
+    toks, owner = autoderush._token_index(words)
+    near = next((i for i, o in enumerate(owner) if words[o].start >= at - 1.0), len(toks))
+    i = _find(toks, autoderush._tokens(anchor), near - 5, near + 40, near)
+    k = owner[i] if i is not None and abs(words[owner[i]].start - at - TRANSITION_LEAD) < 3.0 else None
+    if k is None:
+        k = next((n for n, w in enumerate(words) if w.start >= at + TRANSITION_LEAD - 0.3), None)
+    if k is None:
+        return at
+    lo = words[k - 1].end if k else 0.0
+    hi = words[k].start
+    cuts, cursor = [], 0.0
+    for c in aroll:
+        cuts.append(cursor)
+        cursor += c["out"] - c["in"]
+    inside = [c for c in cuts if lo - 0.02 <= c <= hi + 0.02]
+    return round(min(inside, key=lambda c: abs(c - (lo + hi) / 2)) if inside else (lo + hi) / 2, 3)
+
+
+def _pause_transitions(pid: str, timeline: dict, pauses: list[tuple[str, dict]]) -> list[dict]:
+    """
+    Les transitions de partie qui viennent d'être posées deviennent des plans de l'A-roll : chacune est calée au milieu
+    du silence entre les deux parties, et l'A-roll s'arrête sous elle (montage.pause_motion) ; la voix reprend après.
+    Modifie `timeline` ; rend les décalages à reporter sur les beats du storyboard.
+    """
+    if not pauses or not (src := montage.ensure_pause(pid)):
+        return []
+    words = timeline_words(service.load(pid), timeline)
+    shifts: list[dict] = []
+    # de la dernière à la première : une pause ne décale pas celles d'avant
+    for mid, b in sorted(pauses, key=lambda p: -p[1]["at"]):
+        m = next(x for x in timeline["motion"] if x["id"] == mid)
+        delta = _gap_cut(words, timeline["aroll"], m["at"], b.get("anchor") or "") - m["at"]
+        m["at"] = round(m["at"] + delta, 3)
+        for s in timeline["audio"]:
+            if s.get("motion") == mid:
+                s["at"] = round(max(0.0, s["at"] + delta), 3)
+        done = montage.pause_motion(timeline, mid, src) or []
+        # le beat de la transition reste où il est ; ceux d'après suivent la pause
+        shifts += [{**s, "at": max(s["at"], round(b["at"] + 0.01, 3))} for s in done]
+    return shifts
 
 
 # au-delà, une image agrandie se voit floue à l'écran
@@ -1351,7 +1414,15 @@ def brief(pid: str, ids: list[str]) -> str:
         lines = [f"### {m['id']} · {m['at']:.2f} → {m['at'] + m['dur']:.2f} s ({m['dur']:.1f} s)",
                  f"- Il dit : « {b['says']} »",
                  f"- On montre : {b['show']}"]
-        if kind == "transition":
+        if kind == "transition" and any(c.get("pause") == m["id"] for c in timeline["aroll"]):
+            lines.append("- Transition plein écran entre deux parties de la vidéo, en PAUSE : la voix s'est tue et "
+                         "l'A-roll est arrêté dessous (image noire, silence) tout le temps du motion, qui est un plan à "
+                         "part entière. Couvre tout le cadre de la première à la dernière image (pas de marge, le fond "
+                         "opaque est là dès le début : sinon on voit du noir) ; ce qu'elle affiche se lit d'un coup "
+                         "d'œil et a le temps de respirer : le spectateur marque un temps avant la partie suivante. "
+                         "Le titre est en place et lisible tôt (avant le premier tiers) puis reste fixe au moins "
+                         "1,5 s avant de sortir : pas d'animation qui court jusqu'à la dernière image.")
+        elif kind == "transition":
             lines.append(f"- Transition plein écran entre deux parties de la vidéo : l'écran est entièrement couvert "
                          f"au milieu (vers {m['dur'] / 2:.2f} s), entrée et sortie rapides et franches ; ce qu'elle "
                          "affiche se lit d'un coup d'œil. Ici pas de marge : elle couvre tout le cadre.")

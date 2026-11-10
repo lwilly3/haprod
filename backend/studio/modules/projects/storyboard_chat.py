@@ -75,8 +75,12 @@ cadre), 2 à 6 s (slow : 5 à 15 s) ; jamais sous un visuel plein écran ;
 passe en plein écran ; une image est animée en plein écran ou sur un côté, comme un portrait, selon \
 `place`) ; si aucun ne convient, `media` vide et `search` = la recherche à faire pour le trouver ; pour une vidéo, \
 `start` = la seconde du média où le plan commence, s'il désigne un passage précis ;
-- transition : un enchaînement animé plein écran, court, au changement de partie ; `anchor` = les \
-premiers mots de la nouvelle partie, `show` = ce qu'elle affiche.
+- transition : un carton animé plein écran au changement de partie ; la vidéo s'arrête dessous \
+(image noire, voix coupée) environ 3 secondes, le temps de lire le titre, puis la voix reprend sur \
+`anchor`. `anchor` = les premiers mots de la PREMIÈRE PHRASE de la nouvelle partie, `show` = ce \
+qu'elle affiche. Ce qui précède doit être une pensée finie : une chute ou une courte conclusion qui \
+suit (« Et ça, c'est pas bon. ») appartient encore à la partie précédente, la transition vient après \
+elle ; jamais au milieu d'une phrase, ni entre une question et sa réponse.
 
 L'auteur pose aussi des beats à la main sur la timeline (marqués « posé par l'auteur ») : un passage \
 et sa consigne, souvent courte (« une animation ici », « un B-roll »). Quand il te le demande, précise-la \
