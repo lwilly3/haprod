@@ -14,9 +14,9 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useAltWheel } from "../../../lib/composables";
 import { fxName } from "../../../lib/transitions";
-import { MEDIA_DRAG, trimAroll } from "./ops";
+import { MEDIA_DRAG, pauseOf, setMotionDur, trimAroll } from "./ops";
 import {
-  clipStarts, clone, fxMax, type AvailableMedia, fxSpan, prevJoined, spanOf, type Broll, type FxEnd, type Motion, type MontageView, type Selection, type Timeline,
+  clipStarts, clone, fxMax, type ArollClip, type AvailableMedia, fxSpan, prevJoined, spanOf, type Broll, type FxEnd, type Motion, type MontageView, type Selection, type Timeline,
   type Track, type ZoomStyle,
 } from "./types";
 
@@ -207,6 +207,10 @@ const isFxSel = (track: Track, id: string, fx: FxEnd) => !!sel.value && "item" i
   && sel.value.item.track === track && sel.value.item.id === id && sel.value.item.fx === fx;
 
 const nameOf = (src: string) => props.media[src]?.name ?? src.split("/").pop() ?? src;
+/** Le nom d'un clip de l'A-roll inséré : son média, ou la pause et son motion. */
+const clipName = (c: ArollClip) => (c.pause
+  ? tr("editing.pauseClip", { motion: props.tl.motion.find((m) => m.id === c.pause)?.title || c.pause })
+  : c.src ? nameOf(c.src) : undefined);
 
 // --- vignettes de la vidéo source, sur chaque clip
 const TILE_H = 44;
@@ -392,6 +396,8 @@ function apply(tl: Timeline, d: NonNullable<typeof drag>, t: number) {
   const dt = t - d.t0;
   if (d.track === "aroll") {
     const o = d.origin.aroll.find((c) => c.id === d.id)!;
+    // une pause a la durée de son motion : on la change par lui
+    if (o.pause) return;
     const limit = o.src ? props.media[o.src]?.duration ?? Infinity : props.sourceDuration;
     if (d.mode === "left") trimAroll(tl, d.id, "in", o.in + dt, limit);
     else if (d.mode === "right") trimAroll(tl, d.id, "out", o.out + dt, limit);
@@ -406,6 +412,11 @@ function apply(tl: Timeline, d: NonNullable<typeof drag>, t: number) {
   const it = list.find((k) => k.id === d.id)!;
   const o = (d.origin[d.track] as typeof list).find((k) => k.id === d.id)!;
   const len = o.dur ?? (o.out! - o.in!);
+  // un motion en pause est un plan de l'A-roll : il ne se déplace pas, tirer sa fin allonge ou raccourcit sa pause
+  if (d.track === "motion" && pauseOf(d.origin, d.id)) {
+    if (d.mode === "right") setMotionDur(tl, d.id, Math.max(0.3, Math.round((len + dt) * 20) / 20));
+    return;
+  }
   const limit = "src" in o ? props.media[(o as { src: string }).src]?.duration ?? Infinity : Infinity;
   if (d.mode === "move") {
     let at = o.at + dt;
@@ -643,12 +654,14 @@ function motionState(id: string) {
         </div>
 
         <!-- A-roll : la vidéo source, avec ses vignettes -->
-        <div v-for="v in arollV" :key="v.c.id" class="clip" :class="{ on: isSel('aroll', v.c.id), ext: !!v.c.src }"
+        <div v-for="v in arollV" :key="v.c.id" class="clip" :class="{ on: isSel('aroll', v.c.id), ext: !!v.c.src, pause: !!v.c.pause }"
           :style="{ top: `${tops.aroll}px`, height: `${rowH.aroll}px`, left: `${x(v.a)}px`, width: `${x(v.b - v.a)}px` }"
-          :title="v.c.src ? nameOf(v.c.src) : undefined" @pointerdown="down($event, 'aroll', v.c.id)" @dblclick="goTo(v.a)">
-          <span v-if="v.c.src">{{ nameOf(v.c.src) }}</span>
-          <i class="edge l" @pointerdown="down($event, 'aroll', v.c.id, 'left')" />
-          <i class="edge r" @pointerdown="down($event, 'aroll', v.c.id, 'right')" />
+          :title="clipName(v.c)" @pointerdown="down($event, 'aroll', v.c.id)" @dblclick="goTo(v.a)">
+          <span v-if="v.c.src">{{ clipName(v.c) }}</span>
+          <template v-if="!v.c.pause">
+            <i class="edge l" @pointerdown="down($event, 'aroll', v.c.id, 'left')" />
+            <i class="edge r" @pointerdown="down($event, 'aroll', v.c.id, 'right')" />
+          </template>
         </div>
         <div class="strip" :style="{ top: `${tops.aroll + 4}px` }">
           <span v-for="k in tiles" :key="k.key" class="tile"
@@ -757,6 +770,8 @@ function motionState(id: string) {
 .gain { position: absolute; transform: translateX(-100%); z-index: 2; white-space: nowrap; font-size: 9.5px; font-weight: 600; color: #fff;
   background: rgba(0, 0, 0, .55); border-radius: 2px; padding: 0 4px; pointer-events: none; }
 .clip.ext.on { background: repeating-linear-gradient(135deg, #8A4FBF 0 8px, #7D45B0 8px 16px); }
+/* une pause sous un motion plein écran : la voix s'arrête, l'image est noire */
+.clip.pause, .clip.pause.on { background: repeating-linear-gradient(135deg, #1B1B1D 0 8px, #2A2140 8px 16px); color: #C9BBF5; }
 .strip { position: absolute; left: 0; height: 0; pointer-events: none; z-index: 1; }
 .tile { position: absolute; top: 0; background-repeat: no-repeat; opacity: .92; }
 .pending-media { position: absolute; font-size: 10.5px; color: var(--off); z-index: 2; pointer-events: none; }

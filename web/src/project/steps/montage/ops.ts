@@ -3,7 +3,7 @@
  * L'A-roll est la piste principale : couper ou raccourcir un clip décale tout ce qui suit
  * (ripple), et les éléments posés au-dessus suivent leur passage, comme dans Resolve.
  */
-import { clipStarts, newId, totalOf, type AvailableMedia, type Broll, type Sound, type Timeline, type Track } from "./types";
+import { clipStarts, newId, PAUSE_SRC, totalOf, type AvailableMedia, type Broll, type Sound, type Timeline, type Track } from "./types";
 
 const MIN = 0.1;
 
@@ -26,7 +26,8 @@ export function ripple(tl: Timeline, from: number, delta: number): void {
 export function bladeAroll(tl: Timeline, t: number): string | null {
   const starts = clipStarts(tl);
   const i = tl.aroll.findIndex((c, k) => t > starts[k] + MIN && t < starts[k] + c.out - c.in - MIN);
-  if (i < 0) return null;
+  // une pause ne se coupe pas : elle suit son motion
+  if (i < 0 || tl.aroll[i].pause) return null;
   const c = tl.aroll[i], at = c.in + (t - starts[i]);
   const id = newId(tl, "a");
   // la seconde moitié garde le média et le volume du clip coupé
@@ -117,19 +118,93 @@ export function bladeItem(tl: Timeline, track: Track, id: string, t: number): st
   return null;
 }
 
-/** Supprime un élément ; un clip de l'A-roll est retiré avec raccord (ripple). */
+/**
+ * Supprime un élément ; un clip de l'A-roll est retiré avec raccord (ripple). Une pause retirée laisse son motion
+ * au-dessus de la voix ; un motion supprimé emporte sa pause.
+ */
 export function remove(tl: Timeline, track: Track, id: string): void {
   if (track === "aroll") {
     const starts = clipStarts(tl), i = tl.aroll.findIndex((c) => c.id === id);
     if (i < 0 || tl.aroll.length < 2) return;
     const c = tl.aroll[i], len = c.out - c.in;
+    if (c.pause && tl.motion.some((m) => m.id === c.pause)) {
+      unpauseMotion(tl, c.pause);
+      return;
+    }
     tl.aroll.splice(i, 1);
     ripple(tl, starts[i] + len, -len);
     return;
   }
+  if (track === "motion") unpauseMotion(tl, id);
   (tl[track] as { id: string }[]) = (tl[track] as { id: string }[]).filter((x) => x.id !== id);
   // les sons d'un motion partent avec lui
   if (track === "motion") tl.audio = tl.audio.filter((s) => s.motion !== id);
+}
+
+/** Un décalage de la timeline, que les beats du storyboard suivent (useMontage.shiftBeats). */
+export interface Shift { at: number; length: number }
+
+/** La pause qui porte le motion `id`, s'il en a une. */
+export const pauseOf = (tl: Timeline, id: string) => tl.aroll.find((c) => c.pause === id) ?? null;
+
+/**
+ * Retire la pause d'un motion (comme montage.unpause_motion) : l'A-roll se referme et ce qui suit remonte ; ce qui
+ * commençait dans la pause disparaît, sauf le motion et ses sons, qui restent où ils sont. Rend le décalage.
+ */
+export function unpauseMotion(tl: Timeline, id: string): Shift | null {
+  const i = tl.aroll.findIndex((c) => c.pause === id);
+  if (i < 0) return null;
+  const start = clipStarts(tl)[i], c = tl.aroll[i], len = c.out - c.in;
+  const m = tl.motion.find((x) => x.id === id), own = tl.audio.filter((s) => s.motion === id);
+  tl.motion = tl.motion.filter((x) => x.id !== id);
+  tl.audio = tl.audio.filter((s) => s.motion !== id);
+  tl.aroll.splice(i, 1);
+  if (tl.aroll[i]) tl.aroll[i].transition = null;
+  ripple(tl, start + len, -len);
+  if (m) tl.motion.push(m);
+  tl.audio.push(...own);
+  return { at: round(start + len), length: round(-len) };
+}
+
+/**
+ * Met l'A-roll en pause sous un motion plein écran (comme montage.pause_motion) : une pause noire et muette de la
+ * durée du motion, insérée à son début ; tout ce qui suit est décalé, le motion et ses sons restent posés dessus.
+ * Une pause déjà là est refaite (la durée du motion a pu changer). Rend les décalages à reporter sur le storyboard.
+ */
+export function pauseMotion(tl: Timeline, id: string): Shift[] {
+  if (!tl.motion.some((x) => x.id === id)) return [];
+  const shifts: Shift[] = [];
+  const undone = unpauseMotion(tl, id);
+  if (undone) shifts.push(undone);
+  const m = tl.motion.find((x) => x.id === id)!;
+  const held = new Map([m, ...tl.audio.filter((s) => s.motion === id)].map((x) => [x.id, x.at]));
+  const park = (at: (old: number) => number) => {
+    for (const x of [...tl.motion, ...tl.audio]) if (held.has(x.id)) x.at = at(held.get(x.id)!);
+  };
+  // le motion et ses sons hors d'atteinte le temps de l'insertion : ni coupés ni décalés
+  park(() => -1e9);
+  const done = insertAroll(tl, held.get(id)!, { src: PAUSE_SRC, in: 0, out: m.dur });
+  tl.aroll.find((c) => c.id === done.id)!.pause = id;
+  // calé sur la coupe toute proche : le motion et ses sons la suivent
+  const delta = done.at - held.get(id)!;
+  park((at) => round(Math.max(0, at + delta)));
+  // le beat du motion reste à son début : seuls ceux d'après suivent
+  shifts.push({ at: round(done.at + 0.01), length: round(m.dur) });
+  return shifts;
+}
+
+/** Change la durée d'un motion ; sa pause, s'il en a une, suit (avec ripple). */
+export function setMotionDur(tl: Timeline, id: string, dur: number): void {
+  const m = tl.motion.find((x) => x.id === id);
+  if (!m) return;
+  m.dur = round(dur);
+  const p = pauseOf(tl, id);
+  if (!p) return;
+  // ses sons restent où ils sont (une pause raccourcie effacerait ceux posés dans sa fin)
+  const own = tl.audio.filter((s) => s.motion === id);
+  tl.audio = tl.audio.filter((s) => s.motion !== id);
+  trimAroll(tl, p.id, "out", p.in + m.dur, Infinity);
+  tl.audio.push(...own);
 }
 
 /** Change les bornes d'un clip de l'A-roll (dans son média : `limit`, sa durée), avec ripple. */

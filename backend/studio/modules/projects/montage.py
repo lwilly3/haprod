@@ -13,6 +13,7 @@ Tout vit dans le dossier du projet, que Resolve lit tel quel (chemins absolus) :
   montage/daryl/<demande>/     la copie de travail de Daryl pendant un tour du chat (timeline.json, contexte.md,
                                insertions.json), fusionnée à la fin du tour avec la timeline, que le client continue
                                de monter à la main (merge) ; plusieurs demandes tournent à la fois
+  montage/pause.mp4            la vidéo noire et muette des pauses de l'A-roll (faite au premier besoin)
   montage/.cache/              forme d'onde et vignettes de la vidéo source
   assets/<catégorie>/          B-roll, musique, sons : un son de la bibliothèque y est copié
                                dès qu'il entre dans la timeline
@@ -20,7 +21,7 @@ Tout vit dans le dossier du projet, que Resolve lit tel quel (chemins absolus) :
 timeline.json (temps de la timeline en secondes, sauf `in` / `out` : temps dans le média) :
 
     {
-      "aroll":   [{"id", "src"?, "in", "out", "transition", "gain_db"?}], # la vidéo source, bout à bout ; transition avec le précédent
+      "aroll":   [{"id", "src"?, "in", "out", "transition", "gain_db"?, "pause"?}], # la vidéo source, bout à bout ; transition avec le précédent
       "zooms":   [{"id", "at", "dur", "scale", "x", "y", "style"?, "beat"?}], # zoom sur l'A-roll ; x, y : décalage du centre (fraction) ;
                                                                              # style : smooth (défaut), cut ou slow (ZOOM_STYLES)
       "broll":   [{"id", "src", "at", "in", "out", "enter"?, "exit"?, "beat"?}], # plans de coupe, au-dessus de l'A-roll (muets)
@@ -39,6 +40,9 @@ x, y : le centre du texte en fraction de l'image (0 à 1) ; size : la hauteur de
 de l'image ; color : « #RRGGBB » ; angle : en degrés (négatif : penché vers le haut à droite).
 `src` d'un clip de l'A-roll : absent pour la vidéo source, sinon un autre média inséré (un extrait, une archive)
 qui passe avec son propre son. `gain_db` d'un clip de l'A-roll : son volume (absent : 0 dB).
+`pause` d'un clip de l'A-roll : l'id du motion plein écran qu'il porte. Le clip est une pause (PAUSE_SRC, noire et
+muette) de la durée du motion, au même instant : la voix s'arrête le temps du motion, qui devient un plan de l'A-roll
+(pause_motion, unpause_motion ; ops.pauseMotion dans l'interface).
 `src` : chemin relatif au projet (« assets/broll/x.mp4 »), ou « library/<catégorie>/<fichier> »
 pour un média de la bibliothèque commune (copié dans le projet à l'enregistrement).
 """
@@ -49,6 +53,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import time
 from array import array
 from collections.abc import Iterator
@@ -56,6 +61,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from ...core import jobs
+from ...core.system import tool
 from ..animations import kit
 from . import library, media, service, transitions
 from . import timeline as tl
@@ -66,6 +72,9 @@ TIMELINE_FILE = "timeline.json"
 INSERTIONS_FILE = "insertions.json"
 MOTION_DIR = "motion"
 RENDERS_DIR = "renders"
+# la pause sous un motion plein écran : une vidéo noire et muette au format de la source, dont chaque pause prend le début
+PAUSE_SRC = f"{MONTAGE_DIR}/pause.mp4"
+PAUSE_LENGTH = 120.0
 # la page qui rend un motion (montage_tasks._index) entre dans sa signature : à monter quand elle change,
 # les motions déjà rendus se refont
 MOTION_PAGE_VERSION = 2
@@ -250,6 +259,33 @@ def _ends(item: dict) -> dict:
     return {k: v for k in ("enter", "exit") if (v := transitions.clean(item.get(k)))}
 
 
+def ensure_pause(pid: str) -> str | None:
+    """La vidéo des pauses (PAUSE_SRC), faite au premier besoin au format de la source ; None sans source."""
+    dest = service.project_dir(pid) / PAUSE_SRC
+    if dest.is_file():
+        return PAUSE_SRC
+    source = _source(service.load(pid))
+    if not source:
+        return None
+    info = media.probe(Path(source["path"]))
+    size = f"{source.get('width') or 1920}x{source.get('height') or 1080}"
+    rate = f"{info.get('fps_num') or 25}/{info.get('fps_den') or 1}"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    seed, tmp = dest.with_name(f".seed-{dest.name}"), dest.with_name(f".{dest.name}")
+    # 2 s encodées puis répétées sans réencodage : moins d'une seconde, contre 30 pour tout encoder
+    subprocess.run([tool("ffmpeg"), "-y", "-v", "error", "-f", "lavfi", "-i", f"color=c=black:s={size}:r={rate}",
+                    "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-t", "2",
+                    "-c:v", "libx264", "-preset", "ultrafast", "-tune", "stillimage", "-pix_fmt", "yuv420p",
+                    "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
+                    "-c:a", "aac", "-f", "mp4", str(seed)], check=True, capture_output=True, timeout=120)
+    subprocess.run([tool("ffmpeg"), "-y", "-v", "error", "-stream_loop", str(int(PAUSE_LENGTH / 2)), "-i", str(seed),
+                    "-c", "copy", "-t", str(PAUSE_LENGTH), "-f", "mp4", str(tmp)], check=True, capture_output=True,
+                   timeout=120)
+    seed.unlink(missing_ok=True)
+    tmp.replace(dest)
+    return PAUSE_SRC
+
+
 def clean(pid: str, raw: dict, source_duration: float) -> dict:
     """Une timeline sûre : ids uniques, nombres, bornes, médias présents dans le projet."""
     out: dict = {t: [] for t in TRACKS}
@@ -274,14 +310,17 @@ def clean(pid: str, raw: dict, source_duration: float) -> dict:
 
     for c in raw.get("aroll") or []:
         # un clip inséré d'un autre média : borné par sa durée ; un média introuvable, le clip disparaît
-        src = _resolve_src(pid, str(c["src"])) if c.get("src") else None
+        # une pause : la vidéo des pauses, faite au besoin
+        pause = bool(c.get("src")) and str(c["src"]).replace("\\", "/").strip("/") == PAUSE_SRC
+        src = (ensure_pause(pid) if pause else _resolve_src(pid, str(c["src"]))) if c.get("src") else None
         if c.get("src") and not src:
             continue
         a, b = max(0.0, _num(c.get("in"))), min(_num(c.get("out")), (length(src) if src else source_duration) or 1e9)
         gain = max(-60.0, min(_num(c.get("gain_db")), 12.0))
         if b - a >= 0.04:
             out["aroll"].append({"id": ident("aroll", c.get("id")), **({"src": src} if src else {}), "in": a, "out": b,
-                                 "transition": transitions.clean(c.get("transition")), **({"gain_db": gain} if gain else {})})
+                                 "transition": transitions.clean(c.get("transition")), **({"gain_db": gain} if gain else {}),
+                                 **({"pause": str(c["pause"])[:20]} if pause and c.get("pause") else {})})
     total = sum(c["out"] - c["in"] for c in out["aroll"])
 
     for z in raw.get("zooms") or []:
@@ -420,6 +459,86 @@ def insert_aroll(timeline: dict, at: float, clip: dict) -> dict:
     return {"id": new["id"], "at": at, "length": length}
 
 
+def _pause_of(timeline: dict, motion_id: str) -> int | None:
+    return next((i for i, c in enumerate(timeline["aroll"]) if c.get("pause") == motion_id), None)
+
+
+def _lift(timeline: dict, motion_id: str) -> tuple[dict | None, list[dict]]:
+    """Retire de la timeline le motion et ses sons, le temps d'insérer ou de retirer sa pause."""
+    m = next((x for x in timeline["motion"] if x["id"] == motion_id), None)
+    own = [s for s in timeline["audio"] if s.get("motion") == motion_id]
+    timeline["motion"] = [x for x in timeline["motion"] if x["id"] != motion_id]
+    timeline["audio"] = [s for s in timeline["audio"] if s.get("motion") != motion_id]
+    return m, own
+
+
+def unpause_motion(timeline: dict, motion_id: str) -> dict | None:
+    """
+    Retire la pause d'un motion (comme ops.unpauseMotion) : l'A-roll se referme et ce qui suit remonte d'autant ; ce
+    qui commençait dans la pause disparaît, sauf le motion et ses sons, qui restent où ils sont. Modifie `timeline` ;
+    rend le décalage {at, length} (length négatif), ou None s'il n'a pas de pause.
+    """
+    i = _pause_of(timeline, motion_id)
+    if i is None:
+        return None
+    start = sum(c["out"] - c["in"] for c in timeline["aroll"][:i])
+    c = timeline["aroll"].pop(i)
+    length = c["out"] - c["in"]
+    end = start + length
+    if i < len(timeline["aroll"]):
+        timeline["aroll"][i]["transition"] = None
+    m, own = _lift(timeline, motion_id)
+    inside = lambda t: start + 1e-3 < t < end - 1e-3  # noqa: E731
+    back = lambda t: round(t - length, 3) if t >= end - 1e-3 else t  # noqa: E731
+    for track in ("zooms", "broll", "motion", "audio", "texts"):
+        timeline[track] = [{**x, "at": back(x["at"])} for x in timeline.get(track) or [] if not inside(x["at"])]
+    timeline["markers"] = [{**k, "t": back(k["t"])} for k in timeline["markers"] if not inside(k["t"])]
+    if m:
+        timeline["motion"].append(m)
+    timeline["audio"] += own
+    return {"at": round(end, 3), "length": round(-length, 3)}
+
+
+def drop_orphan_pauses(timeline: dict) -> list[dict]:
+    """
+    Retire les pauses dont le motion n'est plus dans la timeline (supprimé sans retirer sa pause, perdu à une fusion) :
+    sans lui, ce n'est qu'un trou noir et muet au milieu de la voix. Modifie `timeline` ; rend les décalages.
+    """
+    motions = {m["id"] for m in timeline["motion"]}
+    orphans = {c["pause"] for c in timeline["aroll"] if c.get("pause") and c["pause"] not in motions}
+    shifts = []
+    for mid in orphans:
+        # un motion peut avoir laissé plusieurs morceaux de pause (une autre pause insérée au milieu)
+        while shift := unpause_motion(timeline, mid):
+            shifts.append(shift)
+    return shifts
+
+
+def pause_motion(timeline: dict, motion_id: str, src: str) -> dict | None:
+    """
+    Met l'A-roll en pause sous un motion plein écran : une pause (`src`, la vidéo des pauses) de la durée du motion,
+    insérée à son début (insert_aroll : tout ce qui suit est décalé) ; le motion et ses sons restent posés dessus. Une
+    pause déjà là est refaite (la durée du motion a pu changer). Modifie `timeline` ; rend les décalages à reporter
+    sur le storyboard [{at, length}], ou None si le motion n'existe pas.
+    """
+    if not any(x["id"] == motion_id for x in timeline["motion"]):
+        return None
+    shifts = [s for s in [unpause_motion(timeline, motion_id)] if s]
+    m = next(x for x in timeline["motion"] if x["id"] == motion_id)
+    held = [(x, x["at"]) for x in [m, *(s for s in timeline["audio"] if s.get("motion") == motion_id)]]
+    # le motion et ses sons mis hors d'atteinte le temps de l'insertion (ni coupés ni décalés ; leurs ids restent pris)
+    for x, _ in held:
+        x["at"] = -1e9
+    done = insert_aroll(timeline, held[0][1], {"src": src, "in": 0.0, "out": min(m["dur"], PAUSE_LENGTH)})
+    next(c for c in timeline["aroll"] if c["id"] == done["id"])["pause"] = motion_id
+    # calé sur la coupe toute proche : le motion et ses sons la suivent
+    delta = done["at"] - held[0][1]
+    for x, at in held:
+        x["at"] = round(max(0.0, at + delta), 3)
+    # le beat du motion reste à son début : seuls ceux d'après suivent
+    return shifts + [{"at": round(done["at"] + 0.01, 3), "length": done["length"]}]
+
+
 def _shift_beats(pid: str, at: float, length: float) -> None:
     """Décale de `length` les beats du storyboard qui commencent à partir de `at`."""
     from . import storyboard
@@ -454,8 +573,9 @@ def apply_insertions(pid: str, task: str) -> list[str]:
     Les clips que Daryl a demandé d'insérer pour la demande `task` (insertions.json dans son dossier de travail :
     [{src, at, in, out, gain_db?}], `at` en temps
     de la timeline au moment où il écrit le fichier) : insérés dans sa copie de travail l'un après l'autre, du dernier
-    au premier pour que les temps restent justes. Les beats du storyboard ne suivent qu'à la fin du tour, si son A-roll
-    est gardé (finish_work). Le fichier est effacé ; rend ce qui n'a pas pu l'être.
+    au premier pour que les temps restent justes ; puis les pauses sous un motion ({pause: id}, à poser ou à refaire
+    quand sa durée change) et leurs retraits ({unpause: id}). Les beats du storyboard ne suivent qu'à la fin du tour,
+    si son A-roll est gardé (finish_work). Le fichier est effacé ; rend ce qui n'a pas pu l'être.
     """
     file = work_dir(pid, task) / INSERTIONS_FILE
     if not file.is_file():
@@ -472,7 +592,9 @@ def apply_insertions(pid: str, task: str) -> list[str]:
     duration = (_source(project) or {}).get("duration") or 0.0
     timeline = clean(pid, _read(work_file(pid, task)) or load(pid), duration)
     problems, shifts = [], []
-    for w in sorted((w for w in wanted if isinstance(w, dict)), key=lambda w: -_num(w.get("at"))):
+    wanted = [w for w in wanted if isinstance(w, dict)]
+    clips = [w for w in wanted if not w.get("pause") and not w.get("unpause")]
+    for w in sorted(clips, key=lambda w: -_num(w.get("at"))):
         src = _resolve_src(pid, str(w.get("src") or ""))
         if not src:
             problems.append(f"média introuvable : {w.get('src')}")
@@ -485,6 +607,21 @@ def apply_insertions(pid: str, task: str) -> list[str]:
             continue
         done = insert_aroll(timeline, _num(w.get("at")), {"src": src, "in": a, "out": b, "gain_db": _num(w.get("gain_db"))})
         shifts.append({"at": done["at"], "length": done["length"]})
+    # les pauses sous un motion, par son id (sa place suit les insertions faites juste avant)
+    for w in wanted:
+        if w.get("unpause"):
+            done = unpause_motion(timeline, str(w["unpause"]))
+            if not done:
+                problems.append(f"pas de pause sous le motion {w['unpause']}")
+                continue
+            shifts.append(done)
+        elif w.get("pause"):
+            src = ensure_pause(pid)
+            done = pause_motion(timeline, str(w["pause"]), src) if src else None
+            if done is None:
+                problems.append(f"motion introuvable pour la pause : {w['pause']}")
+                continue
+            shifts += done
     _dump(work_file(pid, task), clean(pid, timeline, duration))
     noted = work_dir(pid, task) / WORK_BASE / SHIFTS_FILE
     before = json.loads(noted.read_text(encoding="utf-8")) if noted.is_file() else []
@@ -718,6 +855,9 @@ def finish_work(pid: str, task: str, touched: set[str]) -> tuple[bool, list[str]
     if changed:
         with _locked(pid):
             merged, notes, renamed = merge(base, load(pid), theirs)
+            kept_theirs = _shape(merged["aroll"]) == _shape(theirs["aroll"])
+            # une pause dont le motion a disparu (supprimé par l'un, gardé par l'autre) : le trou dans la voix se referme
+            orphans = drop_orphan_pauses(merged)
             for old, new in renamed.items():
                 comp = motion_dir(pid) / f"{old}.html"
                 if comp.is_file():
@@ -726,11 +866,13 @@ def finish_work(pid: str, task: str, touched: set[str]) -> tuple[bool, list[str]
             snapshot(pid, [p for p in before.values() if p.is_file()])
             _write(pid, clean(pid, merged, duration))
             # ses insertions dans l'A-roll sont gardées : les beats du storyboard les suivent
-            if _shape(merged["aroll"]) == _shape(theirs["aroll"]):
+            if kept_theirs:
                 for shift in shifts:
                     shift_beats(pid, shift["at"], shift["length"])
             elif shifts:
                 notes.append("le clip que j'ai inséré dans l'A-roll n'y est pas (ta version de l'A-roll est gardée) : redemande-le")
+            for shift in orphans:
+                shift_beats(pid, shift["at"], shift["length"])
     shutil.rmtree(work, ignore_errors=True)
     return changed, notes
 
@@ -758,19 +900,25 @@ def _starts(aroll: list[dict]) -> list[float]:
     return out
 
 
+def _media(c: dict) -> str:
+    """Le média d'un clip de l'A-roll, pour retrouver un moment de la vidéo ; une pause est celle de son motion (toutes
+    partagent la même vidéo noire, depuis son début : sans ça, ce qui est posé sur l'une se retrouverait sur la première)."""
+    return f"{PAUSE_SRC}#{c['pause']}" if c.get("pause") else c.get("src") or ""
+
+
 def _anchor(aroll: list[dict], starts: list[float], t: float) -> tuple | None:
     """L'instant `t` de la timeline dans la vidéo : (média, temps dans le média, clip)."""
     if not aroll:
         return None
     k = max((i for i, s in enumerate(starts) if s <= t + 1e-6), default=0)
     c = aroll[k]
-    return (c.get("src") or "", round(c["in"] + min(max(t - starts[k], 0.0), c["out"] - c["in"]), 3), c["id"])
+    return (_media(c), round(c["in"] + min(max(t - starts[k], 0.0), c["out"] - c["in"]), 3), c["id"])
 
 
 def _place(aroll: list[dict], starts: list[float], anchor: tuple) -> float | None:
     """L'instant de la timeline où passe ce moment de la vidéo (dans le même clip de préférence) ; None s'il est coupé."""
     src, s, cid = anchor
-    fits = [k for k, c in enumerate(aroll) if (c.get("src") or "") == src and c["in"] - 1e-3 <= s <= c["out"] + 1e-3]
+    fits = [k for k, c in enumerate(aroll) if _media(c) == src and c["in"] - 1e-3 <= s <= c["out"] + 1e-3]
     if not fits:
         return None
     k = next((k for k in fits if aroll[k]["id"] == cid), fits[0])

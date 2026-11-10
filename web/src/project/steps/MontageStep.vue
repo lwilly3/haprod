@@ -21,7 +21,7 @@ import ImageSearchQueue from "./montage/ImageSearchQueue.vue";
 import Inspector from "./montage/Inspector.vue";
 import MonteurChat from "./montage/MonteurChat.vue";
 import TaskQueue from "./montage/TaskQueue.vue";
-import { addMedia, bladeAroll, bladeItem, frameStep, insertAroll, isVideo, remove } from "./montage/ops";
+import { addMedia, bladeAroll, bladeItem, frameStep, insertAroll, isVideo, pauseMotion, remove, unpauseMotion, type Shift } from "./montage/ops";
 import Preview from "./montage/Preview.vue";
 import StylePicker from "./montage/StylePicker.vue";
 import Timeline from "./montage/Timeline.vue";
@@ -91,6 +91,21 @@ async function insertClip(m: AvailableMedia, at: number) {
   selection.value = { item: { track: "aroll", id: done.id } };
   seek(from);
   toast(tr("editing.inserted", { name: m.name, tc: tcd(from) }));
+  await M.flush();
+  await SB.load();
+}
+
+/**
+ * Met l'A-roll en pause sous un motion (on) ou retire sa pause : la suite est décalée d'autant, beats du storyboard
+ * compris (relu ensuite).
+ */
+async function setPause(id: string, on: boolean) {
+  let shifts: Shift[] = [];
+  M.edit((x) => { shifts = on ? pauseMotion(x, id) : [unpauseMotion(x, id)].filter((v): v is Shift => !!v); }, 0);
+  if (!shifts.length) return;
+  for (const s of shifts) M.shiftBeats(s.at, s.length);
+  const len = shifts[shifts.length - 1].length;
+  toast(on ? tr("editing.paused", { dur: `${len.toFixed(1)} s` }) : tr("editing.unpaused"));
   await M.flush();
   await SB.load();
 }
@@ -381,7 +396,8 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
             :image-popup="imagePopup" @image-popup="(tab: ImageTab | null) => (imagePopup = tab)" />
           <Inspector v-else v-model:selection="selection" class="insp" :tl="tl" :view="view" :available="M.available.value"
             :t="t" :total="M.total.value" @edit="edit" @comment="comment" @seek="seek" @beat="addBeat"
-            @insert="(m: AvailableMedia) => insertClip(m, t)" @media="M.loadAvailable()" @rerender="M.retryRenders()" />
+            @insert="(m: AvailableMedia) => insertClip(m, t)" @media="M.loadAvailable()" @rerender="M.retryRenders()"
+            @pause="setPause" />
         </div>
 
         <div class="toolbar">

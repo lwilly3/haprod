@@ -5,9 +5,12 @@ import type { Fx } from "../../../lib/transitions";
 /**
  * transition : avec le clip précédent (null : coupe franche) ; src : absent pour la vidéo source, sinon un autre
  * média inséré dans l'A-roll (un extrait, une archive), qui passe avec son propre son ; gain_db : son volume
- * (absent : 0 dB)
+ * (absent : 0 dB) ; pause : le motion plein écran que ce clip porte (src = PAUSE_SRC, noir et muet, de la durée du
+ * motion) : la voix s'arrête le temps du motion, qui devient un plan de l'A-roll
  */
-export interface ArollClip { id: string; src?: string; in: number; out: number; transition: Fx | null; gain_db?: number }
+export interface ArollClip { id: string; src?: string; in: number; out: number; transition: Fx | null; gain_db?: number; pause?: string }
+/** La vidéo noire et muette des pauses (backend montage.PAUSE_SRC), faite par le serveur au premier besoin. */
+export const PAUSE_SRC = "montage/pause.mp4";
 /**
  * Le style d'un zoom (backend montage.ZOOM_STYLES) : smooth monte et descend en ZOOM_RAMP (adouci), cut saute
  * d'un coup (aparté face cam), slow pousse lentement sur toute sa durée puis revient d'un coup.

@@ -123,6 +123,24 @@ insère le clip et décale tout ce qui suit (zooms, B-roll, motions, sons, marqu
 RELIS {work}/timeline.json (elle a changé) avant toute autre modification : le clip y est, avec son id ; les temps \
 d'après sont décalés de sa durée. Ajoute alors ce qui l'accompagne (un whoosh à l'entrée et à la sortie, \
 par exemple) en temps de la timeline à jour.
+- Pause sous un motion plein écran : un motion plein écran qui marque un temps (transition de chapitre, \
+respiration entre deux parties) se pose PAR DÉFAUT en pause : l'A-roll s'arrête (image noire, silence) le temps \
+du motion, qui devient un plan à part entière, puis la voix reprend. Le spectateur souffle et réfléchit, au lieu \
+que la voix continue sous le motion. Un motion plein écran qui illustre la phrase en train d'être dite reste \
+au-dessus de la voix, sans pause. Pour la poser : place d'abord le motion dans {work}/timeline.json, son `at` \
+dans le silence juste après la DERNIÈRE PHRASE du passage, une pensée finie (jamais au milieu d'un mot ni d'une \
+phrase : l'A-roll y est coupé, la voix s'arrête net). Lis les phrases autour dans contexte.md : une chute ou \
+une conclusion courte qui suit (« Et ça, c'est pas bon. ») reste avant la pause, la voix reprend sur la première \
+phrase de la partie suivante. Durée : 2,5 s au moins, 3 à 4 s pour un titre à lire (en dessous, on ne lit rien \
+et on ne voit pas l'animation). Puis \
+écris {work}/insertions.json : [{{"pause": "<id du motion>"}}]. Le studio insère dans l'A-roll une pause de la \
+durée du motion à son `at` et décale tout ce qui suit ; le motion et ses sons restent posés dessus. RELIS \
+ensuite {work}/timeline.json. Dans l'A-roll, une pause est un clip `"src": "montage/pause.mp4", "pause": \
+"<id>"` : n'y touche pas à la main et ne déplace pas son motion. Si tu changes la durée d'un motion en pause, \
+réécris [{{"pause": "<id>"}}] (la pause est refaite à la bonne durée) ; pour la retirer : [{{"unpause": "<id>"}}]. \
+Pour supprimer un motion en pause : d'abord [{{"unpause": "<id>"}}], puis RELIS la timeline et retire le motion \
+(sinon il reste un trou noir et muet dans la voix). \
+La musique de la pause se fait plus tard, à l'habillage musical : n'en mets pas.
 - zooms : recadrage de l'A-roll. `style` : absent = smooth (montée et descente adoucies de 0,4 s), \
 "cut" (le cadre saute d'un coup à l'entrée et à la sortie : aparté face caméra, chute, réaction), "slow" \
 (poussée lente à vitesse constante sur toute la durée, retour net à la fin : explication posée, tension ; \
@@ -210,7 +228,8 @@ def write_context(pid: str, selection: dict | None, path: Path) -> None:
     inserted, cursor = [], 0.0
     for c in timeline["aroll"]:
         if c.get("src"):
-            inserted.append(f"- {c['id']} · {_mmss(cursor)} → {_mmss(cursor + c['out'] - c['in'])} · {c['src']}"
+            what = f"pause sous le motion {c['pause']}" if c.get("pause") else c["src"]
+            inserted.append(f"- {c['id']} · {_mmss(cursor)} → {_mmss(cursor + c['out'] - c['in'])} · {what}"
                             + (f" · {c['gain_db']:+.0f} dB" if c.get("gain_db") else ""))
         cursor += c["out"] - c["in"]
     if inserted:

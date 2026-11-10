@@ -13,7 +13,7 @@ import { post } from "../../../lib/api";
 import { duration as fmtDur } from "../../../lib/format";
 import { toast } from "../../../lib/toast";
 import MediaPicker from "./MediaPicker.vue";
-import { addMedia as addMediaTo, addText as addTextTo, remove } from "./ops";
+import { addMedia as addMediaTo, addText as addTextTo, pauseOf, remove } from "./ops";
 import {
   fxSpan, newId, prevJoined, spanOf, tcd, trackLabel, ZOOM_STYLES,
   type AvailableMedia, type ArollClip, type Broll, type MediaTab, type Marker, type MontageView, type Motion, type Selection, type Sound, type TextNote, type Timeline, type Zoom,
@@ -23,7 +23,11 @@ import {
 const props = defineProps<{
   tl: Timeline; view: MontageView; available: AvailableMedia[]; t: number; total: number;
 }>();
-const emit = defineEmits<{ edit: [(t: Timeline) => void]; comment: [string?]; seek: [number]; insert: [AvailableMedia]; media: []; beat: []; rerender: [] }>();
+const emit = defineEmits<{
+  edit: [(t: Timeline) => void]; comment: [string?]; seek: [number]; insert: [AvailableMedia]; media: []; beat: []; rerender: [];
+  /** mettre l'A-roll en pause sous un motion (on), ou la retirer */
+  pause: [string, boolean];
+}>();
 const sel = defineModel<Selection | null>("selection", { required: true });
 const { t: tr } = useI18n();
 
@@ -88,6 +92,8 @@ function del() {
 }
 const nameOf = (src: string) => props.view.media[src]?.name ?? src.split("/").pop() ?? src;
 const motionState = computed(() => (item.value?.track === "motion" ? props.view.motions[item.value.data.id] : null));
+const paused = computed(() => (item.value?.track === "motion" ? !!pauseOf(props.tl, item.value.data.id) : false));
+const pausedMotion = (id: string) => props.tl.motion.find((m) => m.id === id)?.title || id;
 
 // --- ajouter au curseur
 const at = computed(() => Math.min(props.t, Math.max(0, props.total - 0.5)));
@@ -184,14 +190,20 @@ const SOUND_ROLES = computed(() => [["sfx", tr("editing.inspector.sound")], ["mu
       </div>
       <fieldset>
         <template v-if="item.track === 'aroll'">
-          <span class="t">{{ (item.data as ArollClip).src ? nameOf((item.data as ArollClip).src!) : tr("editing.inspector.sourceVideo") }}</span>
-          <span class="mono sub">{{ tr("editing.inspector.inSource", { from: tcd((item.data as ArollClip).in), to: tcd((item.data as ArollClip).out), dur: fmtDur((item.data as ArollClip).out - (item.data as ArollClip).in) }) }}</span>
-          <label class="f">{{ tr("editing.inspector.volume") }} <b class="mono">{{ fmtGain((item.data as ArollClip).gain_db) }}</b>
-            <input type="range" min="-30" max="12" step="1" :value="(item.data as ArollClip).gain_db ?? 0"
-              @input="set<ArollClip>((x) => { const v = num($event); if (v) x.gain_db = v; else delete x.gain_db; })"
-              @dblclick="set<ArollClip>((x) => { delete x.gain_db; })">
-          </label>
-          <p v-if="(item.data as ArollClip).src" class="hint">{{ tr("editing.inspector.insertedHint") }}</p>
+          <template v-if="(item.data as ArollClip).pause">
+            <span class="t">{{ tr("editing.pauseClip", { motion: pausedMotion((item.data as ArollClip).pause!) }) }}</span>
+            <p class="hint">{{ tr("editing.inspector.pauseClipHint") }}</p>
+          </template>
+          <template v-else>
+            <span class="t">{{ (item.data as ArollClip).src ? nameOf((item.data as ArollClip).src!) : tr("editing.inspector.sourceVideo") }}</span>
+            <span class="mono sub">{{ tr("editing.inspector.inSource", { from: tcd((item.data as ArollClip).in), to: tcd((item.data as ArollClip).out), dur: fmtDur((item.data as ArollClip).out - (item.data as ArollClip).in) }) }}</span>
+            <label class="f">{{ tr("editing.inspector.volume") }} <b class="mono">{{ fmtGain((item.data as ArollClip).gain_db) }}</b>
+              <input type="range" min="-30" max="12" step="1" :value="(item.data as ArollClip).gain_db ?? 0"
+                @input="set<ArollClip>((x) => { const v = num($event); if (v) x.gain_db = v; else delete x.gain_db; })"
+                @dblclick="set<ArollClip>((x) => { delete x.gain_db; })">
+            </label>
+            <p v-if="(item.data as ArollClip).src" class="hint">{{ tr("editing.inspector.insertedHint") }}</p>
+          </template>
           <TransitionPicker v-if="tl.aroll[0]?.id !== item.data.id" :title="tr('transitions.withPrev')"
             :model-value="(item.data as ArollClip).transition" @update:model-value="(v) => set<ArollClip>((x) => { x.transition = v ?? null; })" />
           <p class="hint">{{ tr("editing.inspector.arollHint") }}</p>
@@ -224,6 +236,11 @@ const SOUND_ROLES = computed(() => [["sfx", tr("editing.inspector.sound")], ["mu
         <template v-else-if="item.track === 'motion'">
           <input class="input" :value="(item.data as Motion).title" :placeholder="tr('common.name')" @change="set<Motion>((x) => { x.title = ($event.target as HTMLInputElement).value; })">
           <span v-if="(item.data as Motion).kind" class="sub">{{ (item.data as Motion).kind }}</span>
+          <label class="check" :title="tr('editing.inspector.pauseAroll.title')">
+            <input type="checkbox" :checked="paused" @change="emit('pause', item.data.id, ($event.target as HTMLInputElement).checked)">
+            {{ tr("editing.inspector.pauseAroll.label") }}
+          </label>
+          <p v-if="paused" class="hint">{{ tr("editing.inspector.pauseAroll.on") }}</p>
           <p v-if="(item.data as Motion).idea" class="idea">{{ (item.data as Motion).idea }}</p>
           <div class="ends">
             <TransitionPicker :title="joined ? tr('transitions.joinPrev') : tr('transitions.enter')" :hint="joined ? tr('transitions.enterHint') : undefined"
@@ -341,6 +358,8 @@ fieldset { border: none; margin: 0; padding: 0; display: flex; flex-direction: c
 .f { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--muted); }
 .f b { font-weight: 500; color: var(--ink); }
 .f input[type="range"] { accent-color: var(--ink); }
+.check { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink); cursor: pointer; }
+.check input { accent-color: var(--ink); margin: 0; }
 .input { height: 36px; padding: 0 10px; font-size: 13.5px; }
 .input.area { height: auto; padding: 8px 10px; resize: vertical; font-family: inherit; line-height: 1.4; }
 .swatch { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--line-strong); cursor: pointer; padding: 0; }
