@@ -33,12 +33,18 @@ the voice loudness (≈ −24.6 LUFS on this channel), pauses ≥ 0.9 s, inserte
 titles, and a Whisper transcript **in timeline time** (`contexte.md` can be stale: don't trust its times).
 
 Cut the video into sequences: cold open, intro, each part (part titles are 1.2 s `transition` motions),
-conclusion. Inside a part, split again where the tone changes or where an inserted clip interrupts.
+conclusion; each A-roll pause is a sequence of its own. Inside a part, split again where the tone changes or where an inserted clip interrupts.
 
 ### 2. Decide what plays where
 
 - **No music under inserted clips** that carry their own sound (politician quotes, TV excerpts, memes).
   The user likes it. Stop the bed right on the clip's first frame (0.3 s fade) and restart after.
+- **A-roll pauses get a short cue of their own.** A pause (A-roll clip with `pause`, `montage/pause.mp4`)
+  is a full-screen motion — usually a part title — during which the voice stops on purpose so the viewer
+  breathes. Don't leave it silent and don't run the talking bed through it: end the previous bed on the
+  pause's first frame (0.3 s fade), lay a short cue (a sting or a few bars, cut to the pause length + a tail
+  of ≤ 0.5 s) at the bed's level or a few dB above (no voice to duck under), then start the next part's
+  bed after it. The cue is the hinge between two parts: it closes one mood and opens the next.
 - **Every spoken passage gets music to its end.** A 15 s stretch of voice between two archives without
   music feels like a hole; a short teaser before a part title can get its own dedicated track.
 - **Silence is a choice:** keep it for a punchline right before an archive, not for whole passages.

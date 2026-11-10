@@ -8,7 +8,7 @@ import re
 import subprocess
 import sys
 
-from common import inserted_clips, lufs, project_dir, timeline, total, work_dir
+from common import inserted_clips, lufs, pause_clips, project_dir, timeline, total, work_dir
 
 
 def mix_aroll(pid: str, tl: dict, dest) -> None:
@@ -59,6 +59,9 @@ def main() -> None:
     print("inserted clips (no music under them):")
     for c in inserted_clips(tl):
         print(f"  {c['start']:8.2f} -> {c['end']:8.2f}  {c['src']}")
+    print("A-roll pauses under a full-screen motion (a short cue each):")
+    for c in pause_clips(tl):
+        print(f"  {c['start']:8.2f} -> {c['end']:8.2f}  {c['motion']} {c['title'][:60]}")
     print("part titles (short motions):")
     for m in tl["motion"]:
         if m["kind"] == "transition" or m["dur"] <= 1.5:

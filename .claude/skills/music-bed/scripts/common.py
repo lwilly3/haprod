@@ -47,6 +47,20 @@ def inserted_clips(tl: dict) -> list[dict]:
     return out
 
 
+def pause_clips(tl: dict) -> list[dict]:
+    """A-roll pauses: the voice stops (black, silence) under a full-screen motion (`pause` = its id), usually a
+    part title. Not an inserted clip: each one gets its own short musical cue."""
+    out, t = [], 0.0
+    titles = {m["id"]: m["title"] for m in tl["motion"]}
+    for c in tl["aroll"]:
+        d = c["out"] - c["in"]
+        if c.get("pause"):
+            out.append({"id": c["id"], "motion": c["pause"], "title": titles.get(c["pause"], ""),
+                        "start": round(t, 3), "end": round(t + d, 3)})
+        t += d
+    return out
+
+
 def _ctx() -> ssl.SSLContext:
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
