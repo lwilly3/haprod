@@ -85,6 +85,8 @@ const ends = ref<[string, string[]][]>([]);
 const editor = useEditor({
   extensions: [StarterKit.configure({ link: { openOnClick: false } }), Markdown, BlockId, Cues, Plans(host), Preview],
   editable: !props.readonly,
+  // un script vide qu'on ouvre pour l'écrire soi-même : le curseur est déjà dedans
+  autofocus: !props.readonly && !props.blocks.length ? "end" : false,
   onUpdate: schedule,
   onTransaction: ({ editor: e }) => {
     const st = plansKey.getState(e.state);

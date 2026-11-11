@@ -1,9 +1,10 @@
 export default {
   tabs: { script: "Script", research: "Research", notes: "Notes" },
   empty: {
-    intro: "The script is written from the chosen angle: Daryl drafts a first version, split into sections, which you then refine here together.",
-    pickAngle: "Pick an angle in the Angle step first.",
-    write: "Write the script",
+    intro: "Write the script yourself, or let Daryl draft a first version from the chosen angle, split into sections, which you then refine here together.",
+    pickAngle: "For Daryl to write it, pick an angle in the Angle step first.",
+    self: "I'll write it myself",
+    write: "Have Daryl write it",
   },
   writing: "Writing the script…",
   hint: "Select a passage: “+ Shot” to annotate it, Daryl to discuss it",

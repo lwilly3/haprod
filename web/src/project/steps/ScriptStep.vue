@@ -36,7 +36,10 @@ const blocks = computed(() => script.blocks.value ?? []);
 const md = computed(() => toMarkdown(blocks.value));
 const writing = computed(() => running("script"));
 const writeError = computed(() => failed("script"));
-const empty = computed(() => script.blocks.value !== null && !md.value.trim() && !project.value.runtime.has_script);
+/** « Je l'écris moi-même » : l'éditeur s'ouvre sur une page blanche, sans passer par Daryl. */
+const selfWrite = ref(false);
+const empty = computed(() => script.blocks.value !== null && !md.value.trim() && !project.value.runtime.has_script
+  && !selfWrite.value);
 const angle = computed(() => {
   const p = project.value;
   return p.angle_sel != null ? p.angles[p.angle_sel] ?? null : null;
@@ -323,7 +326,10 @@ function setNote(i: number, n: string): void {
           <p>{{ t("script.empty.intro") }}</p>
           <p v-if="angle" class="angle">{{ t("chat.quoted", { q: angle.t }) }}</p>
           <p v-else>{{ t("script.empty.pickAngle") }}</p>
-          <button class="btn dark lg" :disabled="!angle" @click="writeScript">{{ t("script.empty.write") }}</button>
+          <div class="actions">
+            <button class="btn lg" @click="selfWrite = true">{{ t("script.empty.self") }}</button>
+            <button class="btn dark lg" :disabled="!angle" @click="writeScript">{{ t("script.empty.write") }}</button>
+          </div>
           <p v-if="writeError" class="error">{{ writeError }}</p>
         </div>
       </div>
@@ -464,6 +470,7 @@ function setNote(i: number, n: string): void {
 .empty-state .dashed-box { max-width: 560px; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 36px 32px; }
 .empty-state p { margin: 0; }
 .empty-state .angle { color: var(--ink); font-weight: 600; }
+.empty-state .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 
 .script-layout { flex: 1; min-height: 0; display: flex; gap: 20px; padding: 16px 24px 20px; }
 
