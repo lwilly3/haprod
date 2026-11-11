@@ -80,6 +80,11 @@ function toggleDone() {
           <span class="label">{{ s.label }}</span>
           <span class="sub">{{ s.sub }}</span>
         </RouterLink>
+        <!-- le prompteur, outil du tournage sans statut : ouvert à part -->
+        <RouterLink v-if="step.g === 'tour'" :to="`/prompteur/${project.id}`" target="_blank" class="sib">
+          <span class="dot tool" />
+          <span class="label">{{ t("shoot.teleprompter") }}</span>
+        </RouterLink>
       </nav>
       <div class="actions">
         <span class="chip" :style="{ background: chip[1], color: chip[2] }">{{ chip[0] }}</span>
@@ -110,6 +115,7 @@ header {
 .sib:hover { background: var(--bg-soft); }
 .sib.on { border-bottom-color: var(--ink); color: var(--ink) !important; }
 .sib .dot { width: 8px; height: 8px; border-radius: 4px; flex-shrink: 0; }
+.sib .dot.tool { border: 1px dashed var(--dash); }
 .sib .label { font-size: 14px; font-weight: 450; }
 .sib.on .label { font-weight: 600; }
 .sib .sub { font-family: var(--mono); font-size: 10.5px; color: var(--faint); }

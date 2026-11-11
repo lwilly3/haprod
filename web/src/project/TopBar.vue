@@ -132,6 +132,11 @@ function openProject(id: string) {
               <span class="label">{{ s.label }}</span>
               <span class="sub">{{ s.sub }}</span>
             </RouterLink>
+            <!-- le prompteur n'est pas une étape (pas de statut) : un outil du tournage, ouvert à part (téléphone) -->
+            <RouterLink v-if="g.g === 'tour'" :to="`/prompteur/${project.id}`" target="_blank" class="step tool" @click="menu = null">
+              <span class="dot" />
+              <span class="label">{{ t("shoot.teleprompter") }}</span>
+            </RouterLink>
           </div>
         </div>
       </nav>
@@ -237,6 +242,7 @@ header {
 .step .label { flex: 1; font-size: 13.5px; font-weight: 450; }
 .step.on .label { font-weight: 600; color: var(--ink); }
 .step.todo .label { color: var(--muted-2); }
+.step.tool .dot { border: 1px dashed var(--dash); }
 .step .sub { font-family: var(--mono); font-size: 10.5px; color: var(--faint); }
 
 .worker { display: flex; align-items: center; gap: 6px; padding: 0 4px; font-family: var(--mono); font-size: 10.5px; color: var(--faint); cursor: default; }
