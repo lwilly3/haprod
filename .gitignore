@@ -35,3 +35,6 @@ Thumbs.db
 /docs/
 /backend/scripts/compare_stt.py
 /editing-os-starter/
+
+# site construit (node site/build.mjs)
+/site/dist/

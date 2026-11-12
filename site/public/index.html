@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Daryl: a local studio for YouTube videos, from the idea to the upload</title>
+  <meta name="description" content="Angle, titles, thumbnails, script, rough cut, motion design, editing, shorts and upload in one app that runs on your machine, with Claude Code as a co-author. Free and open source.">
+  <link rel="canonical" href="https://daryl.eventuallymaking.io/">
+  <meta name="theme-color" content="#FAFAF8">
+
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://daryl.eventuallymaking.io/">
+  <meta property="og:title" content="Daryl: a local studio for YouTube videos">
+  <meta property="og:description" content="From the idea to the upload, in one app that runs on your machine, with Claude Code as a co-author. Free and open source.">
+  <meta property="og:image" content="https://daryl.eventuallymaking.io/screenshots/editing.png">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preload" href="fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/ibm-plex-sans-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <script>document.documentElement.classList.add('js')</script>
+  <script src="main.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="top">
+    <a class="brand" href="./" aria-label="Daryl, home">
+      <img src="favicon.svg" width="28" height="28" alt="">
+      <span>daryl</span>
+    </a>
+    <nav class="top-nav" aria-label="Sections">
+      <a href="#tour">Tour</a>
+      <a href="#how">How it works</a>
+      <a href="#try">Try it</a>
+    </nav>
+    <a class="btn btn-ink btn-sm" href="https://rickub.com/hlassiege/daryl"><svg class="btn-icon" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 8 A24 24 0 1 1 12 44"/><path d="M32 18 A14 14 0 1 0 46 32"/><circle cx="32" cy="32" r="6.5"/></svg>Source code</a>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <div class="hero-copy">
+        <h1>Your YouTube video, from the idea to the upload.</h1>
+        <p class="lead">
+          Daryl is a studio that runs on your machine. It takes a video through every step, with Claude Code
+          as a co-author and editing assistant. Daryl proposes, you decide.
+        </p>
+        <div class="actions">
+          <a class="btn btn-red" href="#try">Try it</a>
+          <a class="btn btn-line" href="https://rickub.com/hlassiege/daryl"><svg class="btn-icon" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 8 A24 24 0 1 1 12 44"/><path d="M32 18 A14 14 0 1 0 46 32"/><circle cx="32" cy="32" r="6.5"/></svg>Source code</a>
+        </div>
+        <p class="perk">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>
+          Free and open source, nothing to buy
+        </p>
+      </div>
+    </section>
+
+    <!-- The reel: every step of a project laid out as an editing timeline. Static, it shows the finished
+         project; with JS, the playhead sweeps it once and each clip fills in as the playhead reaches it.
+         Positions are on a 30-unit timeline: --a is where a clip starts, --b how long it lasts. -->
+    <figure class="reel" data-reel aria-labelledby="reel-caption">
+      <div class="reel-scroll">
+        <div class="reel-inner">
+          <ol class="ruler" aria-hidden="true">
+            <li>00:00</li><li>00:05</li><li>00:10</li><li>00:15</li><li>00:20</li><li>00:25</li><li>00:30</li>
+          </ol>
+          <div class="lanes">
+            <div class="lane" style="--c: var(--motion)">
+              <span class="lane-name">Writing</span>
+              <ul>
+                <li style="--a:0; --b:2"><span>Angle</span></li>
+                <li style="--a:2; --b:1.5"><span>Title</span></li>
+                <li style="--a:3.5; --b:2.5"><span>Thumbnail</span></li>
+                <li style="--a:6; --b:2"><span>Script</span></li>
+                <li style="--a:8; --b:2"><span>Roast</span></li>
+              </ul>
+            </div>
+            <div class="lane" style="--c: var(--zoom)">
+              <span class="lane-name">Shoot</span>
+              <ul>
+                <li style="--a:10; --b:3"><span>Teleprompter</span></li>
+              </ul>
+            </div>
+            <div class="lane" style="--c: var(--broll)">
+              <span class="lane-name">Editing</span>
+              <ul>
+                <li style="--a:13; --b:2.5"><span>Rough cut</span></li>
+                <li style="--a:15.5; --b:2.75"><span>Storyboard</span></li>
+                <li style="--a:18.25; --b:3.25"><span>Editing</span></li>
+                <li style="--a:21.5; --b:2"><span>Shorts</span></li>
+                <li style="--a:23.5; --b:2"><span>Render</span></li>
+              </ul>
+            </div>
+            <div class="lane" style="--c: var(--music)">
+              <span class="lane-name">Publishing</span>
+              <ul>
+                <li style="--a:25.5; --b:2.25"><span>Details</span></li>
+                <li style="--a:27.75; --b:2.25"><span>Upload</span></li>
+              </ul>
+            </div>
+            <div class="playhead" aria-hidden="true"></div>
+          </div>
+        </div>
+      </div>
+      <figcaption id="reel-caption">Every step of a video, one project folder on your disk.</figcaption>
+    </figure>
+
+    <section class="tour" id="tour" aria-labelledby="tour-title">
+      <h2 class="sr-only" id="tour-title">A tour of Daryl</h2>
+      <div class="tour-tabs" role="tablist" aria-label="Screens" aria-orientation="vertical">
+        <button role="tab" id="tab-projects" aria-controls="shot-projects" aria-selected="true">
+          <span class="tab-title">Every video, every step</span>
+          <span class="tab-desc">Each project keeps its brief, script, footage, edit and renders together, and shows where you left off.</span>
+        </button>
+        <button role="tab" id="tab-angle" aria-controls="shot-angle" aria-selected="false" tabindex="-1">
+          <span class="tab-title">Find the angle</span>
+          <span class="tab-desc">Daryl researches the topic from your brief and notes, then suggests angles to keep or rework.</span>
+        </button>
+        <button role="tab" id="tab-titles" aria-controls="shot-titles" aria-selected="false" tabindex="-1">
+          <span class="tab-title">Thirty titles, keep the best</span>
+          <span class="tab-desc">Daryl writes 30 titles from the angle. Keep two or three for the A/B test.</span>
+        </button>
+        <button role="tab" id="tab-thumbnail" aria-controls="shot-thumbnail" aria-selected="false" tabindex="-1">
+          <span class="tab-title">A thumbnail per title</span>
+          <span class="tab-desc">Generate variants from your own photos and references, or import the ones you made elsewhere.</span>
+        </button>
+        <button role="tab" id="tab-script" aria-controls="shot-script" aria-selected="false" tabindex="-1">
+          <span class="tab-title">Write the script</span>
+          <span class="tab-desc">Write it yourself or start from Daryl's draft, with versions, an outline and an assistant on the side.</span>
+        </button>
+        <button role="tab" id="tab-derush" aria-controls="shot-derush" aria-selected="false" tabindex="-1">
+          <span class="tab-title">Rough cut in one pass</span>
+          <span class="tab-desc">Your footage is transcribed, then silences and bad takes are cut. Check every cut before you apply it.</span>
+        </button>
+        <button role="tab" id="tab-storyboard" aria-controls="shot-storyboard" aria-selected="false" tabindex="-1">
+          <span class="tab-title">Plan the motion design</span>
+          <span class="tab-desc">Daryl reads what you say and places a motion beat on the right words. Review each one.</span>
+        </button>
+        <button role="tab" id="tab-editing" aria-controls="shot-editing" aria-selected="false" tabindex="-1">
+          <span class="tab-title">Edit with Daryl</span>
+          <span class="tab-desc">Zooms, B-roll, motion design, sound and music on a real timeline. Ask Daryl or do it by hand, then export to DaVinci Resolve.</span>
+        </button>
+        <button role="tab" id="tab-details" aria-controls="shot-details" aria-selected="false" tabindex="-1">
+          <span class="tab-title">Publish to YouTube</span>
+          <span class="tab-desc">Title, description, chapters and A/B variants, checked, then uploaded.</span>
+        </button>
+      </div>
+      <div class="tour-shots">
+        <div class="frame" id="shot-projects" role="tabpanel" aria-labelledby="tab-projects"><img src="screenshots/projects.png" width="2880" height="1800" alt="The projects page, with the last opened project and the progress of each video" fetchpriority="high"></div>
+        <div class="frame" id="shot-angle" role="tabpanel" aria-labelledby="tab-angle"><img src="screenshots/angle.png" width="2880" height="1800" alt="The Angle step: the brief, the suggested angles and Daryl's chat" loading="lazy"></div>
+        <div class="frame" id="shot-titles" role="tabpanel" aria-labelledby="tab-titles"><img src="screenshots/titles.png" width="2880" height="1800" alt="The Title step: the titles kept for the A/B test and Daryl's suggestions with their score" loading="lazy"></div>
+        <div class="frame" id="shot-thumbnail" role="tabpanel" aria-labelledby="tab-thumbnail"><img src="screenshots/thumbnail.png" width="2880" height="1800" alt="The Thumbnail step: three variants and the brief of a touch-up" loading="lazy"></div>
+        <div class="frame" id="shot-script" role="tabpanel" aria-labelledby="tab-script"><img src="screenshots/script.png" width="2880" height="1800" alt="The Script step: the script, its sections and its estimated length" loading="lazy"></div>
+        <div class="frame" id="shot-derush" role="tabpanel" aria-labelledby="tab-derush"><img src="screenshots/derush.png" width="2880" height="1800" alt="The Rough cut step: preview, transcript and the timeline with its cuts" loading="lazy"></div>
+        <div class="frame" id="shot-storyboard" role="tabpanel" aria-labelledby="tab-storyboard"><img src="screenshots/storyboard.png" width="2880" height="1800" alt="The Storyboard step: motion beats anchored on the transcript, with their place on screen" loading="lazy"></div>
+        <div class="frame" id="shot-editing" role="tabpanel" aria-labelledby="tab-editing"><img src="screenshots/editing.png" width="2880" height="1800" alt="The Editing step: preview, timeline with chapters, motion, zooms, B-roll and music, and Daryl's chat" loading="lazy"></div>
+        <div class="frame" id="shot-details" role="tabpanel" aria-labelledby="tab-details"><img src="screenshots/details.png" width="2880" height="1800" alt="The Details step: A/B variants, description and chapters" loading="lazy"></div>
+      </div>
+    </section>
+
+    <section class="how" id="how" aria-labelledby="how-title">
+      <h2 id="how-title">A studio on your machine, an assistant that asks first</h2>
+      <dl class="facts">
+        <div>
+          <dt>Your files stay with you</dt>
+          <dd>Projects, footage and renders live in a folder on your disk. Whisper, ffmpeg and the renderer run locally.</dd>
+        </div>
+        <div>
+          <dt>Runs on your Claude Code plan</dt>
+          <dd>Daryl drives Claude Code with your subscription. No API key to set up, no second bill.</dd>
+        </div>
+        <div>
+          <dt>Nothing changes without you</dt>
+          <dd>Cuts, titles, beats and edits are suggestions. They land in your project when you accept them.</dd>
+        </div>
+      </dl>
+
+      <div class="skills">
+        <div class="skills-copy">
+          <h3>Editing jobs for Claude Code</h3>
+          <p>Some jobs work better from a Claude Code session opened in the repository. Daryl ships them as skills.</p>
+        </div>
+        <ul class="skills-list">
+          <li><code>/music-bed</code><span>Scores the edit: one track per sequence, cut to cover it and ducked under the voice.</span></li>
+          <li><code>/replace-aroll-take</code><span>Swaps a stretch of A-roll for a re-recorded take and moves everything on top of it.</span></li>
+          <li><code>/snatch-cut</code><span>Proposes a burst of close-ups with snap zooms and punchy sounds, with a preview.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="honest" aria-labelledby="honest-title">
+      <h2 id="honest-title">A personal tool, shared as is</h2>
+      <div class="honest-body">
+        <p>
+          I make every video of <a href="https://www.youtube.com/@eventuallycoding">my channel</a> with Daryl.
+          I share it because people asked to see it, not to sell anything: there is no course, no paid plan,
+          no waiting list.
+        </p>
+        <p>
+          It follows how I work and evolves in that direction. It is built for one person on Windows, and
+          maintained on a best-effort basis. Fork it, take what you need, or use it for ideas.
+        </p>
+      </div>
+    </section>
+
+    <section class="try" id="try" aria-labelledby="try-title">
+      <h2 id="try-title">Try it</h2>
+      <p class="section-lead">You need Windows, Python 3.12, Node.js with pnpm, ffmpeg and Claude Code logged in.</p>
+      <div class="code">
+        <pre><code id="install-cmd">git clone https://rickub.com/hlassiege/daryl.git
+cd daryl
+py -3.12 -m venv .venv
+.venv\Scripts\pip install -r backend\requirements.txt
+cd web; pnpm install; pnpm build; cd ..\backend
+..\.venv\Scripts\python -m studio</code></pre>
+        <button class="btn btn-line btn-sm copy" type="button" data-copy="install-cmd">Copy</button>
+      </div>
+      <p class="note">Then open <code>http://localhost:4400</code>. <a href="https://rickub.com/hlassiege/daryl">Read the README</a> for the optional services: cloud transcription, thumbnails, YouTube upload, music.</p>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>Open source under the AGPL-3.0. Made by <a href="https://eventuallymaking.io">Hugo Lassiège</a>.</p>
+    <nav aria-label="Elsewhere">
+      <a href="https://rickub.com/hlassiege/daryl">Source code</a>
+      <a href="https://github.com/hlassiege/daryl">GitHub mirror</a>
+      <a href="https://panoplie.eventuallymaking.io">panoplie</a>
+    </nav>
+  </footer>
+</body>
+</html>
