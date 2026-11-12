@@ -1,0 +1,57 @@
+# Builds the website (site/) and uploads it to Bunny CDN, served as https://daryl.eventuallymaking.io.
+# Only runs when the site, the screenshots or the logo it uses, or this file change.
+#
+# The build has no dependencies (plain node), so there is no install step and ubuntu-latest is enough.
+#
+# Repository settings: secrets BUNNY_ACCESS_KEY and BUNNY_STORAGE_ZONE_PASSWORD, variables
+# BUNNY_STORAGE_ZONE (storage zone name) and BUNNY_PULL_ZONE_ID (pull zone purged after the upload).
+name: Deploy site
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "site/**"
+      - "media/screenshots/**"
+      - "web/public/favicon.svg"
+      - ".rickub/workflows/deploy-site.yml"
+  workflow_dispatch:
+
+# Workflow level: rickub ignores job-level concurrency. Deployments queue, none is cancelled
+concurrency:
+  group: deploy-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build site
+        run: node site/build.mjs
+
+      # enable-delete-action removes from the storage zone every file absent from site/dist
+      # The storage zone primary region is Stockholm, hence the se. endpoint
+      - name: Deploy to Bunny CDN
+        uses: R-J-dev/bunny-deploy@v2.1.1
+        with:
+          access-key: ${{ secrets.BUNNY_ACCESS_KEY }}
+          directory-to-upload: "site/dist"
+          storage-endpoint: "https://se.storage.bunnycdn.com"
+          storage-zone-name: ${{ vars.BUNNY_STORAGE_ZONE }}
+          storage-zone-password: ${{ secrets.BUNNY_STORAGE_ZONE_PASSWORD }}
+          enable-delete-action: true
+          enable-purge-pull-zone: true
+          pull-zone-id: ${{ vars.BUNNY_PULL_ZONE_ID }}
+          concurrency: 50
+          replication-timeout: "15000"
+          request-timeout: "15000"
+          retry-limit: "6"
