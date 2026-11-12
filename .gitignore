@@ -22,3 +22,8 @@ Thumbs.db
 
 # maquette Claude Design (non versionnée)
 /design/
+
+# configuration locale de panoplie (et ce qu'elle écrit dans .claude/settings.json)
+/panoplie.json
+/panoplie.lock
+/.claude/settings.json
