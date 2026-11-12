@@ -14,7 +14,7 @@ Hard rule: **the AI proposes, the user decides.** Never modify the user's files,
 ### 1. Analysis
 
 ```bash
-cd C:/Dev/src/youtube/studio
+# from the repository root
 TMP=$(mktemp -d)   # working folder outside data/
 .venv/Scripts/python -I .claude/skills/snatch-cut/scripts/analyze.py "<video>" "$TMP/analysis" --dense 0:6 --step 2
 ```
