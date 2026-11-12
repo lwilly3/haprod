@@ -30,3 +30,8 @@ Thumbs.db
 
 # vidéos d'exemple du skill hyperframes-animation (37 Mo, gardées en local par panoplie)
 /.claude/skills/hyperframes-animation/examples/assets/*.mp4
+
+# notes internes, scripts personnels et kits tiers (gardés en local, non publiés)
+/docs/
+/backend/scripts/compare_stt.py
+/editing-os-starter/
