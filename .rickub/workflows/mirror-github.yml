@@ -1,0 +1,71 @@
+# Mirrors this repository to GitHub (read-only copy, rickub stays the source of truth).
+# Pushes every branch and tag, removes on GitHub the ones deleted here, and overwrites any
+# divergent history: nothing must ever be pushed to the GitHub copy directly.
+#
+# Setup:
+# - GitHub: create the empty repository hlassiege/daryl, then add a deploy key with write
+#   access (Settings > Deploy keys). Turn off Issues, Wiki, Projects and Discussions, and
+#   restrict or disable pull requests.
+# - rickub: store the private half of that deploy key in the secret GH_MIRROR_SSH_KEY.
+name: Mirror to GitHub
+
+on:
+  push:
+  workflow_dispatch:
+
+# Workflow level: rickub ignores job-level concurrency. Runs queue, each one pushes the current state
+concurrency:
+  group: mirror-github
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+
+    steps:
+      # fetch-depth 0 fetches the full history, every branch (as refs/remotes/origin/*) and every tag
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # GitHub host key pinned rather than fetched with ssh-keyscan
+      - name: Push to GitHub
+        env:
+          SSH_KEY: ${{ secrets.GH_MIRROR_SSH_KEY }}
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+
+          # A key pasted from Windows carries CRLF line endings, and some secret stores flatten newlines
+          # into spaces or literal \n: OpenSSH then fails with "error in libcrypto". Rebuild the PEM layout
+          key=$(printf '%s' "$SSH_KEY" | tr -d '\r')
+          key=${key//\\n/$'\n'}
+          header=$(grep -oE -- '-----BEGIN [A-Z ]+-----' <<< "$key" || true)
+          if [[ -n $header && $key != *$'\n'* ]]; then
+            footer=$(grep -oE -- '-----END [A-Z ]+-----' <<< "$key")
+            body=${key#"$header"}
+            body=${body%"$footer"}
+            key=$(printf '%s\n' "$header"; tr ' ' '\n' <<< "$body" | sed '/^$/d'; printf '%s\n' "$footer")
+          fi
+          printf '%s\n' "$key" > ~/.ssh/mirror_key
+          chmod 600 ~/.ssh/mirror_key
+
+          # Fail early with a readable diagnosis (header and line count only, never the key itself)
+          if ! ssh-keygen -y -f ~/.ssh/mirror_key > /dev/null; then
+            first=$(head -n 1 ~/.ssh/mirror_key)
+            [[ $first == -----* || $first == ssh-* ]] || first="(neither a PEM header nor a public key)"
+            echo "GH_MIRROR_SSH_KEY is not a usable private key: $(wc -l < ~/.ssh/mirror_key) lines, first line: ${first:0:40}"
+            echo "Expected the private key, without passphrase, from -----BEGIN OPENSSH PRIVATE KEY----- to -----END OPENSSH PRIVATE KEY-----"
+            exit 1
+          fi
+          echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" > ~/.ssh/known_hosts
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/mirror_key -o IdentitiesOnly=yes"
+
+          # origin/HEAD would otherwise become a branch named HEAD on GitHub
+          git remote set-head origin --delete 2>/dev/null || true
+
+          git push --force --prune git@github.com:hlassiege/daryl.git \
+            'refs/remotes/origin/*:refs/heads/*' \
+            'refs/tags/*:refs/tags/*'
