@@ -37,7 +37,7 @@ function loadStorage(id: string) {
 }
 
 watch([project, locale], ([p]) => {
-  if (p) document.title = `${p.title} · Studio`;
+  if (p) document.title = `${p.title} · Daryl`;
 }, { immediate: true });
 
 const CHIP = computed(() => ({

@@ -46,7 +46,7 @@ watch([project, () => route.params.step], ([p]) => {
 }, { immediate: true });
 
 watch([project, step, locale], ([p, s]) => {
-  if (p && s) document.title = `${s.label} · ${p.title} · Studio`;
+  if (p && s) document.title = `${s.label} · ${p.title} · Daryl`;
 }, { immediate: true });
 
 const index = computed(() => (step.value ? STEPS.findIndex((s) => s.id === step.value!.id) : 0));

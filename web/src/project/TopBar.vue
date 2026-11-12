@@ -82,7 +82,7 @@ function openProject(id: string) {
 <template>
   <header>
     <div v-if="menu" class="backdrop" @click="menu = null" />
-    <RouterLink to="/" class="brand"><span class="logo" />studio</RouterLink>
+    <RouterLink to="/" class="brand"><span class="logo" />daryl</RouterLink>
     <div class="divider" />
 
     <template v-if="!project">

@@ -23,5 +23,5 @@ export const router = createRouter({
 });
 
 router.afterEach((to) => {
-  if (typeof to.meta.title === "string") document.title = `${t(to.meta.title)} · Studio`;
+  if (typeof to.meta.title === "string") document.title = `${t(to.meta.title)} · Daryl`;
 });
