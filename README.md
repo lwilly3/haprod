@@ -272,7 +272,8 @@ ids in `web/scripts/screenshots.mjs`):
 cd web; pnpm screenshots
 ```
 
-The website lives in `site/`: `node site/build.mjs` builds it into `site/dist/`. It is deployed to
+The website lives in `site/`. `node site/serve.mjs` serves it on http://localhost:4477 while you work on it
+(reload the page after an edit); `node site/build.mjs` builds it into `site/dist/`. It is deployed to
 Bunny CDN by `.rickub/workflows/deploy-site.yml` when `site/`, the screenshots or the logo change.
 
 ## Contributing
