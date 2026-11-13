@@ -11,12 +11,11 @@
 
 <p align="center">
   <a href="https://daryl.eventuallymaking.io">Website</a> ·
-  <a href="https://rickub.com/hlassiege/daryl">Source code</a> ·
-  <a href="https://github.com/hlassiege/daryl">GitHub mirror</a>
+  <a href="https://rickub.com/hlassiege/daryl">Source code</a>
 </p>
 
 <p align="center">
-  <img src="media/screenshots/editing.png" alt="The editing step: preview, timeline with chapters, motion design, zooms, B-roll and music, and Daryl's chat" width="900">
+  <img src="media/screenshots/editing.png" alt="The editing step: asked for a title card with a whoosh, Daryl adds both to the timeline and the preview shows the card" width="900">
 </p>
 
 ---
@@ -73,7 +72,7 @@ A **Library** (`data/library/`) keeps your own resources (images, videos, sounds
 across projects.
 
 <p align="center">
-  <img src="media/screenshots/storyboard.png" alt="The storyboard: motion design beats anchored on the transcript, with their place on screen" width="900">
+  <img src="media/screenshots/storyboard.png" alt="The storyboard: motion design beats anchored on the words they illustrate, with their place on screen" width="900">
 </p>
 
 ### Claude Code skills for editing
@@ -223,7 +222,7 @@ backend/studio/
 web/                 Vue 3 + Vite
   src/pages/         home, new project / brief, library, settings, teleprompter
   src/project/       open project store, top bar, step header, steps/ (one screen per step)
-  scripts/           screenshots.mjs (the screenshots of this README and the website)
+  scripts/           screenshots.mjs (the images of this README and the share image of the website)
 skills/              Claude skills copied into each project (script, titles, thumbnail)
 .claude/skills/      Claude Code skills for editing sessions in this repository
 site/                the website (static, deployed to Bunny CDN)
@@ -263,10 +262,11 @@ Tasks on the same `queue` run one at a time (e.g. `gpu`); two different queues r
 | `EPIDEMIC_SOUND_API_KEY` | Epidemic Sound key, for the `music-bed` skill (`.mcp.json`) |
 | `STUDIO_NO_BROWSER` | unset (set it to `1` to not open the browser on launch) |
 
-## Screenshots and website
+## Website and images
 
-The screenshots in `media/screenshots/` are taken from a running app, with your own projects (edit the
-ids in `web/scripts/screenshots.mjs`):
+The screens shown on the website are mockups: the app's screens redrawn in HTML and CSS
+(`site/public/index.html`), in English, on a made-up project, and animated. The images in
+`media/screenshots/` (this README, and the share image of the website) are captured from these mockups:
 
 ```powershell
 cd web; pnpm screenshots
@@ -274,7 +274,7 @@ cd web; pnpm screenshots
 
 The website lives in `site/`. `node site/serve.mjs` serves it on http://localhost:4477 while you work on it
 (reload the page after an edit); `node site/build.mjs` builds it into `site/dist/`. It is deployed to
-Bunny CDN by `.rickub/workflows/deploy-site.yml` when `site/`, the screenshots or the logo change.
+Bunny CDN by `.rickub/workflows/deploy-site.yml` when `site/`, the images or the logo change.
 
 ## Contributing
 

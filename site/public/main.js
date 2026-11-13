@@ -1,6 +1,6 @@
-// Progressive enhancement only: without this file every screenshot is listed and the reel shows the finished project.
+// Progressive enhancement only: without this file every mockup is listed and the reel shows the finished project.
 
-// Tour: screenshots as tabs (WAI-ARIA tabs pattern; up/down on the vertical list, left/right on mobile)
+// Tour: mockups as tabs (WAI-ARIA tabs pattern; up/down on the vertical list, left/right on mobile)
 const tabs = [...document.querySelectorAll('.tour-tabs [role="tab"]')]
 
 function select(tab, focus) {
@@ -16,8 +16,21 @@ function select(tab, focus) {
   }
 }
 
+// Mockups replay when their tab shows (CSS animations restart when a hidden frame shows);
+// a click on the tab already open replays it too.
+function replay(tab) {
+  const frame = document.getElementById(tab.getAttribute('aria-controls'))
+  for (const animation of frame.getAnimations?.({ subtree: true }) ?? []) {
+    animation.cancel()
+    animation.play()
+  }
+}
+
 for (const tab of tabs) {
-  tab.addEventListener('click', () => select(tab, false))
+  tab.addEventListener('click', () => {
+    if (tab.getAttribute('aria-selected') === 'true') replay(tab)
+    else select(tab, false)
+  })
   tab.addEventListener('keydown', (e) => {
     const i = tabs.indexOf(tab)
     const next = { ArrowDown: i + 1, ArrowRight: i + 1, ArrowUp: i - 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key]
@@ -27,6 +40,20 @@ for (const tab of tabs) {
   })
 }
 if (tabs.length) select(tabs[0], false)
+
+// The first mockup waits, paused, until the tour scrolls into view
+const tour = document.querySelector('.tour')
+if (tour && 'IntersectionObserver' in window) {
+  const observer = new IntersectionObserver((entries) => {
+    if (entries.some((e) => e.isIntersecting)) {
+      observer.disconnect()
+      tour.classList.add('seen')
+    }
+  }, { threshold: 0.4 })
+  observer.observe(tour)
+} else if (tour) {
+  tour.classList.add('seen')
+}
 
 // Copy buttons
 for (const button of document.querySelectorAll('[data-copy]')) {

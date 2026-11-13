@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Daryl: a local studio for YouTube videos, from the idea to the upload</title>
-  <meta name="description" content="Angle, titles, thumbnails, script, rough cut, motion design, editing, shorts and upload in one app that runs on your machine, with Claude Code as a co-author. Free and open source.">
+  <title>Daryl: help at every step of your YouTube videos</title>
+  <meta name="description" content="Find your angle and your best title, get a first draft of the script, skip the rough cut, edit by asking and publish without forgetting anything. Free and open source.">
   <link rel="canonical" href="https://daryl.eventuallymaking.io/">
   <meta name="theme-color" content="#FAFAF8">
 
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://daryl.eventuallymaking.io/">
-  <meta property="og:title" content="Daryl: a local studio for YouTube videos">
-  <meta property="og:description" content="From the idea to the upload, in one app that runs on your machine, with Claude Code as a co-author. Free and open source.">
-  <meta property="og:image" content="https://daryl.eventuallymaking.io/screenshots/editing.png">
+  <meta property="og:title" content="Daryl: help at every step of your YouTube videos">
+  <meta property="og:description" content="From the idea to the upload: find the angle and the title, write the script, cut, edit and publish. Free and open source.">
+  <meta property="og:image" content="https://daryl.eventuallymaking.io/screenshots/og.png">
   <meta name="twitter:card" content="summary_large_image">
 
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -41,10 +41,10 @@
   <main id="main">
     <section class="hero">
       <div class="hero-copy">
-        <h1>Your YouTube video, from the idea to the upload.</h1>
+        <h1>Help at every step of your YouTube videos.</h1>
         <p class="lead">
-          Daryl is a studio that runs on your machine. It takes a video through every step, with Claude Code
-          as a co-author and editing assistant. Daryl proposes, you decide.
+          Find the angle and the title, write the script, cut the footage, edit and publish.
+          Daryl takes the tedious part, you keep the fun one.
         </p>
         <div class="actions">
           <a class="btn btn-red" href="#try">Try it</a>
@@ -52,7 +52,7 @@
         </div>
         <p class="perk">
           <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>
-          Free and open source, nothing to buy
+          Free and open source
         </p>
       </div>
     </section>
@@ -104,88 +104,395 @@
           </div>
         </div>
       </div>
-      <figcaption id="reel-caption">Every step of a video, one project folder on your disk.</figcaption>
+      <figcaption id="reel-caption">From the idea to the upload, without switching tools.</figcaption>
     </figure>
 
     <section class="tour" id="tour" aria-labelledby="tour-title">
       <h2 class="sr-only" id="tour-title">A tour of Daryl</h2>
       <div class="tour-tabs" role="tablist" aria-label="Screens" aria-orientation="vertical">
         <button role="tab" id="tab-projects" aria-controls="shot-projects" aria-selected="true">
-          <span class="tab-title">Every video, every step</span>
-          <span class="tab-desc">Each project keeps its brief, script, footage, edit and renders together, and shows where you left off.</span>
+          <span class="tab-title">Know where each video stands</span>
+          <span class="tab-desc">Pick up any video where you left off, with its script, footage and edit in the same place.</span>
         </button>
         <button role="tab" id="tab-angle" aria-controls="shot-angle" aria-selected="false" tabindex="-1">
-          <span class="tab-title">Find the angle</span>
-          <span class="tab-desc">Daryl researches the topic from your brief and notes, then suggests angles to keep or rework.</span>
+          <span class="tab-title">Turn an idea into an angle</span>
+          <span class="tab-desc">Start from a vague idea and a few links. Get the research done and angles worth a video.</span>
         </button>
         <button role="tab" id="tab-titles" aria-controls="shot-titles" aria-selected="false" tabindex="-1">
-          <span class="tab-title">Thirty titles, keep the best</span>
-          <span class="tab-desc">Daryl writes 30 titles from the angle. Keep two or three for the A/B test.</span>
+          <span class="tab-title">Find your best title</span>
+          <span class="tab-desc">Compare scored titles side by side and A/B test the ones you like.</span>
         </button>
         <button role="tab" id="tab-thumbnail" aria-controls="shot-thumbnail" aria-selected="false" tabindex="-1">
-          <span class="tab-title">A thumbnail per title</span>
-          <span class="tab-desc">Generate variants from your own photos and references, or import the ones you made elsewhere.</span>
+          <span class="tab-title">Thumbnail generator</span>
+          <span class="tab-desc">Get thumbnails made from your own photos, one for each title you test.</span>
         </button>
         <button role="tab" id="tab-script" aria-controls="shot-script" aria-selected="false" tabindex="-1">
-          <span class="tab-title">Write the script</span>
-          <span class="tab-desc">Write it yourself or start from Daryl's draft, with versions, an outline and an assistant on the side.</span>
+          <span class="tab-title">Never start from a blank page</span>
+          <span class="tab-desc">Start from a first draft, make it yours, and get it roasted before you shoot.</span>
         </button>
         <button role="tab" id="tab-derush" aria-controls="shot-derush" aria-selected="false" tabindex="-1">
-          <span class="tab-title">Rough cut in one pass</span>
-          <span class="tab-desc">Your footage is transcribed, then silences and bad takes are cut. Check every cut before you apply it.</span>
+          <span class="tab-title">Skip the rough cut</span>
+          <span class="tab-desc">Silences and bad takes are cut for you. You only review.</span>
         </button>
         <button role="tab" id="tab-storyboard" aria-controls="shot-storyboard" aria-selected="false" tabindex="-1">
-          <span class="tab-title">Plan the motion design</span>
-          <span class="tab-desc">Daryl reads what you say and places a motion beat on the right words. Review each one.</span>
+          <span class="tab-title">Animations on the right words</span>
+          <span class="tab-desc">Daryl listens to your video and plans the motion design where it helps the point land.</span>
         </button>
         <button role="tab" id="tab-editing" aria-controls="shot-editing" aria-selected="false" tabindex="-1">
-          <span class="tab-title">Edit with Daryl</span>
-          <span class="tab-desc">Zooms, B-roll, motion design, sound and music on a real timeline. Ask Daryl or do it by hand, then export to DaVinci Resolve.</span>
+          <span class="tab-title">Edit by asking</span>
+          <span class="tab-desc">Ask for a zoom, a B-roll, a sound or music, or do it by hand on a real timeline.</span>
         </button>
         <button role="tab" id="tab-details" aria-controls="shot-details" aria-selected="false" tabindex="-1">
-          <span class="tab-title">Publish to YouTube</span>
-          <span class="tab-desc">Title, description, chapters and A/B variants, checked, then uploaded.</span>
+          <span class="tab-title">Publish without forgetting anything</span>
+          <span class="tab-desc">Description, chapters and A/B tests are written and checked before the upload.</span>
         </button>
       </div>
       <div class="tour-shots">
-        <div class="frame" id="shot-projects" role="tabpanel" aria-labelledby="tab-projects"><img src="screenshots/projects.png" width="2880" height="1800" alt="The projects page, with the last opened project and the progress of each video" fetchpriority="high"></div>
-        <div class="frame" id="shot-angle" role="tabpanel" aria-labelledby="tab-angle"><img src="screenshots/angle.png" width="2880" height="1800" alt="The Angle step: the brief, the suggested angles and Daryl's chat" loading="lazy"></div>
-        <div class="frame" id="shot-titles" role="tabpanel" aria-labelledby="tab-titles"><img src="screenshots/titles.png" width="2880" height="1800" alt="The Title step: the titles kept for the A/B test and Daryl's suggestions with their score" loading="lazy"></div>
-        <div class="frame" id="shot-thumbnail" role="tabpanel" aria-labelledby="tab-thumbnail"><img src="screenshots/thumbnail.png" width="2880" height="1800" alt="The Thumbnail step: three variants and the brief of a touch-up" loading="lazy"></div>
-        <div class="frame" id="shot-script" role="tabpanel" aria-labelledby="tab-script"><img src="screenshots/script.png" width="2880" height="1800" alt="The Script step: the script, its sections and its estimated length" loading="lazy"></div>
-        <div class="frame" id="shot-derush" role="tabpanel" aria-labelledby="tab-derush"><img src="screenshots/derush.png" width="2880" height="1800" alt="The Rough cut step: preview, transcript and the timeline with its cuts" loading="lazy"></div>
-        <div class="frame" id="shot-storyboard" role="tabpanel" aria-labelledby="tab-storyboard"><img src="screenshots/storyboard.png" width="2880" height="1800" alt="The Storyboard step: motion beats anchored on the transcript, with their place on screen" loading="lazy"></div>
-        <div class="frame" id="shot-editing" role="tabpanel" aria-labelledby="tab-editing"><img src="screenshots/editing.png" width="2880" height="1800" alt="The Editing step: preview, timeline with chapters, motion, zooms, B-roll and music, and Daryl's chat" loading="lazy"></div>
-        <div class="frame" id="shot-details" role="tabpanel" aria-labelledby="tab-details"><img src="screenshots/details.png" width="2880" height="1800" alt="The Details step: A/B variants, description and chapters" loading="lazy"></div>
+        <div class="frame" id="shot-projects" role="tabpanel" aria-labelledby="tab-projects">
+          <div class="mock m-projects" role="img" aria-label="The projects page: the last opened video to resume, and every other video with its progress">
+            <div class="m-bar"><span class="m-brand">daryl</span><span class="m-path"><b>Home</b><i>·</i>New project<i>·</i>Library</span></div>
+            <div class="m-body">
+              <div class="m-row"><span class="m-h">Projects</span><span class="m-btn red">+ New project</span></div>
+              <span class="m-eyebrow">Resume · last opened project</span>
+              <div class="m-resume" style="--i: 0">
+                <div class="m-thumb t-days"><b>4 days?</b><i class="m-person"></i></div>
+                <div>
+                  <h4>The 4-day week, one year later</h4>
+                  <p>My company switched to a four-day week a year ago. What it did to pay, output and the people, with our own numbers and the UK trial.</p>
+                  <div class="m-steps" style="--i: 0"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="w"></i><i class="w"></i><i></i><i></i><i></i><i></i><i></i></div>
+                  <div class="m-row"><span class="m-btn dark">Continue · Editing →</span><span class="m-meta">9/15 steps · 24 GB · Nov 12</span></div>
+                </div>
+              </div>
+              <span class="m-eyebrow">Other projects</span>
+              <div class="m-grid">
+                <div class="m-proj" style="--i: 1"><div class="m-thumb t-juniors"><b>Junior jobs?</b><i class="m-person"></i></div><strong>AI and junior developers</strong><div class="m-steps"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i></div><span class="m-meta">15/15 steps · published</span></div>
+                <div class="m-proj" style="--i: 2"><div class="m-thumb t-salary"><b>+0%</b><i class="m-person"></i></div><strong>Why your salary stalls</strong><div class="m-steps"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="w"></i><i></i><i></i><i></i></div><span class="m-meta">11/15 steps · Nov 9</span></div>
+                <div class="m-proj" style="--i: 3"><div class="m-thumb t-numbers"><b>Back to the office</b><i class="m-person"></i></div><strong>The end of remote work?</strong><div class="m-steps"><i class="d"></i><i class="d"></i><i class="d"></i><i class="w"></i><i class="w"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="m-meta">3/15 steps · Nov 4</span></div>
+                <div class="m-proj" style="--i: 4"><div class="m-thumb t-empty"></div><strong>Hiring freezes, explained</strong><div class="m-steps"><i class="w"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="m-meta">0/15 steps · Oct 30</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="frame" id="shot-angle" role="tabpanel" aria-labelledby="tab-angle">
+          <div class="mock m-angle-step" role="img" aria-label="The Angle step: Daryl reads the sources of the brief, suggests three angles, and one is kept">
+            <div class="m-bar"><span class="m-brand">daryl</span><span class="m-project">The 4-day week, one year later</span><span class="m-path">Pre-prod<i>/</i><b>Angle</b></span></div>
+            <div class="m-body">
+              <div class="m-col">
+                <div class="m-brief">
+                  <span class="m-eyebrow">Project brief</span>
+                  <dl><dt>Starting idea</dt><dd>My company tried the 4-day week for a year. Was it worth it?</dd></dl>
+                  <dl><dt>Target length</dt><dd>10–15 min</dd></dl>
+                </div>
+                <span class="m-eyebrow">Angles · 3</span>
+                <div class="m-angles">
+                  <div class="m-angle-card kept" style="--i: 0"><i>A</i><strong>We did the 4-day week for a year. Here's the bill.</strong><p>Our own numbers, month by month: output, sick days, hiring, and what it cost.</p><span class="m-btn m-swap"><span>Keep</span><span>✓ Kept</span></span></div>
+                  <div class="m-angle-card" style="--i: 1"><i>B</i><strong>The 4-day week works. Just not for every job.</strong><p>Where the UK and Iceland trials worked, and the jobs where it fell apart.</p><span class="m-btn">Keep</span></div>
+                  <div class="m-angle-card" style="--i: 2"><i>C</i><strong>Why your boss will still say no</strong><p>The objections managers raise, and the ones that actually hold up.</p><span class="m-btn">Keep</span></div>
+                </div>
+              </div>
+              <div class="m-panel">
+                <div class="m-panel-head">Daryl</div>
+                <div class="m-msg daryl">Reading your brief and the sources you linked…</div>
+                <ul class="m-sources">
+                  <li style="--i: 0">UK four-day week pilot, final report</li>
+                  <li style="--i: 1">Iceland working-time trials, 2015–2019</li>
+                  <li style="--i: 2">Microsoft Japan, Work-Life Choice Challenge</li>
+                  <li style="--i: 3">Your HR exports: hours, sick days, hires</li>
+                  <li style="--i: 4">Six interview notes</li>
+                </ul>
+                <div class="m-msg daryl">Three angles. I'd keep A: your own numbers are something no other video has.</div>
+                <span class="m-meta">14 sources read · 3 angles</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="frame" id="shot-titles" role="tabpanel" aria-labelledby="tab-titles">
+          <div class="mock m-titles" role="img" aria-label="The Title step: Daryl's scored suggestions, and the two best ones kept for the A/B test">
+            <div class="m-bar"><span class="m-brand">daryl</span><span class="m-project">The 4-day week, one year later</span><span class="m-path">Pre-prod<i>/</i><b>Title</b></span></div>
+            <div class="m-body">
+              <p class="m-angle"><span class="m-eyebrow">Kept angle</span>A year of 4-day weeks: what happened to pay and output</p>
+              <div class="m-ab">
+                <span class="m-eyebrow">Kept for the A/B test · 2/3</span>
+                <div class="m-slot fill" style="--at: 2300ms"><i>A</i><b>61 companies tried the 4-day week. 56 kept it.</b><span class="m-score hi">82</span></div>
+                <div class="m-slot fill" style="--at: 3000ms"><i>B</i><b>4 days, same salary: the numbers after a year</b><span class="m-score hi">74</span></div>
+                <div class="m-slot empty"><i>C</i><span>Keep a title below, or add your own.</span></div>
+              </div>
+              <div class="m-list-wrap">
+                <span class="m-eyebrow">Daryl's suggestions</span>
+                <ol class="m-list">
+                  <li style="--i: 0"><span>The 4-day week, one year later</span><span class="m-score">58</span><span class="m-add">+</span></li>
+                  <li style="--i: 1"><span>Why the 4-day week works (and where it doesn't)</span><span class="m-score hi">71</span><span class="m-add">+</span></li>
+                  <li style="--i: 2; --at: 2300ms" class="kept"><span>61 companies tried the 4-day week. 56 kept it.</span><span class="m-score hi">82</span><span class="m-add">✓</span></li>
+                  <li style="--i: 3"><span>Is the 4-day week only for tech jobs?</span><span class="m-score">63</span><span class="m-add">+</span></li>
+                  <li style="--i: 4; --at: 3000ms" class="kept"><span>4 days, same salary: the numbers after a year</span><span class="m-score hi">74</span><span class="m-add">✓</span></li>
+                  <li style="--i: 5"><span>The hidden cost of the 4-day week</span><span class="m-score">66</span><span class="m-add">+</span></li>
+                  <li style="--i: 6"><span>Your boss is wrong about the 4-day week</span><span class="m-score">54</span><span class="m-add">+</span></li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="frame" id="shot-thumbnail" role="tabpanel" aria-labelledby="tab-thumbnail">
+          <div class="mock m-thumbs" role="img" aria-label="The Thumbnail step: a new variant is generated from a short brief and joins the two kept for the A/B test">
+            <div class="m-bar"><span class="m-brand">daryl</span><span class="m-project">The 4-day week, one year later</span><span class="m-path">Pre-prod<i>/</i><b>Thumbnail</b></span></div>
+            <div class="m-body">
+              <p class="m-angle"><span class="m-eyebrow">Kept angle</span>We did the 4-day week for a year. Here's the bill.</p>
+              <div>
+                <span class="m-eyebrow">Kept for the A/B test · 3/3</span>
+                <div class="m-slots">
+                  <div class="m-vslot"><div class="m-thumb t-days"><b>4 days?</b><i class="m-person"></i><span class="m-tag">A</span></div><span class="m-select">61 companies tried the 4-day week…</span></div>
+                  <div class="m-vslot"><div class="m-thumb t-numbers"><b>56 of 61 kept it</b><i class="m-person"></i><span class="m-tag">B</span></div><span class="m-select">4 days, same salary: the numbers…</span></div>
+                  <div class="m-vslot"><div class="m-hole"><div class="m-thumb t-friday"><b><s>Fridays</s></b><i class="m-person"></i><span class="m-tag">C</span></div></div><span class="m-select">We did the 4-day week for a year…</span></div>
+                </div>
+              </div>
+              <div class="m-variant">
+                <div>
+                  <span class="m-eyebrow">Variant v3 · brief</span>
+                  <div class="m-field"><label>What the thumbnail shows</label><div>Me at my desk, next to a calendar where Friday is crossed out</div></div>
+                  <div class="m-field"><label>Text in the image</label><div>FRIDAYS, crossed out</div></div>
+                </div>
+                <div>
+                  <span class="m-eyebrow">Results · 1</span>
+                  <div class="m-gen"><div class="m-thumb t-friday"><b><s>Fridays</s></b><i class="m-person"></i><span class="m-tag r">★ Chosen</span></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="frame" id="shot-script" role="tabpanel" aria-labelledby="tab-script">
+          <div class="mock m-script" role="img" aria-label="The Script step: a first draft written from the angle, then a roast with a score, an estimated retention and what to fix">
+            <div class="m-bar"><span class="m-brand">daryl</span><span class="m-project">The 4-day week, one year later</span><span class="m-path">Pre-prod<i>/</i><b>Script</b></span></div>
+            <div class="m-body">
+              <div class="m-outline">
+                <span class="m-eyebrow">Outline</span>
+                <ol>
+                  <li class="on">Hook <span>120</span></li>
+                  <li>The trial <span>340</span></li>
+                  <li>The numbers <span>610</span></li>
+                  <li>What broke <span>480</span></li>
+                  <li>Verdict <span>210</span></li>
+                </ol>
+                <span class="m-meta">1,760 words · ~12 min</span>
+              </div>
+              <div class="m-doc">
+                <span class="m-eyebrow">Draft v2 · written from the angle</span>
+                <h5>HOOK</h5>
+                <p style="--i: 0">A year ago, my company switched to a four-day week. Same salary, same goals, one day less.</p>
+                <p class="visual" style="--i: 1">[VISUAL: a calendar, Friday slides out]</p>
+                <p style="--i: 2">Everyone asked me the same thing: did it work? Here are our numbers, month by month, and the one thing nobody saw coming.</p>
+                <h5>THE TRIAL</h5>
+                <p style="--i: 3">We were not the first. In 2022, 61 companies in the UK tried it for six months. 56 of them kept it.</p>
+                <p style="--i: 4">Same output, fewer sick days, and almost nobody wanted to go back. So why did ours nearly fall apart?</p>
+              </div>
+              <div class="m-roast">
+                <span class="m-eyebrow" style="--i: 0">Roasting</span>
+                <div class="m-grade" style="--i: 1"><strong>7.5</strong><span>/10</span></div>
+                <p style="--i: 2">Strong hook. The middle drags.</p>
+                <div style="--i: 3">
+                  <span class="m-eyebrow">Estimated retention · 54 %</span>
+                  <svg class="m-curve" viewBox="0 0 100 36" preserveAspectRatio="none" aria-hidden="true"><line x1="0" y1="35" x2="100" y2="35"/><path d="M0 3 C6 11, 12 14, 22 16 S38 18, 48 22 S62 23, 70 25 S88 26, 100 28"/></svg>
+                </div>
+                <ul class="m-remarks" style="--i: 4">
+                  <li>Say what broke in the hook, not at minute 9</li>
+                  <li>Cut the second example in The numbers</li>
+                  <li>End on the question, not on a summary</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="frame" id="shot-derush" role="tabpanel" aria-labelledby="tab-derush">
+          <div class="mock m-cut" role="img" aria-label="The Rough cut step: bad takes and silences are struck from the transcript and removed from the timeline">
+            <div class="m-bar"><span class="m-brand">daryl</span><span class="m-project">The 4-day week, one year later</span><span class="m-path">Post-prod<i>/</i><b>Rough cut</b></span></div>
+            <div class="m-body">
+              <div class="m-transcript">
+                <p class="m-file">A001_C004.MP4 · 00:12 → 01:48</p>
+                <p class="m-say" style="--i: 0"><time>00:00</time><span>A year ago, my company switched to a four-day week.</span></p>
+                <p class="m-say bad" style="--i: 1"><time></time><span>Same salary, same… hmm, no, let me start that again.</span><em>Bad take</em></p>
+                <p class="m-say" style="--i: 2"><time>00:04</time><span>Same salary, same goals, one day less.</span></p>
+                <p class="m-say gap" style="--i: 3"><time></time><span>2.6 s of silence</span><em>Silence</em></p>
+                <p class="m-say" style="--i: 4"><time>00:07</time><span>So I asked the people who lived it what actually changed.</span></p>
+                <p class="m-say bad" style="--i: 5"><time></time><span>And the first thing they… sorry, the first thing they said</span><em>Bad take</em></p>
+                <p class="m-say" style="--i: 6"><time>00:12</time><span>The first thing they told me was not about Fridays.</span></p>
+                <p class="m-say gap" style="--i: 7"><time></time><span>1.9 s of silence</span><em>Silence</em></p>
+                <p class="m-say" style="--i: 8"><time>00:15</time><span>It was about Mondays, and the meetings that piled up on them.</span></p>
+              </div>
+              <div class="m-tools">
+                <span class="m-btn dark">Select</span><span class="m-btn">Blade</span>
+                <span class="m-btn b1">Remove 6 bad takes</span><span class="m-btn b2">Remove 14 silences · 38 s</span>
+                <span class="m-stat">42:10 of footage → <b>14:32</b> kept</span>
+              </div>
+              <div class="m-tl">
+                <div class="m-tl-names"><span>V1</span><span>A1</span></div>
+                <div class="m-track">
+                  <span class="m-seg" style="--g: 3"></span><span class="m-seg gap x" style="--g: .6"></span><span class="m-seg" style="--g: 2"></span><span class="m-seg bad x" style="--g: 2.2"></span>
+                  <span class="m-seg" style="--g: 4"></span><span class="m-seg gap x" style="--g: .8"></span><span class="m-seg" style="--g: 1.5"></span><span class="m-seg" style="--g: 2.5"></span>
+                  <span class="m-seg gap x" style="--g: .5"></span><span class="m-seg" style="--g: 3"></span><span class="m-seg bad x" style="--g: 1.8"></span><span class="m-seg" style="--g: 2"></span>
+                  <span class="m-seg gap x" style="--g: .7"></span><span class="m-seg" style="--g: 3.5"></span><span class="m-seg bad x" style="--g: 1.4"></span><span class="m-seg" style="--g: 1"></span>
+                  <span class="m-seg gap x" style="--g: .9"></span><span class="m-seg" style="--g: 2.5"></span><span class="m-seg bad x" style="--g: 2.6"></span><span class="m-seg" style="--g: 3"></span>
+                  <span class="m-seg gap x" style="--g: .5"></span><span class="m-seg" style="--g: 2"></span><span class="m-seg" style="--g: 1.5"></span><span class="m-seg gap x" style="--g: .8"></span>
+                  <span class="m-seg" style="--g: 3"></span><span class="m-seg bad x" style="--g: 1.6"></span><span class="m-seg" style="--g: 2.5"></span><span class="m-seg gap x" style="--g: .6"></span>
+                  <span class="m-seg bad x" style="--g: 1.2"></span><span class="m-seg" style="--g: 3"></span>
+                  <span class="m-head"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="frame" id="shot-storyboard" role="tabpanel" aria-labelledby="tab-storyboard">
+          <div class="mock m-story" role="img" aria-label="The Storyboard step: Daryl places motion design beats on the words they illustrate, each with its place on screen">
+            <div class="m-bar"><span class="m-brand">daryl</span><span class="m-project">The 4-day week, one year later</span><span class="m-path">Post-prod<i>/</i><b>Storyboard</b></span></div>
+            <div class="m-body">
+              <div class="m-row"><strong>18 beats</strong><span class="m-meta">one every 45 s</span><span class="m-chip" style="--c: var(--motion)">Motion <b>12</b></span><span class="m-chip" style="--c: var(--zoom)">Zoom <b>4</b></span><span class="m-chip" style="--c: var(--broll)">B-roll <b>2</b></span></div>
+              <div class="m-strip">
+                <i style="--x: 3%; --i: 0"></i><i style="--x: 7%; --i: 1"></i><i style="--x: 11%; --i: 2; --c: var(--zoom)"></i><i style="--x: 15%; --i: 3"></i><i class="on" style="--x: 21%; --i: 4"></i><i style="--x: 25%; --i: 5"></i>
+                <i class="on" style="--x: 29%; --i: 6"></i><i style="--x: 34%; --i: 7; --c: var(--zoom)"></i><i style="--x: 40%; --i: 8; --c: var(--broll); --w: 2.4%"></i><i style="--x: 46%; --i: 9"></i><i style="--x: 51%; --i: 10"></i><i style="--x: 56%; --i: 11; --c: var(--zoom)"></i>
+                <i style="--x: 61%; --i: 12"></i><i style="--x: 67%; --i: 13"></i><i style="--x: 72%; --i: 14; --c: var(--broll); --w: 2.4%"></i><i style="--x: 79%; --i: 15; --c: var(--zoom)"></i><i style="--x: 86%; --i: 16"></i><i style="--x: 93%; --i: 17"></i>
+              </div>
+              <div class="m-beats">
+                <div class="m-beat" style="--i: 0">
+                  <div class="m-beat-meta"><strong>04:12.5</strong><span class="m-meta">6.2 s</span><span class="m-chip" style="--c: var(--motion)">Motion</span></div>
+                  <div>
+                    <span class="m-eyebrow">You say</span>
+                    <q>Same salary, same goals, <mark>one day less</mark>.</q>
+                    <span class="m-eyebrow">We show</span>
+                    <p>A week calendar: Friday slides out and the four days stretch to fill the week.</p>
+                  </div>
+                  <div><span class="m-eyebrow">Screen position · <b>Right</b></span><div class="m-pos"><i class="band"></i><i></i><i></i><i class="on"></i><i class="band"></i></div></div>
+                </div>
+                <div class="m-beat" style="--i: 1">
+                  <div class="m-beat-meta"><strong>05:40.1</strong><span class="m-meta">4.8 s</span><span class="m-chip" style="--c: var(--motion)">Motion</span></div>
+                  <div>
+                    <span class="m-eyebrow">You say</span>
+                    <q><mark>61 companies</mark> tried it, and <mark>56 kept it</mark>.</q>
+                    <span class="m-eyebrow">We show</span>
+                    <p>Two counters tick up side by side in the lower band, 61 then 56.</p>
+                  </div>
+                  <div><span class="m-eyebrow">Screen position · <b>Bottom</b></span><div class="m-pos"><i class="band"></i><i></i><i></i><i></i><i class="band on"></i></div></div>
+                </div>
+                <div class="m-beat" style="--i: 2">
+                  <div class="m-beat-meta"><strong>09:31.0</strong><span class="m-meta">1.4 s</span><span class="m-chip" style="--c: var(--zoom)">Zoom</span></div>
+                  <div>
+                    <span class="m-eyebrow">You say</span>
+                    <q>And then, in March, <mark>it nearly fell apart</mark>.</q>
+                    <span class="m-eyebrow">We show</span>
+                    <p>A strong punch-in on your face, held for the whole line.</p>
+                  </div>
+                  <div><span class="m-eyebrow">Screen position · <b>Center</b></span><div class="m-pos"><i class="band"></i><i></i><i class="on z"></i><i></i><i class="band"></i></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="frame" id="shot-editing" role="tabpanel" aria-labelledby="tab-editing">
+          <div class="mock m-edit" role="img" aria-label="The Editing step: asked for a title card with a whoosh, Daryl adds both to the timeline and the preview shows the card">
+            <div class="m-bar"><span class="m-brand">daryl</span><span class="m-project">The 4-day week, one year later</span><span class="m-path">Post-prod<i>/</i><b>Editing</b></span></div>
+            <div class="m-body">
+              <div class="m-preview">
+                <div class="m-shot">
+                  <div class="m-card"><small>The deal</small><strong>4 days. <u>Same salary.</u></strong></div>
+                </div>
+                <div class="m-controls"><span class="m-btn">−1 s</span><span class="m-btn dark">▶</span><span class="m-btn">+1 s</span><span>08:04.2 / 19:40</span></div>
+              </div>
+              <div class="m-chat">
+                <div class="m-chat-head">Daryl</div>
+                <div class="m-msg me">Put a title card on “same salary”, with a whoosh</div>
+                <div class="m-reply">
+                  <div class="m-typing"><i></i><i></i><i></i></div>
+                  <div class="m-msg daryl">Done: a title card at 08:04, and a whoosh on the way in.<small>2 actions · timeline edited</small></div>
+                </div>
+                <div class="m-input">Ask Daryl…</div>
+              </div>
+              <div class="m-lanes">
+                <span>Chapters</span>
+                <ul class="ch"><li style="--a: 0; --b: 2.5">Intro</li><li style="--a: 2.5; --b: 4">The trial</li><li style="--a: 6.5; --b: 4.5">The numbers</li><li style="--a: 11; --b: 4.5">What broke</li><li style="--a: 15.5; --b: 4.5">Verdict</li></ul>
+                <span>Motion</span>
+                <ul style="--c: var(--motion)"><li style="--a: 1; --b: 1"></li><li style="--a: 3.2; --b: .8"></li><li style="--a: 5.5; --b: .7"></li><li class="new" style="--a: 8.2; --b: 1.4">Title card</li><li style="--a: 10.4; --b: .8"></li><li style="--a: 12.5; --b: 1"></li><li style="--a: 14.2; --b: .7"></li><li style="--a: 16.8; --b: 1"></li><li style="--a: 18.5; --b: .8"></li></ul>
+                <span>Zooms</span>
+                <ul class="zm" style="--c: var(--zoom)"><li style="--a: .6; --b: .3"></li><li style="--a: 2.8; --b: .3"></li><li style="--a: 4.6; --b: .3"></li><li style="--a: 7.1; --b: .3"></li><li style="--a: 9.9; --b: .3"></li><li style="--a: 11.6; --b: .3"></li><li style="--a: 13.9; --b: .3"></li><li style="--a: 16; --b: .3"></li><li style="--a: 17.9; --b: .3"></li><li style="--a: 19.5; --b: .3"></li></ul>
+                <span>B-roll</span>
+                <ul style="--c: var(--broll)"><li style="--a: 2; --b: 1">office</li><li style="--a: 6.5; --b: 1.1">survey</li><li style="--a: 11; --b: 1.6">timesheet</li><li style="--a: 15; --b: 1">team</li></ul>
+                <span>Video</span>
+                <ul class="vid"><li style="--a: 0; --b: 4.9"></li><li style="--a: 4.9; --b: 4.5"></li><li style="--a: 9.4; --b: 4.6"></li><li style="--a: 14; --b: 6"></li></ul>
+                <span>Voice</span>
+                <ul class="voice"><li style="--a: 0; --b: 20"></li></ul>
+                <span>Sound</span>
+                <ul style="--c: #E2683C"><li style="--a: 1; --b: .25"></li><li style="--a: 3.2; --b: .25"></li><li class="new" style="--a: 8.05; --b: .4"></li><li style="--a: 12.5; --b: .25"></li><li style="--a: 16.8; --b: .25"></li></ul>
+                <span>Music</span>
+                <ul style="--c: var(--music)"><li style="--a: 0; --b: 6.4">lofi-01</li><li style="--a: 6.5; --b: 7.9">lofi-02</li><li style="--a: 14.5; --b: 5.5">lofi-03</li></ul>
+                <span class="m-head"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="frame" id="shot-details" role="tabpanel" aria-labelledby="tab-details">
+          <div class="mock m-details" role="img" aria-label="The Details step: A/B variants, description and chapters; every check passes, then the video is uploaded to YouTube">
+            <div class="m-bar"><span class="m-brand">daryl</span><span class="m-project">The 4-day week, one year later</span><span class="m-path">Publish<i>/</i><b>Details</b></span></div>
+            <div class="m-body">
+              <div class="m-col">
+                <div>
+                  <span class="m-eyebrow">A/B test · 3 variants</span>
+                  <ul class="m-variants">
+                    <li><div class="m-thumb t-days"><b>4 days?</b><i class="m-person"></i><span class="m-tag">A</span></div>61 companies tried the 4-day week. 56 kept it.</li>
+                    <li><div class="m-thumb t-numbers"><b>56 of 61 kept it</b><i class="m-person"></i><span class="m-tag">B</span></div>4 days, same salary: the numbers after a year</li>
+                    <li><div class="m-thumb t-friday"><b><s>Fridays</s></b><i class="m-person"></i><span class="m-tag">C</span></div>We did the 4-day week for a year. Here's the bill.</li>
+                  </ul>
+                </div>
+                <div>
+                  <span class="m-eyebrow">Description</span>
+                  <div class="m-desc">A year ago, my company switched to a four-day week. Here is what it did to pay, output and hiring, with our own numbers and the UK trial.
+                    <ol><li>00:00 Intro</li><li>01:05 The trial</li><li>04:12 The numbers</li><li>09:30 What broke</li><li>15:20 Verdict</li></ol>
+                  </div>
+                </div>
+              </div>
+              <div class="m-panel">
+                <div class="m-panel-head">Before the upload</div>
+                <ul class="m-checks">
+                  <li style="--i: 0">Video rendered · 19:40, 4K</li>
+                  <li style="--i: 1">Titles under 70 characters</li>
+                  <li style="--i: 2">Three thumbnails at 1280 × 720</li>
+                  <li style="--i: 3">Chapters start at 00:00</li>
+                  <li style="--i: 4">Description and tags</li>
+                  <li style="--i: 5">Scheduled for Tuesday, 6 pm</li>
+                </ul>
+                <div class="m-upload">
+                  <span class="m-btn red">Upload to YouTube</span>
+                  <div class="m-bar-track"><i></i></div>
+                  <span class="m-done">Uploaded · goes live Tuesday, 6 pm</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
     <section class="how" id="how" aria-labelledby="how-title">
-      <h2 id="how-title">A studio on your machine, an assistant that asks first</h2>
+      <h2 id="how-title">Fits the way you already work</h2>
       <dl class="facts">
         <div>
-          <dt>Your files stay with you</dt>
-          <dd>Projects, footage and renders live in a folder on your disk. Whisper, ffmpeg and the renderer run locally.</dd>
+          <dt>In your language</dt>
+          <dd>Daryl writes your titles, scripts and descriptions in the language of your channel.</dd>
         </div>
         <div>
-          <dt>Runs on your Claude Code plan</dt>
-          <dd>Daryl drives Claude Code with your subscription. No API key to set up, no second bill.</dd>
+          <dt>Your footage stays on your disk</dt>
+          <dd>Transcription and rendering run on your machine. Your rushes go nowhere until you publish.</dd>
         </div>
         <div>
-          <dt>Nothing changes without you</dt>
-          <dd>Cuts, titles, beats and edits are suggestions. They land in your project when you accept them.</dd>
+          <dt>Keep your editing software</dt>
+          <dd>Send the rough cut or the edit to DaVinci Resolve or Premiere and finish it there.</dd>
         </div>
       </dl>
 
       <div class="skills">
         <div class="skills-copy">
-          <h3>Editing jobs for Claude Code</h3>
-          <p>Some jobs work better from a Claude Code session opened in the repository. Daryl ships them as skills.</p>
+          <h3>One command for the most tedious jobs</h3>
+          <p>Open your AI agent in the repository and type the command.</p>
         </div>
         <ul class="skills-list">
-          <li><code>/music-bed</code><span>Scores the edit: one track per sequence, cut to cover it and ducked under the voice.</span></li>
-          <li><code>/replace-aroll-take</code><span>Swaps a stretch of A-roll for a re-recorded take and moves everything on top of it.</span></li>
-          <li><code>/snatch-cut</code><span>Proposes a burst of close-ups with snap zooms and punchy sounds, with a preview.</span></li>
+          <li><code>/music-bed</code><span>Music under the whole video, cut to length and ducked under your voice.</span></li>
+          <li><code>/replace-aroll-take</code><span>Re-filmed a passage? Drop it in, and the B-roll, zooms and sounds follow.</span></li>
+          <li><code>/snatch-cut</code><span>A burst of close-ups, snap zooms and punchy sounds to wake up a sequence.</span></li>
         </ul>
       </div>
     </section>
@@ -194,13 +501,8 @@
       <h2 id="honest-title">A personal tool, shared as is</h2>
       <div class="honest-body">
         <p>
-          I make every video of <a href="https://www.youtube.com/@eventuallycoding">my channel</a> with Daryl.
-          I share it because people asked to see it, not to sell anything: there is no course, no paid plan,
-          no waiting list.
-        </p>
-        <p>
-          It follows how I work and evolves in that direction. It is built for one person on Windows, and
-          maintained on a best-effort basis. Fork it, take what you need, or use it for ideas.
+          It follows how I work and evolves in that direction. It is maintained on a best-effort basis.
+          Fork it, take what you need, or use it for ideas.
         </p>
       </div>
     </section>
@@ -225,7 +527,6 @@ cd web; pnpm install; pnpm build; cd ..\backend
     <p>Open source under the AGPL-3.0. Made by <a href="https://eventuallymaking.io">Hugo Lassiège</a>.</p>
     <nav aria-label="Elsewhere">
       <a href="https://rickub.com/hlassiege/daryl">Source code</a>
-      <a href="https://github.com/hlassiege/daryl">GitHub mirror</a>
       <a href="https://panoplie.eventuallymaking.io">panoplie</a>
     </nav>
   </footer>

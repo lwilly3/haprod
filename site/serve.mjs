@@ -1,4 +1,4 @@
-// Serves the website for local work, without building it: site/public as is, the screenshots and the logo
+// Serves the website for local work, without building it: site/public as is, the share image and the logo
 // from their place in the repository (the same mapping as build.mjs). Edit a file, reload the page.
 // No dependencies: `node site/serve.mjs [port]`, then open http://localhost:4477.
 import { createReadStream } from 'node:fs'

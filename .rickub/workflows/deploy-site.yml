@@ -1,5 +1,5 @@
 # Builds the website (site/) and uploads it to Bunny CDN, served as https://daryl.eventuallymaking.io.
-# Only runs when the site, the screenshots or the logo it uses, or this file change.
+# Only runs when the site, the images or the logo it uses, or this file change.
 #
 # The build has no dependencies (plain node), so there is no install step and ubuntu-latest is enough.
 #
