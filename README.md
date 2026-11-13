@@ -40,7 +40,6 @@ as open source, but it remains a **personal tool**, maintained on a best-effort 
   same license. It can't be turned into a closed commercial product.
 - It will evolve in the direction **I** need. Feature requests may not land, but the code is fairly
   flexible overall, and it may give you ideas for your own workflow.
-- The code comments are still mostly in French. They will move to English over time.
 
 It is built on **Windows** and for a single user: no accounts, no remote server, all state lives in
 `data/`. It may work on macOS and Linux, but I don't test it there.
@@ -188,18 +187,6 @@ copy "$(mkcert -CAROOT)\rootCA.pem" .certs\rootCA.crt
 On iPhone: open `https://<pc-name>.local:4400/rootCA.crt`, install the profile (Settings → Profile
 Downloaded), then trust it (Settings → General → About → Certificate Trust Settings). The Windows
 firewall must allow port 4400 on the private network.
-
-## Motion design kits
-
-Daryl animates motion design with its own kit (`backend/studio/modules/animations/kit/`). You can
-also import the cards of editing-os, a Claude Code + HyperFrames kit by another creator (MIT), into
-the Library, Animations tab, if you have a copy of it:
-
-```powershell
-..\.venv\Scripts\python scripts/import_editing_os.py <path\to\editing-os-starter>
-```
-
-The import goes to `data/library/animations/editing-os/` and is never committed.
 
 ## Architecture
 

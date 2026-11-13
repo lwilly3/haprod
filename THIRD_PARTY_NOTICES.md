@@ -28,11 +28,6 @@ from the HyperFrames repository if you need them.
 `skills/youtube-scriptwriting` comes from [cdeistopened/skill-stack](https://github.com/cdeistopened/skill-stack),
 Copyright (c) 2025 Wayne Sutton, licensed under the MIT license (see [its LICENSE](skills/youtube-scriptwriting/LICENSE)).
 
-### youtube-titles skill
-
-`skills/youtube-titles` started as an adaptation of a skill from the
-`alexmcfarland-ai/co-writer-plugins` repository, which is no longer available.
-
 ## Used at run time, not included
 
 These are installed or downloaded by you, under their own terms:
