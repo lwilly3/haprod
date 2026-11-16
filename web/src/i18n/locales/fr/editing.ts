@@ -367,4 +367,5 @@ export default {
     rendering: "rendu {pct} %",
     renderPending: "rendu en attente",
   },
+  find: { placeholder: "Chercher une phrase dite…", title: "Tape des mots dits dans la vidéo : Entrée va au premier endroit, Entrée encore au suivant", count: "{n} endroit | {n} endroits · Entrée : suivant", none: "Ces mots ne sont dits nulle part sur la timeline." },
 };

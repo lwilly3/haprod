@@ -367,4 +367,5 @@ export default {
     rendering: "rendering {pct}%",
     renderPending: "render queued",
   },
+  find: { placeholder: "Find a spoken phrase…", title: "Type words said in the video: Enter goes to the first place, Enter again to the next", count: "{n} place | {n} places · Enter: next", none: "These words are not said anywhere on the timeline." },
 };

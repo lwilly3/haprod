@@ -169,6 +169,27 @@ def _said(project: dict, query: str) -> list[dict]:
     return hits
 
 
+def said_on_timeline(project: dict, timeline: dict, query: str) -> list[dict]:
+    """Les phrases du montage où tous les mots de la recherche sont dits, à leur place sur la timeline :
+    {t (l'instant du premier mot cherché), text}. Les passages coupés au montage n'y sont plus."""
+    from . import autoderush, storyboard
+
+    wanted = [w for w in _plain(query).split() if len(w) > 1]
+    if not wanted:
+        raise ValueError("écris au moins un mot")
+    words = storyboard.timeline_words(project, timeline)
+    lines = autoderush.lines_of([{"id": "timeline"}], {"timeline": words})
+    hits = []
+    for i, line in enumerate(lines):
+        last = lines[i + 1]["first"] if i + 1 < len(lines) else len(words)
+        plain = [_plain(w.text).strip() for w in words[line["first"]:last]]
+        if not all(any(p.startswith(q) for p in plain) for q in wanted):
+            continue
+        k = next(n for n, p in enumerate(plain) if p.startswith(wanted[0]))
+        hits.append({"t": round(words[line["first"] + k].start, 2), "text": line["text"][:160]})
+    return hits[:40]
+
+
 def _seen(project: dict, query: str) -> list[dict]:
     """Les images des rushes indexés les plus proches de la description."""
     import numpy as np

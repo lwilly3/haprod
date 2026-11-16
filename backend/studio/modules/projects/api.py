@@ -1035,6 +1035,19 @@ def search_rushes(pid: str, q: str):
         raise HTTPException(400, str(e)) from e
 
 
+@router.get("/{pid}/montage/find")
+def find_on_timeline(pid: str, q: str):
+    """Les endroits de la timeline du montage où ces mots sont dits."""
+    _check(pid)
+    project = service.load(pid)
+    if not montage._source(project):
+        raise HTTPException(409, "pas de vidéo source")
+    try:
+        return {"hits": rush_search.said_on_timeline(project, montage.load(pid), q)}
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+
+
 @router.get("/{pid}/rushes/{rush_id}/frame")
 def rush_frame(pid: str, rush_id: str, t: float = 0.0):
     """L'image d'un rush à un instant donné (résultats de la recherche)."""

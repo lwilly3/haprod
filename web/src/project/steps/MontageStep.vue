@@ -17,6 +17,7 @@ import { store } from "../store";
 import { usePlaylist, type Piece } from "./derush/usePlaylist";
 import BeatPanel from "./montage/BeatPanel.vue";
 import type { ImageTab } from "./montage/BeatImageModal.vue";
+import FindSaid from "./montage/FindSaid.vue";
 import ImageSearchQueue from "./montage/ImageSearchQueue.vue";
 import Inspector from "./montage/Inspector.vue";
 import MonteurChat from "./montage/MonteurChat.vue";
@@ -410,6 +411,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
             <button :title="tr('editing.toolbar.fitTitle')" @click="timeline?.fit()">{{ tr("editing.toolbar.fit") }}</button>
             <button :title="tr('editing.toolbar.zoomIn')" @click="timeline?.zoomBy(1.5)">+</button>
           </div>
+          <FindSaid :pid="project.id" @seek="seek" />
           <button v-if="toAnimate.length" class="btn sm" :disabled="M.busy.value" :title="tr('editing.storyboard.createAllTitle')"
             @click="createAnimations(toAnimate.map((b) => b.id))">
             {{ tr("editing.storyboard.createAll", toAnimate.length) }}
