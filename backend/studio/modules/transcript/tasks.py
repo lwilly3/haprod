@@ -8,22 +8,24 @@ from pathlib import Path
 from ...core import jobs
 from ...core.tasks import Task, TaskContext
 from ..settings import service as settings
-from . import cues, service
+from . import cues, mlx_engine, service
 from .cloud import CloudEngine
+from .mlx_engine import MlxEngine
 from .whisper import Engine
 
 ENGINE_META = "transcript.engine"
 
-_engine: Engine | None = None
+_engine: Engine | MlxEngine | None = None
 
 
 def startup() -> None:
     global _engine
-    _engine = Engine()
+    # sur un Mac Apple Silicon, le GPU via MLX ; ailleurs faster-whisper (CUDA ou CPU)
+    _engine = MlxEngine() if mlx_engine.available() else Engine()
     jobs.set_meta(ENGINE_META, _engine.describe())
 
 
-def _pick_engine() -> Engine | CloudEngine:
+def _pick_engine() -> Engine | MlxEngine | CloudEngine:
     """Relu a chaque job : changer de moteur dans les reglages ne demande pas de relancer le worker."""
     name, key = settings.transcription_engine()
     return CloudEngine(name, key) if key else _engine
