@@ -16,7 +16,7 @@ from pydantic import BaseModel
 from ...core import jobs, system
 from ..animations import kit
 from ..youtube import service as youtube
-from . import (asset_tasks, assets, autoderush, cleanup, derush, free_audio, kit_adapt, library, migrate, montage, publish, render, roast, runtime, script, sound_ideas, sound_place,
+from . import (asset_tasks, assets, autoderush, cleanup, derush, free_audio, kit_adapt, library, migrate, montage, publish, render, roast, runtime, script, rush_search, sound_ideas, sound_place,
                service, storyboard, storyboard_chat, thumbs, timeline, transitions)
 from . import beat_anim
 
@@ -1000,6 +1000,52 @@ def _export_timeline(project: dict, tl: str | None) -> tuple[list[dict], str]:
     if not found:
         raise HTTPException(400, "rien à exporter")
     return found, _export_name(project, tid)
+
+
+# --- Recherche dans les rushes, par description (rush_search) ------------------------------
+
+@router.get("/{pid}/search/status")
+def search_status(pid: str):
+    _check(pid)
+    project = service.load(pid)
+    return rush_search.status(project, project["jobs"].get("search_index"))
+
+
+@router.post("/{pid}/search/index")
+def search_index(pid: str):
+    """Fait regarder au modèle les rushes qu'il n'a pas encore vus."""
+    _check(pid)
+    if not rush_search.available():
+        raise HTTPException(400, "la recherche par l'image demande open_clip : pip install -r backend/requirements.txt")
+    try:
+        job = service.requeue(f"{pid}-search-index", rush_search.KIND, {"project": pid}, {})
+    except ValueError as e:
+        raise HTTPException(409, "l'indexation est déjà en cours") from e
+    with service.editing(pid) as p:
+        p["jobs"]["search_index"] = job.id
+    return rush_search.status(service.load(pid), job.id)
+
+
+@router.get("/{pid}/search")
+def search_rushes(pid: str, q: str):
+    _check(pid)
+    try:
+        return rush_search.search(service.load(pid), q)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+
+
+@router.get("/{pid}/rushes/{rush_id}/frame")
+def rush_frame(pid: str, rush_id: str, t: float = 0.0):
+    """L'image d'un rush à un instant donné (résultats de la recherche)."""
+    _check(pid)
+    rush = next((r for r in service.load(pid)["rushes"] if r["id"] == rush_id), None)
+    if not rush or not Path(rush["path"]).is_file():
+        raise HTTPException(404, "rush introuvable")
+    try:
+        return FileResponse(rush_search.frame(pid, rush, t), headers={"Cache-Control": "max-age=86400"})
+    except RuntimeError as e:
+        raise HTTPException(500, str(e)) from e
 
 
 class SoundIdeasRequest(BaseModel):

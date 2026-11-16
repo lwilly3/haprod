@@ -19,6 +19,7 @@ import { clipAt, clipLen, move, offsets, remove, removeRange, removeRushRanges, 
 import MediaPool from "./derush/MediaPool.vue";
 import { frameStep } from "./montage/ops";
 import PlayerFrame from "./derush/PlayerFrame.vue";
+import RushSearch from "./derush/RushSearch.vue";
 import Timeline, { type Peaks } from "./derush/Timeline.vue";
 import Transcript from "./derush/Transcript.vue";
 import { useDerush } from "./derush/useDerush";
@@ -51,7 +52,7 @@ const player = usePlaylist(pieces);
 const selection = ref<Selection>(null);
 const tool = ref<"select" | "blade">("select");
 const tl = ref<InstanceType<typeof Timeline> | null>(null);
-const tab = ref<"transcript" | "rushes" | "daryl">("transcript");
+const tab = ref<"transcript" | "rushes" | "search" | "daryl">("transcript");
 
 // --- timelines : onglets au-dessus de la timeline, comme les séquences d'un logiciel de montage
 function openTimeline(id: string) {
@@ -205,6 +206,12 @@ function applyAuto(cuts: AutoCut[]) {
   });
 }
 
+/** Va au passage trouvé par la recherche ; coupé du dérush, il n'est plus sur la timeline : on le dit. */
+function seekFound(rush: string, at: number) {
+  if (timeOf(flat.value, rush, at) == null) return toast(t("derush.search.cut"));
+  seekRush(rush, at);
+}
+
 /** Écoute un passage d'un rush : un peu avant, pour entendre ce qui précède la coupe. */
 function seekRush(rush: string, t: number) {
   const at = timeOf(flat.value, rush, t);
@@ -313,6 +320,7 @@ async function validate() {
         <div class="tabs">
           <button class="tab" :class="{ on: tab === 'transcript' }" @click="tab = 'transcript'">{{ t("derush.transcript") }}</button>
           <button class="tab" :class="{ on: tab === 'rushes' }" @click="tab = 'rushes'">{{ t("derush.tabs.rushes", { n: project.rushes.length }) }}</button>
+          <button class="tab" :class="{ on: tab === 'search' }" @click="tab = 'search'">{{ t("derush.search.tab") }}</button>
           <button class="tab" :class="{ on: tab === 'daryl' }" @click="tab = 'daryl'">{{ t("common.assistant") }}</button>
           <div class="spacer" />
           <span v-if="tab === 'transcript' && ready" class="hint">{{ t("derush.hint") }}</span>
@@ -333,6 +341,7 @@ async function validate() {
           </template>
           <AutoDerush v-else-if="tab === 'daryl'" :clips="rushClips" :names="names" :ready="ready"
             @apply="applyAuto" @seek="seekRush" />
+          <RushSearch v-else-if="tab === 'search'" :pid="project.id" @seek="seekFound" />
           <div v-else class="scroll"><MediaPool :derush="derush" @open="openTimeline" /></div>
         </div>
       </div>

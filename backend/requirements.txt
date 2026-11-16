@@ -15,6 +15,11 @@ mlx-whisper; sys_platform == "darwin" and platform_machine == "arm64"
 # DLL CUDA pour faire tourner Whisper sur le GPU (inutile en CPU)
 nvidia-cublas-cu12; sys_platform != "darwin"
 nvidia-cudnn-cu12==9.*; sys_platform != "darwin"
+# recherche dans les rushes par description : un modèle de vision (CLIP) qui tourne en local
+open_clip_torch
+# l'encodeur de texte multilingue du modèle (XLM-RoBERTa)
+transformers
+sentencepiece
 # publication YouTube (API YouTube Data v3, OAuth)
 google-api-python-client
 google-auth-oauthlib
