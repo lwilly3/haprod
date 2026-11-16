@@ -96,13 +96,13 @@ HyperFrames (see [Third-party notices](THIRD_PARTY_NOTICES.md)).
 
 ## Versions
 
-Each version is a git tag (`v0.2.0`…), described in the [changelog](CHANGELOG.md). To get a given version:
+Each version is a git tag (`v0.3.0`…), described in the [changelog](CHANGELOG.md). To get a given version:
 
 ```bash
-git clone --branch v0.2.0 --depth 1 https://github.com/lwilly3/haprod.git
+git clone --branch v0.3.0 --depth 1 https://github.com/lwilly3/haprod.git
 ```
 
-or, in an existing clone, `git fetch --tags && git checkout v0.2.0`. A release is one commit
+or, in an existing clone, `git fetch --tags && git checkout v0.3.0`. A release is one commit
 (`chore(release): vX.Y.Z`) that bumps `web/package.json` and the changelog, then the tag of the same name.
 
 ## Requirements

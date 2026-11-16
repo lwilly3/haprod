@@ -4,6 +4,32 @@ All notable changes to this fork are listed here. Versions follow [semantic vers
 `vMAJOR.MINOR.PATCH`, one git tag per version. haprod is a fork of
 [Daryl](https://rickub.com/hlassiege/daryl) by Hugo Lassiège; "upstream" below means Daryl.
 
+## v0.3.0 (2026-11-16)
+
+### Sound
+
+- The library searches royalty-free sounds and music online (Freesound and Jamendo, through Openverse,
+  with no key), limited to licenses usable on a monetized channel: public domain and CC BY.
+- Each downloaded sound keeps its author and license. The Details step lists the credits CC BY requires,
+  inserts them in the description, and a check stays red until they are there.
+- Media page of a project: Claude suggests music and sound effects from the script and the footage, each
+  with royalty-free results to listen to and add.
+- Claude can also choose one sound per idea and place it on the edit timeline, anchored on what is said.
+  It chooses from titles and tags, without hearing: the placement is a proposal to listen to, and it can
+  be undone.
+
+### Search in the footage
+
+- Rough cut step, Search tab: find a passage by describing what is seen in it, with a multilingual vision
+  model (CLIP) that runs on the machine, or what is said in it, from the transcripts.
+- New requirements: `open_clip_torch`, `transformers`, `sentencepiece`; the model (about 1.5 GB) is
+  downloaded on first use.
+
+### Known limits
+
+- Placed sounds use fixed volumes; music is not ducked under the voice.
+- The picture search always returns its twelve closest pictures, relevant or not.
+
 ## v0.2.0 (2026-11-16)
 
 First version of the fork, based on upstream commit `89fef88` (package version 0.1.0).
