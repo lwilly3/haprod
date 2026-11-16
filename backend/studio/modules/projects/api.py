@@ -16,7 +16,7 @@ from pydantic import BaseModel
 from ...core import jobs, system
 from ..animations import kit
 from ..youtube import service as youtube
-from . import (asset_tasks, assets, autoderush, cleanup, derush, kit_adapt, library, migrate, montage, publish, render, roast, runtime, script,
+from . import (asset_tasks, assets, autoderush, cleanup, derush, free_audio, kit_adapt, library, migrate, montage, publish, render, roast, runtime, script, sound_ideas, sound_place,
                service, storyboard, storyboard_chat, thumbs, timeline, transitions)
 from . import beat_anim
 
@@ -159,6 +159,29 @@ def library_upload(category: str = Form(...), files: list[UploadFile] = File(...
         dest = _save_upload(f, folder)
         library.remember_origin(f"{category}/{dest.name}", None)
     return {"items": library.library()}
+
+
+@router.get("/library/free")
+def search_free_audio(category: str, q: str, page: int = 1):
+    """Des sons et musiques libres de droits, cherchés en ligne (Openverse)."""
+    try:
+        return free_audio.search(category, q, page)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+
+
+class FreeAudioRequest(BaseModel):
+    category: str
+    id: str
+
+
+@router.post("/library/free")
+def add_free_audio(req: FreeAudioRequest):
+    try:
+        rel = free_audio.add(req.category, req.id)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    return {"rel": rel, "items": library.library()}
 
 
 @router.get("/library/transitions")
@@ -977,6 +1000,54 @@ def _export_timeline(project: dict, tl: str | None) -> tuple[list[dict], str]:
     if not found:
         raise HTTPException(400, "rien à exporter")
     return found, _export_name(project, tid)
+
+
+class SoundIdeasRequest(BaseModel):
+    # demande de l'auteur (« surtout de l'ambiance de stade »…)
+    note: str = ""
+
+
+@router.get("/{pid}/sounds/suggest")
+def get_sound_ideas(pid: str):
+    """Les sons suggérés par Claude pour ce projet, avec leurs résultats libres de droits."""
+    _check(pid)
+    return sound_ideas.result(service.load(pid)["jobs"].get("sound_ideas"))
+
+
+@router.post("/{pid}/sounds/suggest")
+def start_sound_ideas(pid: str, req: SoundIdeasRequest):
+    _check(pid)
+    payload = _claude_payload(pid, web=False, note=req.note)
+    try:
+        job = service.requeue(f"{pid}-sound-ideas", sound_ideas.KIND, payload, {})
+    except ValueError as e:
+        raise HTTPException(409, "Claude cherche déjà des sons pour ce projet") from e
+    with service.editing(pid) as p:
+        p["jobs"]["sound_ideas"] = job.id
+    return sound_ideas.result(job.id)
+
+
+@router.get("/{pid}/sounds/place")
+def get_sound_place(pid: str):
+    """Les sons que Claude a choisis et posés sur la timeline du montage."""
+    _check(pid)
+    return sound_place.result(service.load(pid)["jobs"].get("sound_place"))
+
+
+@router.post("/{pid}/sounds/place")
+def start_sound_place(pid: str, req: SoundIdeasRequest):
+    _check(pid)
+    if not montage._source(service.load(pid)):
+        raise HTTPException(409, "pas de vidéo source : choisis-la d'abord à l'étape Vidéo source")
+    montage.prepare(pid)
+    payload = _claude_payload(pid, web=False, note=req.note)
+    try:
+        job = service.requeue(f"{pid}-sound-place", sound_place.KIND, payload, {})
+    except ValueError as e:
+        raise HTTPException(409, "Claude pose déjà des sons sur ce montage") from e
+    with service.editing(pid) as p:
+        p["jobs"]["sound_place"] = job.id
+    return sound_place.result(job.id)
 
 
 @router.get("/{pid}/derush/export.xml")

@@ -71,6 +71,16 @@ function insert(desc: string, block: string): string {
   return `${head}${head ? "\n\n" : ""}${block}\n\n${desc.slice(at)}`;
 }
 
+// --- crédits des sons et musiques sous licence « avec attribution » (vidéo longue)
+const missingCredits = computed(() => (sel.value?.credits ?? []).filter((line) => !sel.value!.meta.desc.includes(line)));
+function insertCredits() {
+  const m = sel.value!.meta;
+  if (!missingCredits.value.length) return;
+  // en fin de description : les crédits se lisent après le texte et les chapitres
+  set({ desc: `${m.desc.trimEnd()}\n\n${[contentText("credits"), ...missingCredits.value].join("\n")}`.trimStart() });
+  toast(tr("details.creditsInserted"));
+}
+
 // --- chapitres (vidéo longue)
 const chaptersText = computed(() => (sel.value?.chapters ?? []).map((c) => `${c.t} ${c.label}`).join("\n"));
 function insertChapters() {
@@ -206,6 +216,14 @@ const status = (v: Video) => (metaMissing(v).length ? tr("details.todo") : "✓"
           <template #editing><RouterLink :to="`/p/${project.id}/montage`">{{ tr("details.editing") }}</RouterLink></template>
         </i18n-t>
         <button class="btn dark wide" :disabled="!sel.chapters?.length" @click="insertChapters">{{ tr("details.insertChapters") }}</button>
+        <template v-if="sel.credits?.length">
+          <span class="eyebrow">{{ tr("details.audioCredits") }}</span>
+          <p class="hint">{{ tr("details.audioCreditsHint") }}</p>
+          <div v-for="(line, i) in sel.credits" :key="i" class="chap"><span>{{ line }}</span></div>
+          <button class="btn dark wide" :disabled="!missingCredits.length" @click="insertCredits">
+            {{ missingCredits.length ? tr("details.insertCredits") : tr("details.creditsDone") }}
+          </button>
+        </template>
       </template>
       <template v-else>
         <span class="eyebrow">{{ tr("details.passage") }}</span>

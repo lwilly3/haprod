@@ -17,7 +17,8 @@ import { close } from "../project/store";
 import KitDesign from "./library/KitDesign.vue";
 import { useKitAdapt } from "./library/useKitAdapt";
 
-interface Item { name: string; rel: string; category: string; type: string; project: string | null; description: string; gain_db: number | null; duration: number | null; kind: string }
+interface Credit { title: string; creator: string; license: string; url: string; required: boolean; line: string }
+interface Item { credit?: Credit | null; name: string; rel: string; category: string; type: string; project: string | null; description: string; gain_db: number | null; duration: number | null; kind: string }
 interface Animation {
   name: string; id: string; title: string; description: string; format: "youtube" | "short"; tier: string;
   duration: number | null; hero: number | null; url: string;
@@ -58,6 +59,63 @@ onMounted(async () => {
   styles.value = anims.styles;
   adapt.refresh();
 });
+
+// --- sons libres de droits, cherchés en ligne (Openverse : Freesound, Jamendo) -------------------
+
+interface FreeSound {
+  id: string; title: string; creator: string; license: string; url: string; preview: string;
+  duration: number | null; required: boolean; source: string;
+}
+/** les onglets où la recherche en ligne existe (backend free_audio.FILTERS) */
+const FREE_TABS = ["sfx", "musique"];
+const freeQuery = ref("");
+const freeResults = ref<FreeSound[] | null>(null);
+const freeBusy = ref(false);
+/** les sons en cours d'ajout, et ceux déjà ajoutés depuis cette recherche */
+const freeAdding = ref<string[]>([]);
+const freeAdded = ref<string[]>([]);
+
+async function searchFree() {
+  if (!category.value || !freeQuery.value.trim() || freeBusy.value) return;
+  freeBusy.value = true;
+  stopSound();
+  try {
+    const q = new URLSearchParams({ category: category.value, q: freeQuery.value.trim() });
+    freeResults.value = (await api<{ items: FreeSound[] }>(`/api/projects/library/free?${q}`)).items;
+  } catch (e) {
+    toast((e as Error).message, true);
+  } finally {
+    freeBusy.value = false;
+  }
+}
+
+async function addFree(x: FreeSound) {
+  if (!category.value || freeAdding.value.includes(x.id)) return;
+  freeAdding.value = [...freeAdding.value, x.id];
+  try {
+    items.value = (await post<{ items: Item[] }>("/api/projects/library/free", { category: category.value, id: x.id })).items;
+    freeAdded.value = [...freeAdded.value, x.id];
+    toast(t("library.free.added", { title: x.title }));
+  } catch (e) {
+    toast((e as Error).message, true);
+  } finally {
+    freeAdding.value = freeAdding.value.filter((id) => id !== x.id);
+  }
+}
+
+/** Écoute un résultat sans le télécharger : l'extrait est lu depuis sa source. */
+function toggleFree(x: FreeSound): void {
+  const el = player.value!;
+  const key = `free:${x.id}`;
+  if (sound.value === key) {
+    el.pause();
+    sound.value = null;
+    return;
+  }
+  el.src = x.preview;
+  el.play().catch((e) => e.name !== "AbortError" && toast(e.message, true));
+  sound.value = key;
+}
 
 // --- le kit : design system, inspirations reportées --------------------------------------------
 
@@ -260,12 +318,33 @@ function onClick(x: Item): void {
         <template v-else-if="category">{{ t("library.dropInto", { tab: label(category) }) }}</template>
         <template v-else>{{ t("library.pickTab") }}</template>
       </div>
+      <div v-if="category && FREE_TABS.includes(category)" class="free">
+        <div class="free-bar">
+          <input v-model="freeQuery" class="input" :placeholder="t(`library.free.placeholder.${category}`)" @keydown.enter="searchFree">
+          <button class="btn dark" :disabled="!freeQuery.trim() || freeBusy" @click="searchFree">{{ freeBusy ? t("library.free.searching") : t("library.free.search") }}</button>
+          <button v-if="freeResults" class="link-btn" @click="freeResults = null; stopSound()">{{ t("common.close") }}</button>
+        </div>
+        <span class="muted hint">{{ t("library.free.hint") }}</span>
+        <div v-if="freeResults" class="free-list">
+          <div v-for="x in freeResults" :key="x.id" class="free-row" :class="{ playing: sound === `free:${x.id}` }">
+            <button class="play" :title="sound === `free:${x.id}` ? t('common.pause') : t('common.play')" @click="toggleFree(x)">{{ sound === `free:${x.id}` ? "❚❚" : "▶" }}</button>
+            <span class="name" :title="x.title">{{ x.title }}</span>
+            <a class="muted" :href="x.url" target="_blank" rel="noopener" :title="t('library.free.openSource')">{{ x.creator }}</a>
+            <span class="license" :class="{ credit: x.required }" :title="x.required ? t('library.free.creditRequired') : t('library.free.noCredit')">{{ x.license }}</span>
+            <span class="mono r dur">{{ x.duration ? fmtDuration(x.duration) : "" }}</span>
+            <button class="btn" :disabled="freeAdding.includes(x.id) || freeAdded.includes(x.id)" @click="addFree(x)">
+              {{ freeAdded.includes(x.id) ? t("library.free.inLibrary") : freeAdding.includes(x.id) ? t("library.free.adding") : t("library.free.add") }}
+            </button>
+          </div>
+          <span v-if="!freeResults.length" class="nothing">{{ t("library.free.none") }}</span>
+        </div>
+      </div>
       <div class="table">
         <div class="row head eyebrow"><span /><span>{{ t("common.name") }}</span><span>{{ t("library.description") }}</span><span>{{ t("library.gain") }}</span><span>{{ t("common.type") }}</span><span>{{ t("common.project") }}</span><span class="r">{{ t("common.duration") }}</span></div>
         <div v-for="x in shown" :key="x.rel" class="row" :class="{ playing: sound === x.rel }" :title="x.kind === 'Audio' ? undefined : t('common.open')" @click="onClick(x)">
           <button v-if="x.kind === 'Audio'" class="play" :title="sound === x.rel ? t('common.pause') : t('common.play')">{{ sound === x.rel ? "❚❚" : "▶" }}</button>
           <Thumb v-else :src="fileUrl(x.rel)" :kind="x.kind" :name="x.name" />
-          <span class="name">{{ x.name }}</span>
+          <span class="name">{{ x.name }}<span v-if="x.credit" class="credit-line" :title="x.credit.line"> · {{ x.credit.creator }} · {{ x.credit.license }}</span></span>
           <input
             class="desc" :value="x.description" :placeholder="t('library.describe')" :title="x.description"
             @click.stop @keydown.enter="($event.target as HTMLInputElement).blur()" @change="describe(x, $event)"
@@ -293,6 +372,16 @@ function onClick(x: Item): void {
 .page { flex: 1; overflow: auto; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px; }
 .h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.015em; }
 .drop-zone { padding: 18px; }
+.free { display: flex; flex-direction: column; gap: 8px; }
+.free-bar { display: flex; gap: 8px; align-items: center; }
+.free-bar .input { flex: 1; max-width: 520px; }
+.free-list { display: flex; flex-direction: column; border: 1px solid var(--line-soft); border-radius: 6px; padding: 0 12px; max-height: 420px; overflow: auto; }
+.free-row { display: grid; grid-template-columns: 40px minmax(0, 1.6fr) minmax(0, 1fr) 110px 60px 150px; gap: 14px; align-items: center; padding: 7px 0; border-top: 1px solid var(--line-soft); font-size: 13.5px; }
+.free-row:first-child { border-top: 0; }
+.free-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.license { font-size: 11.5px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--line-soft); text-align: center; white-space: nowrap; }
+.license.credit { border-color: #D8C68E; background: #F4E9C8; color: var(--ink); }
+.credit-line { color: var(--muted, #888); font-size: 12px; }
 .table { display: flex; flex-direction: column; }
 .row {
   display: grid; grid-template-columns: 72px minmax(0, 1fr) minmax(0, 1.6fr) 90px 120px minmax(0, 0.7fr) 70px; gap: 16px; align-items: center;

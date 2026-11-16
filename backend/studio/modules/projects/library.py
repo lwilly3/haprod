@@ -120,6 +120,31 @@ def remember_origin(rel: str, project_title: str | None) -> None:
     _save_index(index)
 
 
+def remember_credit(rel: str, credit: dict, description: str) -> None:
+    """Un son libre de droits venu d'Internet (free_audio) : son auteur et sa licence, pour le citer."""
+    index = _index()
+    index[rel] = {"project": None, "description": description, "credit": credit}
+    _save_index(index)
+
+
+def find_credit(category: str, url: str) -> str | None:
+    """Le fichier de la bibliothèque déjà téléchargé depuis cette page d'origine, s'il est encore là."""
+    for rel, entry in _index().items():
+        if url and rel.startswith(f"{category}/") and ((entry or {}).get("credit") or {}).get("url") == url \
+                and (LIBRARY_DIR / rel).is_file():
+            return rel
+    return None
+
+
+def credit_of(src: str) -> dict | None:
+    """Le crédit d'un média de la timeline (« library/sfx/x.mp3 » ou sa copie « assets/sfx/x.mp3 »),
+    retrouvé dans la bibliothèque par catégorie et nom, comme gain_of."""
+    parts = src.split("/")
+    if len(parts) < 3 or parts[0] not in ("library", service.ASSETS_DIR):
+        return None
+    return (_index().get(f"{parts[-2]}/{parts[-1]}") or {}).get("credit")
+
+
 def describe(rel: str, description: str) -> None:
     """Ce que montre ou fait un fichier, et quand s'en servir : c'est ce que lit Daryl pour le choisir."""
     if not (LIBRARY_DIR / rel).is_file() or rel.split("/")[0] not in CATEGORIES:
@@ -174,7 +199,8 @@ def library() -> list[dict]:
             entry = index.get(rel) or {}
             items.append({"name": path.name, "rel": rel, "category": key, "type": label,
                           "project": entry.get("project"), "description": entry.get("description", ""),
-                          "gain_db": entry.get("gain_db"), "duration": duration(path), "kind": kind_of(path)})
+                          "gain_db": entry.get("gain_db"), "duration": duration(path), "kind": kind_of(path),
+                          "credit": entry.get("credit")})
     return items
 
 

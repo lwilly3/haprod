@@ -6,12 +6,12 @@ import { ref } from "vue";
 import { api } from "./api";
 
 const TEXTS = {
-  fr: { chapters: "Chapitres", fullVideo: "Vidéo complète :", part: "Partie", newPart: "Nouvelle partie" },
-  en: { chapters: "Chapters", fullVideo: "Full video:", part: "Part", newPart: "New part" },
-  es: { chapters: "Capítulos", fullVideo: "Vídeo completo:", part: "Parte", newPart: "Nueva parte" },
-  de: { chapters: "Kapitel", fullVideo: "Ganzes Video:", part: "Teil", newPart: "Neuer Teil" },
-  it: { chapters: "Capitoli", fullVideo: "Video completo:", part: "Parte", newPart: "Nuova parte" },
-  pt: { chapters: "Capítulos", fullVideo: "Vídeo completo:", part: "Parte", newPart: "Nova parte" },
+  fr: { credits: "Crédits audio :", chapters: "Chapitres", fullVideo: "Vidéo complète :", part: "Partie", newPart: "Nouvelle partie" },
+  en: { credits: "Audio credits:", chapters: "Chapters", fullVideo: "Full video:", part: "Part", newPart: "New part" },
+  es: { credits: "Créditos de audio:", chapters: "Capítulos", fullVideo: "Vídeo completo:", part: "Parte", newPart: "Nueva parte" },
+  de: { credits: "Audio credits:", chapters: "Kapitel", fullVideo: "Ganzes Video:", part: "Teil", newPart: "Neuer Teil" },
+  it: { credits: "Audio credits:", chapters: "Capitoli", fullVideo: "Video completo:", part: "Parte", newPart: "Nuova parte" },
+  pt: { credits: "Audio credits:", chapters: "Capítulos", fullVideo: "Vídeo completo:", part: "Parte", newPart: "Nova parte" },
 };
 type Lang = keyof typeof TEXTS;
 

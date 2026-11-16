@@ -49,4 +49,18 @@ export default {
   uploading: "Envoi · {pct} %",
   dropInto: "Glisse des fichiers ici pour les ranger dans « {tab} »",
   pickTab: "Choisis un onglet pour y glisser des fichiers. Depuis un projet, Médias → Bibliothèque.",
+  free: {
+    search: "Chercher en ligne",
+    searching: "Recherche…",
+    add: "Ajouter à la bibliothèque",
+    adding: "Téléchargement…",
+    inLibrary: "Dans la bibliothèque",
+    added: "« {title} » ajouté à la bibliothèque",
+    none: "Rien trouvé : essaie en anglais, c’est la langue des catalogues.",
+    hint: "Sons et musiques libres de droits (Freesound, Jamendo, via Openverse), limités aux licences utilisables sur une chaîne monétisée. Cherche plutôt en anglais.",
+    creditRequired: "L’auteur doit être cité : le crédit sera proposé à l’étape Description.",
+    noCredit: "Domaine public : aucun crédit obligatoire.",
+    openSource: "Voir la page d’origine",
+    placeholder: { sfx: "applause, whoosh, crowd cheering…", musique: "upbeat, calm piano, african percussion…" },
+  },
 };

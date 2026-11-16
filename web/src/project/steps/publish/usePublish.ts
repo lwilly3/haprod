@@ -34,7 +34,7 @@ export interface Upload {
 }
 export interface Video {
   id: string; kind: "long" | "short"; name: string; format: string; duration: number;
-  meta: VideoMeta; chapters?: { t: string; label: string }[]; passage?: string;
+  meta: VideoMeta; chapters?: { t: string; label: string }[]; credits?: string[]; passage?: string;
   file: string | null; checks: Check[]; pub: { vis: Visibility; sched: string }; upload: Upload | null;
 }
 export interface Account { client: boolean; connected: boolean; channel: { id: string; title: string; thumbnail: string | null } | null }

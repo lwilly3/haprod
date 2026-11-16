@@ -49,4 +49,18 @@ export default {
   uploading: "Uploading · {pct}%",
   dropInto: "Drop files here to file them under “{tab}”",
   pickTab: "Pick a tab to drop files into it. From a project: Media → Library.",
+  free: {
+    search: "Search online",
+    searching: "Searching…",
+    add: "Add to the library",
+    adding: "Downloading…",
+    inLibrary: "In the library",
+    added: "“{title}” added to the library",
+    none: "Nothing found: try in English, the language of the catalogs.",
+    hint: "Royalty-free sounds and music (Freesound, Jamendo, through Openverse), limited to licenses usable on a monetized channel.",
+    creditRequired: "The author must be credited: the credit is offered at the Details step.",
+    noCredit: "Public domain: no credit required.",
+    openSource: "Open the original page",
+    placeholder: { sfx: "applause, whoosh, crowd cheering…", musique: "upbeat, calm piano, african percussion…" },
+  },
 };

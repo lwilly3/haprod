@@ -16,4 +16,5 @@ export default {
       doc: { label: "Source captures", desc: "Captures of the documents cited in the script" },
     },
   },
+  sounds: { place: "Choose and place on the timeline", placed: "{n} sounds placed on the timeline", openEdit: "open the edit", skipped: "Not placed · {label}: {reason}", placedHint: "Claude chooses without hearing, from titles and tags: listen to the edit before validating. The placement can be undone in the edit like any change.", placeAgainConfirm: "Running again replaces the sounds placed last time (not the ones you placed yourself). Continue?", title: "Suggested sounds", note: "A request? (e.g. mostly stadium ambience)", suggest: "Suggest sounds", again: "Suggest again", running: "Claude is reading the project…", hide: "hide", show: "show the {n} ideas", hint: "Claude reads the script and what is said in the footage, then suggests music and sound effects. Each idea is searched among royalty-free sounds: listen, then add to the library." },
 };

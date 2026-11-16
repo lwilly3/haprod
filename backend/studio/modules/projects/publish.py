@@ -28,7 +28,7 @@ from ...core import jobs, youtube_api
 from ...core.system import tool
 from ...core.tasks import TaskContext
 from ..settings.service import default_description, language
-from . import montage, render, service
+from . import library, montage, render, service
 
 KIND = "project_upload"
 MAX_TITLE = 100
@@ -52,6 +52,17 @@ def chapters(pid: str) -> list[dict]:
     """Les chapitres du montage, prêts pour la description (le premier part de 00:00)."""
     marks = sorted((k for k in montage.load(pid)["markers"] if k["kind"] == "chapter"), key=lambda k: k["t"])
     return [{"t": _fmt_tc(0 if i == 0 else k["t"]), "label": k["text"].strip() or "Chapitre"} for i, k in enumerate(marks)]
+
+
+def audio_credits(pid: str) -> list[str]:
+    """Les crédits que la licence oblige à citer (CC BY) pour les sons et musiques du montage venus de la
+    recherche en ligne de la bibliothèque (free_audio), une ligne par fichier, dans l'ordre de la timeline."""
+    lines: list[str] = []
+    for item in sorted(montage.load(pid)["audio"], key=lambda s: s.get("at", 0)):
+        credit = library.credit_of(item.get("src") or "")
+        if credit and credit.get("required") and credit["line"] not in lines:
+            lines.append(credit["line"])
+    return lines
 
 
 def thumb_file(project: dict, tid: str | None) -> Path | None:
@@ -116,13 +127,18 @@ def videos(project: dict, selection: str | None = None) -> list[dict]:
     ]
     if chaps:
         checks.append({"k": "Chapitres", "ok": "00:00" in meta["desc"], "fix": "description", "meta": True})
+    credits = audio_credits(pid)
+    if credits:
+        # une musique ou un son sous CC BY non cité, c'est une réclamation possible sur la vidéo
+        checks.append({"k": "Crédits audio", "ok": all(line in meta["desc"] for line in credits),
+                       "fix": "description", "meta": True})
     if meta["ab_on"]:
         checks.append({"k": "Test A/B", "fix": "description", "meta": True,
                        "ok": 2 <= len(variants) <= MAX_VARIANTS and all(
                            _check_title(a["title"]) and thumb_file(project, a["thumb"]) for a in variants)})
     checks.append({"k": "Rendu", "ok": long_file is not None, "fix": "rendu"})
     out.append({"id": "long", "kind": "long", "name": "Vidéo longue", "format": "16:9", "duration": duration,
-                "meta": meta, "chapters": chaps, "file": long_file, "checks": checks})
+                "meta": meta, "chapters": chaps, "credits": credits, "file": long_file, "checks": checks})
 
     # les shorts de la sélection affichée
     rows = render.shorts(project, selection)
