@@ -4,6 +4,14 @@ All notable changes to this fork are listed here. Versions follow [semantic vers
 `vMAJOR.MINOR.PATCH`, one git tag per version. haprod is a fork of
 [Daryl](https://rickub.com/hlassiege/daryl) by Hugo Lassiège; "upstream" below means Daryl.
 
+## v0.3.1 (2026-11-16)
+
+- Edit step: a field in the toolbar finds a spoken phrase on the timeline and moves the playhead there
+  (Enter again goes to the next place).
+- Suggested sounds: the brief given to Claude is kept from one project to the next.
+- Fix: the picture search could not index iPhone footage (HEVC with limited-range colors), and one
+  unreadable clip stopped the indexing of all the following ones.
+
 ## v0.3.0 (2026-11-16)
 
 ### Sound
