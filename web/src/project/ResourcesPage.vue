@@ -39,7 +39,8 @@ interface SoundIdeas {
   result: { items: SoundIdea[]; message: string } | null;
 }
 const ideas = ref<SoundIdeas | null>(null);
-const ideasNote = ref("");
+/** la consigne donnée à Claude, gardée d'un projet à l'autre : on redit rarement autre chose à sa chaîne */
+const ideasNote = usePref<string>("media.soundsNote", "");
 const ideasOpen = ref(false);
 const soundAdding = ref<string[]>([]);
 const soundAdded = ref<string[]>([]);
