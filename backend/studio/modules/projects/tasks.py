@@ -12,8 +12,9 @@ from typing import Callable
 from urllib.parse import urlparse
 
 from ...core import claude, jobs
-from ...core.system import tool
+from ...core.system import h264, tool
 from ...core.tasks import Task, TaskContext
+from ..settings.service import claude_model
 from . import library, prompts, service
 from . import script as script_doc
 
@@ -33,12 +34,13 @@ def _tool_label(block: dict) -> str:
 
 
 def ask(ctx: TaskContext, prompt: str, system: str, tools: str, allowed: str | None = None,
-        schema: dict | None = None, session_id: str | None = None) -> dict:
-    """Un tour de Claude dans le dossier script/ ; rend {text, output, session_id}."""
+        schema: dict | None = None, session_id: str | None = None, level: str = "light") -> dict:
+    """Un tour de Claude dans le dossier script/ ; rend {text, output, session_id}.
+    `level` : "light" (tour court) ou "heavy" (travail d'agent), pour le modèle choisi dans les réglages."""
     state = ctx.state
     result = {"text": "", "output": None, "session_id": session_id}
     ctx.set_status("thinking")
-    for event in claude.stream(prompt, Path(ctx.payload["dir"]), system, session_id, None, ctx.check_cancel,
+    for event in claude.stream(prompt, Path(ctx.payload["dir"]), system, session_id, claude_model(level), ctx.check_cancel,
                                tools=tools, json_schema=schema, allowed_tools=allowed):
         kind = event.get("type")
         if kind == "system" and event.get("subtype") == "init":
@@ -61,6 +63,7 @@ def ask(ctx: TaskContext, prompt: str, system: str, tools: str, allowed: str | N
                     ctx.set_status("working")
                     ctx.save(force=True)
         elif kind == "result":
+            claude.record_usage(event, ctx.job.kind)
             if event.get("is_error"):
                 raise RuntimeError(event.get("result") or "Claude a renvoyé une erreur")
             result["text"] = event.get("result") or ""
@@ -242,7 +245,7 @@ def _render_part(r: dict, dest: Path, fmt: dict, on_time: Callable[[float], None
         args += ["-f", "lavfi", "-t", f"{duration:.3f}", "-i", "anullsrc=r=48000:cl=stereo", "-map", "0:v:0", "-map", "1:a:0"]
     else:
         args += ["-map", "0:v:0", "-map", "0:a:0"]
-    args += ["-vf", vf, "-c:v", "libx264", "-preset", "veryfast", "-crf", "18",
+    args += ["-vf", vf, *h264(18, "veryfast"),
              "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2", str(dest)]
     long_render._run(args, on_time, check_cancel)
 

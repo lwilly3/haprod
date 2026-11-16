@@ -88,8 +88,12 @@ export interface Runtime {
   render_timeline: string | null;
   /** capturing : les sources que le job de captures doit encore traiter (la première est en cours) */
   assets: { downloads: AssetDownload[]; capturing: string[] };
-  /** les modèles d'image de fal.ai ; `ready` : la clé FAL_KEY est définie */
-  thumbs: { models: { id: string; label: string }[]; ready: boolean };
+  /** les générateurs d'image : fal.ai (clé FAL_KEY), ChatGPT et Claude (abonnement connecté). Par modèle,
+   *  `ready` : utilisable maintenant ; `needs_refs` : il lui faut une image de référence ; `edits` : il retouche */
+  thumbs: {
+    models: { id: string; label: string; ready: boolean; needs_refs: boolean; edits: boolean }[];
+    ready: boolean; fal: boolean; hint: string;
+  };
   /** la dernière sélection de shorts sur le transcript de la vidéo source, et ses shorts en montage */
   shorts: { selection: string | null; count: number; montages: number };
   now: number;

@@ -15,7 +15,7 @@ from ...core import claude, jobs
 from ...core.system import tool
 from ...core.tasks import TaskContext
 from ..animations import render as hyperframes
-from ..settings.service import language, language_name
+from ..settings.service import claude_model, language, language_name
 from . import montage, service, transitions
 
 MOTION_RULES = """\
@@ -369,7 +369,7 @@ def chat(ctx: TaskContext) -> None:
     insertions = montage.work_dir(pid, task) / montage.INSERTIONS_FILE
     try:
         for event in claude.stream(prompt, service.project_dir(pid), system_prompt(project, work, ids),
-                                   state.get("session_id"), None, ctx.check_cancel):
+                                   state.get("session_id"), claude_model("heavy"), ctx.check_cancel):
             # une insertion demandée : appliquée tout de suite, pour que Daryl relise sa copie à jour
             if insertions.is_file():
                 _insert(pid, task, reply)

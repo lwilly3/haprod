@@ -107,7 +107,7 @@ def analyse(ctx: TaskContext) -> None:
     output = None
     try:
         for event in claude.stream(analysis.prompt(p.get("channel_id"), names), work,
-                                   analysis.system(service.YTWATCH_SERVER), None, None, ctx.check_cancel,
+                                   analysis.system(service.YTWATCH_SERVER), None, service.claude_model("light"), ctx.check_cancel,
                                    tools=analysis.TOOLS, json_schema=analysis.SCHEMA,
                                    allowed_tools=f"mcp__{service.YTWATCH_SERVER}", mcp_config=config):
             kind = event.get("type")

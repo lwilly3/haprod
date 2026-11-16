@@ -304,7 +304,7 @@ def run(ctx: TaskContext) -> None:
     media = [v["src"] for v in storyboard.visuals(pid)[:storyboard.MAX_VISUALS]]
     out = ask(ctx, prompt(pid, request, not session, frame, state.get("media")),
               SYSTEM.format(lang=language_name(), relevance=storyboard.RELEVANCE),
-              "Read", None, SCHEMA, session)
+              "Read", None, SCHEMA, session, level="heavy")
     state["media"] = media
     state["session_id"] = out["session_id"]
     output = out["output"] or {}

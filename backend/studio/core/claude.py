@@ -12,8 +12,12 @@ import queue
 import shutil
 import subprocess
 import threading
+import time
 from pathlib import Path
 from typing import Callable, Iterator
+
+from ..config import DATA_DIR
+from .login import BrowserLogin
 
 # par defaut : lire et ecrire les fichiers du projet ; pas de shell ni de reseau
 TOOLS = "Read,Write,Edit,Glob,Grep"
@@ -29,9 +33,11 @@ def executable() -> str:
     found = shutil.which("claude")
     if found:
         return found
-    native = Path.home() / ".local" / "bin" / "claude.exe"
-    if native.exists():
-        return str(native)
+    # l'installeur natif (~/.local/bin), puis Homebrew sous macOS
+    name = "claude.exe" if os.name == "nt" else "claude"
+    for folder in (Path.home() / ".local" / "bin", Path("/opt/homebrew/bin"), Path("/usr/local/bin")):
+        if (folder / name).is_file():
+            return str(folder / name)
     raise RuntimeError("Claude Code est introuvable : installe-le puis connecte-toi (claude auth login).")
 
 
@@ -48,6 +54,44 @@ def auth_status() -> dict:
     except (RuntimeError, subprocess.TimeoutExpired, json.JSONDecodeError) as e:
         return {"loggedIn": False, "error": str(e)}
     return {k: status.get(k) for k in ("loggedIn", "authMethod", "email")}
+
+
+# --- Consommation --------------------------------------------------------------------
+# Claude Code donne, à la fin de chaque tour, les jetons utilisés et leur prix au tarif de l'API.
+# Avec un abonnement rien n'est facturé : ce prix sert d'unité pour comparer les étapes et les modèles.
+
+USAGE_FILE = DATA_DIR / "claude-usage.jsonl"
+
+
+def record_usage(event: dict, label: str) -> None:
+    """Ajoute une ligne au journal pour l'événement "result" d'un tour (`label` : l'étape)."""
+    usage = event.get("usage") or {}
+    line = {"at": round(time.time()), "step": label, "models": sorted(event.get("modelUsage") or {}),
+            "cost_usd": event.get("total_cost_usd"), "seconds": round((event.get("duration_ms") or 0) / 1000),
+            "turns": event.get("num_turns"), "input": usage.get("input_tokens"),
+            "cache_write": usage.get("cache_creation_input_tokens"),
+            "cache_read": usage.get("cache_read_input_tokens"), "output": usage.get("output_tokens")}
+    try:
+        USAGE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with USAGE_FILE.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(line, ensure_ascii=False) + "\n")
+    except OSError:
+        pass  # un journal qui ne s'écrit pas ne doit pas faire échouer l'étape
+
+
+# --- Connexion du compte depuis l'interface (voir core/login.py) -------------------------
+
+_browser_login = BrowserLogin(lambda: [executable(), "auth", "login", "--claudeai"], lambda: env())
+login_start, login_code, login_cancel, login_state = (_browser_login.start, _browser_login.code,
+                                                      _browser_login.cancel, _browser_login.state)
+
+
+def logout() -> None:
+    login_cancel()
+    out = subprocess.run([executable(), "auth", "logout"], capture_output=True, text=True,
+                         encoding="utf-8", errors="replace", env=env(), timeout=30)
+    if out.returncode != 0:
+        raise RuntimeError((out.stderr or out.stdout).strip()[-300:] or "déconnexion impossible")
 
 
 def stream(prompt: str, cwd: Path, system_prompt: str, session_id: str | None,

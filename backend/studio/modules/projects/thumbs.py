@@ -10,9 +10,10 @@ vont dans vignettes/ ; leur liste, project.thumb_images (variante -> images), n'
 par l'API (`sync`, `remove_image`) : l'interface, qui renvoie project.thumbs en entier, ne peut
 pas l'écraser.
 """
+import time
 from pathlib import Path
 
-from ...core import fal, jobs
+from ...core import claude, codex, fal, jobs, system
 from . import library, service
 
 # l'endpoint d'édition (images de référence) de chaque modèle, et ses réglages pour du 16:9
@@ -31,6 +32,12 @@ MODELS = {
     "qwen-image-edit": {"label": "Qwen Image Edit", "endpoint": "fal-ai/qwen-image-edit-2511",
                         "args": {"image_size": {"width": 1280, "height": 720}, "output_format": "png"}},
 }
+# Sans fal.ai, par l'abonnement de l'auteur : ChatGPT génère l'image (Codex) ; Claude, qui ne dessine pas,
+# compose une mise en page (les images de référence, le texte, des aplats) que Chrome photographie.
+MODELS.update({
+    "chatgpt": {"label": "ChatGPT (abonnement)", "provider": "codex"},
+    "claude": {"label": "Claude (composition)", "provider": "claude"},
+})
 # le plus petit plafond d'images de référence parmi les modèles
 MAX_REFS = 10
 
@@ -39,8 +46,40 @@ def job_name(tid: str, model: str) -> str:
     return f"thumb:{tid}:{model}"
 
 
+def provider(model: str) -> str:
+    return MODELS[model].get("provider", "fal")
+
+
+_claude_status: tuple[float, bool] = (0.0, False)
+
+
+def _claude_ready() -> bool:
+    """Relu au plus toutes les 30 s : la question revient à chaque affichage du projet."""
+    global _claude_status
+    at, value = _claude_status
+    if time.time() - at >= 30:
+        value = bool(claude.auth_status().get("loggedIn"))
+        _claude_status = (time.time(), value)
+    return value
+
+
+def model_ready(model: str) -> bool:
+    """La clé fal.ai pour ses modèles, sinon le compte connecté (ChatGPT dans Codex, Claude)."""
+    kind = provider(model)
+    return codex.logged_in() if kind == "codex" else _claude_ready() if kind == "claude" else bool(fal.key())
+
+
 def ready() -> bool:
-    return bool(fal.key())
+    return any(model_ready(m) for m in MODELS)
+
+
+def check_ready(models: list[str]) -> None:
+    for model in models:
+        if model in MODELS and not model_ready(model):
+            kind = provider(model)
+            raise ValueError(fal.missing() if kind == "fal" else
+                             "ChatGPT n'est pas connecté : lance `codex login` dans un terminal" if kind == "codex"
+                             else "Claude n'est pas connecté : Réglages → Services")
 
 
 # une référence prise dans les médias du projet plutôt que dans la bibliothèque
@@ -129,8 +168,8 @@ def _launch(project: dict, tid: str, models: list[str], prompt: str, refs: list[
         current = jobs.get(project["jobs"].get(name) or "")
         if current and not current.finished:
             continue
-        payload = {"project": project["id"], "thumb": tid, "model": model, "endpoint": MODELS[model]["endpoint"],
-                   "args": MODELS[model]["args"], "prompt": prompt, "refs": [str(p) for p in refs],
+        payload = {"project": project["id"], "thumb": tid, "model": model, "endpoint": MODELS[model].get("endpoint"),
+                   "args": MODELS[model].get("args"), "prompt": prompt, "refs": [str(p) for p in refs],
                    "dest": str(dest), **extra}
         job = service.requeue(f"{project['id']}-thumb-{tid}-{model}", f"project_thumb:{model}", payload, {})
         project["jobs"][name] = job.id
@@ -142,7 +181,8 @@ def start(project: dict, tid: str, models: list[str]) -> None:
     thumb = _thumb(project, tid)
     portraits = [_ref_path(project, r) for r in thumb.get("portraits") or []]
     styles = [_ref_path(project, r) for r in thumb.get("styles") or []]
-    if not portraits and not styles:
+    # les modèles de fal.ai retouchent des images : sans référence, ils n'ont rien à retoucher
+    if not portraits and not styles and any(m in MODELS and provider(m) == "fal" for m in models):
         raise ValueError("choisis au moins un portrait ou une vignette de référence")
     prompt = build_prompt(thumb, video_title(project, thumb), len(portraits), len(styles))
     _launch(project, tid, models, prompt, portraits + styles)
@@ -157,6 +197,8 @@ def start_edit(project: dict, tid: str, file: str, instruction: str, models: lis
         raise ValueError("image inconnue")
     if not instruction.strip():
         raise ValueError("dis ce qu'il faut changer")
+    if any(m in MODELS and provider(m) == "claude" for m in models):
+        raise ValueError("Claude compose une vignette mais ne retouche pas une image : choisis un autre modèle")
     base = service.project_dir(project["id"]) / service.VIGNETTES_DIR / file
     if not base.is_file():
         raise ValueError(f"fichier introuvable : {file}")
@@ -229,4 +271,7 @@ def remove_image(project: dict, tid: str, file: str) -> None:
 
 
 def view() -> dict:
-    return {"models": [{"id": k, "label": m["label"]} for k, m in MODELS.items()], "ready": ready()}
+    return {"models": [{"id": k, "label": m["label"], "ready": model_ready(k), "needs_refs": provider(k) == "fal",
+                        "edits": provider(k) != "claude"} for k, m in MODELS.items()],
+            "ready": ready(), "fal": bool(fal.key()),
+            "hint": system.secret_hint("FAL_KEY", "…")}

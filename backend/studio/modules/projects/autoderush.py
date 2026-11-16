@@ -411,7 +411,7 @@ def run(ctx: TaskContext) -> None:
     state["activity"] = "lit le transcript"
     ctx.save(force=True)
     out = ask(ctx, prompt(spoken_rushes, lines, script_md, p.get("note", "")),
-              SYSTEM.format(lang=language_name()), "Read", None, SCHEMA)
+              SYSTEM.format(lang=language_name()), "Read", None, SCHEMA, level="heavy")
     output = out["output"] or {}
     ctx.progress = 0.9
 

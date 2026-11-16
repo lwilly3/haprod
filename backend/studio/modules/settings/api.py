@@ -3,10 +3,10 @@ API des reglages : le profil de la chaine, la recherche de la chaine sur YouTube
 connexion a ytwatch, l'analyse de la chaine par Claude, la description par defaut des
 videos et le moteur de transcription.
 """
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 
-from ...core import youtube_api
+from ...core import claude, codex, youtube_api
 from . import service
 
 router = APIRouter()
@@ -63,6 +63,114 @@ def put_ytwatch(body: Ytwatch):
 @router.delete("/ytwatch")
 def delete_ytwatch():
     return service.remove_ytwatch()
+
+
+@router.get("/claude")
+def get_claude():
+    return service.claude_models()
+
+
+@router.put("/claude")
+def put_claude(values: dict):
+    try:
+        return service.save_claude_models(values)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+
+
+# --- Compte Claude : connexion et déconnexion ----------------------------------------
+# Réservé à ce Mac : le studio écoute aussi sur le réseau local (prompteur), et personne d'autre
+# ne doit pouvoir y brancher son propre compte ni déconnecter celui de l'auteur.
+
+def _local(request: Request) -> None:
+    if not request.client or request.client.host not in ("127.0.0.1", "::1"):
+        raise HTTPException(403, "le compte Claude ne se gère que depuis l'ordinateur du studio")
+
+
+def _claude_account() -> dict:
+    return {**claude.auth_status(), **claude.login_state()}
+
+
+@router.get("/claude/account")
+def get_claude_account(request: Request):
+    _local(request)
+    return _claude_account()
+
+
+@router.post("/claude/login")
+def claude_login(request: Request):
+    _local(request)
+    try:
+        claude.login_start()
+    except RuntimeError as e:
+        raise HTTPException(400, str(e)) from e
+    return _claude_account()
+
+
+class ClaudeCode(BaseModel):
+    code: str
+
+
+@router.post("/claude/code")
+def claude_code(request: Request, body: ClaudeCode):
+    _local(request)
+    try:
+        claude.login_code(body.code)
+    except RuntimeError as e:
+        raise HTTPException(409, str(e)) from e
+    return _claude_account()
+
+
+@router.post("/claude/cancel")
+def claude_cancel(request: Request):
+    _local(request)
+    claude.login_cancel()
+    return _claude_account()
+
+
+@router.delete("/claude/account")
+def claude_logout(request: Request):
+    _local(request)
+    try:
+        claude.logout()
+    except RuntimeError as e:
+        raise HTTPException(400, str(e)) from e
+    return _claude_account()
+
+
+# --- Compte ChatGPT (Codex) : il génère les miniatures par l'abonnement -----------------
+
+@router.get("/chatgpt/account")
+def get_chatgpt_account(request: Request):
+    _local(request)
+    return codex.account()
+
+
+@router.post("/chatgpt/login")
+def chatgpt_login(request: Request):
+    _local(request)
+    try:
+        codex.login_start()
+    except RuntimeError as e:
+        raise HTTPException(400, str(e)) from e
+    return codex.account()
+
+
+@router.post("/chatgpt/cancel")
+def chatgpt_cancel(request: Request):
+    _local(request)
+    codex.login_cancel()
+    return codex.account()
+
+
+@router.delete("/chatgpt/account")
+def chatgpt_logout(request: Request):
+    _local(request)
+    try:
+        codex.logout()
+    except RuntimeError as e:
+        raise HTTPException(400, str(e)) from e
+    return codex.account()
 
 
 class Transcription(BaseModel):

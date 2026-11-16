@@ -8,6 +8,7 @@ import time
 
 from ...core import claude, jobs
 from ...core.tasks import Task, TaskContext
+from ..settings.service import claude_model
 from ..transcript import service as transcript
 from . import render as montage
 from . import service
@@ -17,7 +18,7 @@ def _ask(ctx: TaskContext, prompt: str) -> dict:
     """Un echange avec Claude, en reprenant la session ; retourne sa reponse structuree."""
     state = ctx.state
     events = claude.stream(prompt, service.WORK_DIR, service.system_prompt(state["settings"]),
-                           state.get("session_id"), ctx.payload.get("model"), ctx.check_cancel,
+                           state.get("session_id"), ctx.payload.get("model") or claude_model("heavy"), ctx.check_cancel,
                            tools="", json_schema=service.SCHEMA)
     size, status, output = 0, "", None
 

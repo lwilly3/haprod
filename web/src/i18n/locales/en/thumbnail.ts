@@ -22,7 +22,7 @@ export default {
   generating: "Generating…",
   queued: "queued",
   falMissing: "fal.ai key missing: run {cmd} in a terminal, then reload the page.",
-  falCmd: "setx FAL_KEY \"your-key\"",
+  modelOff: "Unavailable: fal.ai key missing, or account not connected.",
   pickModel: "Pick at least one model.",
   results: "Results",
   resultsEmpty: "Images generated for {v} will show up here",

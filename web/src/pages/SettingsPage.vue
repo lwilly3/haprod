@@ -189,6 +189,85 @@ const connectYoutube = () => youtube(() => post<YoutubeAccount>("/api/settings/y
 const cancelYoutube = () => youtube(() => post<YoutubeAccount>("/api/settings/youtube/cancel"));
 const disconnectYoutube = () => youtube(() => del<YoutubeAccount>("/api/settings/youtube"));
 
+// --- compte Claude : celui de Claude Code, connecté dans le navigateur ---
+
+type ClaudeAccount = {
+  loggedIn: boolean; authMethod?: string | null; email?: string | null;
+  connecting: boolean; url: string | null; error: string | null;
+};
+const claudeAccount = ref<ClaudeAccount | null>(null);
+const claudeCode = ref("");
+
+usePolling(async () => {
+  claudeAccount.value = await api<ClaudeAccount>("/api/settings/claude/account");
+  return claudeAccount.value.connecting ? 1500 : 15000;
+});
+
+async function claude(run: () => Promise<ClaudeAccount>) {
+  try {
+    claudeAccount.value = await run();
+  } catch (e) {
+    toast((e as Error).message, true);
+  }
+}
+const connectClaude = () => claude(() => post<ClaudeAccount>("/api/settings/claude/login"));
+const cancelClaude = () => claude(() => post<ClaudeAccount>("/api/settings/claude/cancel"));
+async function sendClaudeCode() {
+  await claude(() => post<ClaudeAccount>("/api/settings/claude/code", { code: claudeCode.value }));
+  claudeCode.value = "";
+}
+function disconnectClaude() {
+  if (confirm(t("settings.claudeDisconnectConfirm"))) claude(() => del<ClaudeAccount>("/api/settings/claude/account"));
+}
+
+// --- compte ChatGPT : celui de Codex, qui génère les miniatures par l'abonnement ---
+
+type ChatgptAccount = { installed: boolean; loggedIn: boolean; connecting: boolean; url: string | null; error: string | null };
+const chatgptAccount = ref<ChatgptAccount | null>(null);
+
+usePolling(async () => {
+  chatgptAccount.value = await api<ChatgptAccount>("/api/settings/chatgpt/account");
+  return chatgptAccount.value.connecting ? 1500 : 15000;
+});
+
+async function chatgpt(run: () => Promise<ChatgptAccount>) {
+  try {
+    chatgptAccount.value = await run();
+  } catch (e) {
+    toast((e as Error).message, true);
+  }
+}
+const connectChatgpt = () => chatgpt(() => post<ChatgptAccount>("/api/settings/chatgpt/login"));
+const cancelChatgpt = () => chatgpt(() => post<ChatgptAccount>("/api/settings/chatgpt/cancel"));
+function disconnectChatgpt() {
+  if (confirm(t("settings.chatgptDisconnectConfirm"))) chatgpt(() => del<ChatgptAccount>("/api/settings/chatgpt/account"));
+}
+
+// --- modèle de Claude : un choix pour les tours courts, un pour le travail d'agent ---
+
+type ClaudeLevel = "light" | "heavy";
+type ClaudeModels = Record<ClaudeLevel, string>;
+
+const claudeModels = ref<ClaudeModels | null>(null);
+const claudeOptions = computed(() => ["", "haiku", "sonnet", "opus"]
+  .map((m) => [m, m ? t(`settings.claudeModels.${m}`) : t("settings.claudeDefault")] as [string, string]));
+
+async function setClaudeModel(level: ClaudeLevel, model: string) {
+  try {
+    claudeModels.value = await putJson<ClaudeModels>("/api/settings/claude", { ...claudeModels.value, [level]: model });
+  } catch (err) {
+    toast((err as Error).message, true);
+  }
+}
+
+onMounted(async () => {
+  try {
+    claudeModels.value = await api<ClaudeModels>("/api/settings/claude");
+  } catch (e) {
+    toast((e as Error).message, true);
+  }
+});
+
 // --- moteur de transcription : Whisper en local, ou une API (clé gardée côté serveur) ---
 
 type Engine = "whisper" | "elevenlabs" | "gladia";
@@ -445,6 +524,63 @@ function followers(n: number | null): string {
             <button v-else class="btn lg dark" :disabled="!account.client" @click="connectYoutube">{{ t("settings.connectYoutube") }}</button>
           </div>
           <div v-if="account?.error && !account.connected" class="state err">{{ t("settings.connectFailed", { error: account.error }) }}</div>
+        </div>
+
+        <div v-if="claudeAccount" class="field">
+          <label>{{ t("settings.claudeAccount") }}</label>
+          <span class="hint">{{ t("settings.claudeAccountHint") }}</span>
+          <div v-if="claudeAccount.loggedIn" class="row center">
+            <span class="state ok">{{ t("settings.claudeConnected", { who: claudeAccount.email || claudeAccount.authMethod || "Claude" }) }}</span>
+            <button class="link-btn small" @click="disconnectClaude">{{ t("settings.disconnect") }}</button>
+          </div>
+          <template v-else-if="claudeAccount.connecting">
+            <div class="row center">
+              <span class="spinner" />
+              <span class="muted small">{{ t("settings.claudeFinish") }}</span>
+              <a v-if="claudeAccount.url" class="link-btn small" :href="claudeAccount.url" target="_blank" rel="noopener">{{ t("settings.claudeOpenPage") }}</a>
+              <button class="btn" @click="cancelClaude">{{ t("common.cancel") }}</button>
+            </div>
+            <div class="row">
+              <input v-model="claudeCode" class="input" :placeholder="t('settings.claudeCodePlaceholder')"
+                @keydown.enter="claudeCode.trim() && sendClaudeCode()">
+              <button class="btn lg" :disabled="!claudeCode.trim()" @click="sendClaudeCode">{{ t("settings.claudeSendCode") }}</button>
+            </div>
+          </template>
+          <div v-else class="row center">
+            <button class="btn lg dark" @click="connectClaude">{{ t("settings.claudeConnect") }}</button>
+          </div>
+          <div v-if="claudeAccount.error && !claudeAccount.loggedIn" class="state err">{{ t("settings.connectFailed", { error: claudeAccount.error }) }}</div>
+        </div>
+
+        <div v-if="chatgptAccount" class="field">
+          <label>{{ t("settings.chatgptAccount") }}</label>
+          <span class="hint">{{ t("settings.chatgptAccountHint") }}</span>
+          <span v-if="!chatgptAccount.installed" class="muted small">{{ t("settings.chatgptMissing") }}</span>
+          <div v-else-if="chatgptAccount.loggedIn" class="row center">
+            <span class="state ok">{{ t("settings.chatgptConnected") }}</span>
+            <button class="link-btn small" @click="disconnectChatgpt">{{ t("settings.disconnect") }}</button>
+          </div>
+          <div v-else-if="chatgptAccount.connecting" class="row center">
+            <span class="spinner" />
+            <span class="muted small">{{ t("settings.chatgptFinish") }}</span>
+            <a v-if="chatgptAccount.url" class="link-btn small" :href="chatgptAccount.url" target="_blank" rel="noopener">{{ t("settings.claudeOpenPage") }}</a>
+            <button class="btn" @click="cancelChatgpt">{{ t("common.cancel") }}</button>
+          </div>
+          <div v-else class="row center">
+            <button class="btn lg dark" @click="connectChatgpt">{{ t("settings.chatgptConnect") }}</button>
+          </div>
+          <div v-if="chatgptAccount.error && !chatgptAccount.loggedIn" class="state err">{{ t("settings.connectFailed", { error: chatgptAccount.error }) }}</div>
+        </div>
+
+        <div v-if="claudeModels" class="field">
+          <label>{{ t("settings.claudeLight") }}</label>
+          <span class="hint">{{ t("settings.claudeLightHint") }}</span>
+          <Seg :model-value="claudeModels.light" :options="claudeOptions" @update:model-value="setClaudeModel('light', $event)" />
+        </div>
+        <div v-if="claudeModels" class="field">
+          <label>{{ t("settings.claudeHeavy") }}</label>
+          <span class="hint">{{ t("settings.claudeHeavyHint") }}</span>
+          <Seg :model-value="claudeModels.heavy" :options="claudeOptions" @update:model-value="setClaudeModel('heavy', $event)" />
         </div>
 
         <div v-if="transcription" class="field">

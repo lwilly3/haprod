@@ -894,7 +894,7 @@ def run(ctx: TaskContext) -> None:
         request += ("\n\nAvant de choisir les places et les zooms, regarde ces images de la vidéo (Read) : "
                     + ", ".join(f.removeprefix("montage/") for f in frames) + ".")
     out = ask(ctx, request,
-              SYSTEM.format(lang=language_name(), relevance=RELEVANCE), "Read", None, SCHEMA)
+              SYSTEM.format(lang=language_name(), relevance=RELEVANCE), "Read", None, SCHEMA, level="heavy")
     output = out["output"] or {}
     ctx.progress = 0.9
 

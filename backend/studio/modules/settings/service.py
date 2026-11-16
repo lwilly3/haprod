@@ -186,6 +186,36 @@ def mcp_config(path) -> None:
         encoding="utf-8")
 
 
+# --- Modèle de Claude ---------------------------------------------------------------
+# data/claude.json : {"light", "heavy"}. Deux niveaux, parce que c'est là que se joue le quota de
+# l'abonnement : les tours courts (titres, critique, discussion) et le travail d'agent (dérush,
+# storyboard, montage, animations). "" = le modèle par défaut de Claude Code.
+
+CLAUDE_FILE = DATA_DIR / "claude.json"
+CLAUDE_LEVELS = ("light", "heavy")
+# les alias de Claude Code : ils suivent la dernière version de chaque famille
+CLAUDE_MODELS = ("", "haiku", "sonnet", "opus")
+
+
+def claude_models() -> dict:
+    data = json.loads(CLAUDE_FILE.read_text(encoding="utf-8")) if CLAUDE_FILE.is_file() else {}
+    return {level: data.get(level) if data.get(level) in CLAUDE_MODELS else "" for level in CLAUDE_LEVELS}
+
+
+def claude_model(level: str) -> str | None:
+    """Le modèle choisi pour ce niveau, relu à chaque tour (None : celui de Claude Code)."""
+    return claude_models()[level] or None
+
+
+def save_claude_models(values: dict) -> dict:
+    if any(values.get(level, "") not in CLAUDE_MODELS for level in CLAUDE_LEVELS):
+        raise ValueError("modèle inconnu")
+    data = {level: values.get(level, "") for level in CLAUDE_LEVELS}
+    CLAUDE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    CLAUDE_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return data
+
+
 # --- Moteur de transcription ---------------------------------------------------------
 # data/transcription.json : {"engine", "keys": {fournisseur: cle}}. Whisper (local, gratuit) par
 # defaut ; les API sont plus fideles pour le derush. Les cles ne repartent jamais vers l'interface.

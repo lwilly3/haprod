@@ -105,7 +105,7 @@ def run(ctx: TaskContext) -> None:
     ctx.state["activity"] = "lit l'inspiration"
     ctx.save(force=True)
     out = ask(ctx, _prompt(path.read_text(encoding="utf-8"), card), SYSTEM.format(lang=language_name()),
-              "Read", None, SCHEMA)
+              "Read", None, SCHEMA, level="heavy")
     output = out["output"] or {}
     html = (output.get("html") or "").strip()
     slug = re.sub(r"[^a-z0-9]+", "-", (output.get("slug") or "").lower()).strip("-")[:40] or "inspiration"

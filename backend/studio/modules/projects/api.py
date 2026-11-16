@@ -736,11 +736,10 @@ class ThumbGenerateRequest(BaseModel):
 @router.post("/{pid}/thumbs/{tid}/generate")
 def generate_thumb(pid: str, tid: str, req: ThumbGenerateRequest):
     _check(pid)
-    if not thumbs.ready():
-        raise HTTPException(400, "clé fal.ai absente : définis FAL_KEY (setx FAL_KEY \"ta-clé\")")
     with service.editing(pid) as project:
         runtime.sync(project)
         try:
+            thumbs.check_ready(req.models)
             thumbs.start(project, tid, req.models)
         except ValueError as e:
             raise HTTPException(400, str(e)) from e
@@ -756,11 +755,10 @@ class ThumbEditRequest(BaseModel):
 @router.post("/{pid}/thumbs/{tid}/images/{name}/edit")
 def edit_thumb_image(pid: str, tid: str, name: str, req: ThumbEditRequest):
     _check(pid)
-    if not thumbs.ready():
-        raise HTTPException(400, "clé fal.ai absente : définis FAL_KEY (setx FAL_KEY \"ta-clé\")")
     with service.editing(pid) as project:
         runtime.sync(project)
         try:
+            thumbs.check_ready(req.models)
             thumbs.start_edit(project, tid, name, req.instruction, req.models, req.refs)
         except ValueError as e:
             raise HTTPException(400, str(e)) from e

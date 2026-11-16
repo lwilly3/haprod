@@ -160,16 +160,25 @@ const statuses = computed(() => {
 });
 
 const refCount = (t: Thumb) => (t.portraits?.length ?? 0) + (t.styles?.length ?? 0);
+/** Les modèles choisis qu'on peut lancer : disponibles (clé ou compte connecté), et avec leurs références. */
+const usable = computed(() => {
+  const t = current.value;
+  if (!t) return [];
+  return models.value.filter((m) => chosen.value.includes(m.id) && m.ready && (!m.needs_refs || refCount(t) > 0))
+    .map((m) => m.id);
+});
+/** Un modèle de fal.ai est choisi alors que la clé manque : on dit comment la ranger. */
+const falNeeded = computed(() => !project.value.runtime.thumbs.fal
+  && models.value.some((m) => chosen.value.includes(m.id) && m.needs_refs));
 const canGenerate = computed(() => {
   const t = current.value;
-  return !!t && project.value.runtime.thumbs.ready && chosen.value.length > 0 && refCount(t) > 0
-    && chosen.value.some((m) => !running(job(t, m)));
+  return !!t && usable.value.some((m) => !running(job(t, m)));
 });
 
 async function generate() {
   const t = current.value;
   if (!t?.id || !canGenerate.value) return;
-  await act(`/thumbs/${t.id}/generate`, { models: chosen.value });
+  await act(`/thumbs/${t.id}/generate`, { models: usable.value });
 }
 
 function removeImage(t: Thumb, file: string) {
@@ -208,17 +217,20 @@ function toggleEditModel(id: string) {
   editChosen.value = editChosen.value.includes(id) ? editChosen.value.filter((m) => m !== id) : [...editChosen.value, id];
 }
 
+/** Les modèles qui savent retoucher une image (Claude compose, il ne retouche pas). */
+const editModels = computed(() => models.value.filter((m) => m.edits));
 const canEdit = computed(() => {
   const t = current.value;
-  return !!t && !!zoomed.value && project.value.runtime.thumbs.ready && !!instruction.value.trim()
-    && editChosen.value.some((m) => !running(job(t, m)));
+  return !!t && !!zoomed.value && !!instruction.value.trim()
+    && editModels.value.some((m) => editChosen.value.includes(m.id) && m.ready && !running(job(t, m.id)));
 });
 
 async function retouch() {
   const t = current.value, img = zoomed.value;
   if (!t?.id || !img || !canEdit.value) return;
   if (await act(`/thumbs/${t.id}/images/${encodeURIComponent(img.file)}/edit`,
-                { instruction: instruction.value, models: editChosen.value, refs: editRefs.value })) {
+                { instruction: instruction.value, refs: editRefs.value,
+                  models: editModels.value.filter((m) => editChosen.value.includes(m.id) && m.ready).map((m) => m.id) })) {
     toast(tr("thumbnail.retouchStarted"));
     instruction.value = "";
     editRefs.value = [];
@@ -371,7 +383,7 @@ const big = computed(() => feed.value === "desktop");
               </span>
             </div>
           </div>
-          <span v-if="!refCount(current)" class="hint">{{ tr("thumbnail.needRef") }}</span>
+          <span v-if="!refCount(current) && models.some((m) => chosen.includes(m.id) && m.needs_refs)" class="hint">{{ tr("thumbnail.needRef") }}</span>
 
           <button class="link-btn ideas-link" @click="ideasOpen = true">
             {{ ideasBusy ? tr("thumbnail.ideas.composingIdeas") : ideas?.items.length
@@ -381,7 +393,8 @@ const big = computed(() => feed.value === "desktop");
 
           <div class="run">
             <div class="models">
-              <button v-for="m in models" :key="m.id" class="model" :class="{ on: chosen.includes(m.id) }" @click="toggleModel(m.id)">
+              <button v-for="m in models" :key="m.id" class="model" :class="{ on: chosen.includes(m.id), off: !m.ready }"
+                :title="m.ready ? '' : tr('thumbnail.modelOff')" @click="toggleModel(m.id)">
                 {{ m.label }}
               </button>
             </div>
@@ -390,9 +403,9 @@ const big = computed(() => feed.value === "desktop");
               {{ busy(current) ? tr("thumbnail.generating") : tr("thumbnail.generate") }}
             </button>
           </div>
-          <span v-if="!project.runtime.thumbs.ready" class="hint">
+          <span v-if="falNeeded" class="hint">
             <i18n-t keypath="thumbnail.falMissing" scope="global">
-              <template #cmd><span class="mono">{{ tr("thumbnail.falCmd") }}</span></template>
+              <template #cmd><span class="mono">{{ project.runtime.thumbs.hint }}</span></template>
             </i18n-t>
           </span>
           <span v-else-if="!chosen.length" class="hint">{{ tr("thumbnail.pickModel") }}</span>
@@ -533,8 +546,8 @@ const big = computed(() => feed.value === "desktop");
           </div>
           <div class="retouch-run">
             <button
-              v-for="m in models" :key="m.id" class="model" :class="{ on: editChosen.includes(m.id) }"
-              @click="toggleEditModel(m.id)">
+              v-for="m in editModels" :key="m.id" class="model" :class="{ on: editChosen.includes(m.id), off: !m.ready }"
+              :title="m.ready ? '' : tr('thumbnail.modelOff')" @click="toggleEditModel(m.id)">
               {{ m.label }}
             </button>
             <span class="spacer" />
@@ -620,6 +633,7 @@ const big = computed(() => feed.value === "desktop");
 
 .run { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .models { display: flex; gap: 6px; flex-wrap: wrap; }
+.model.off { opacity: 0.45; }
 .model {
   height: 30px; padding: 0 11px; border: 1px solid var(--line-strong); border-radius: 15px; background: #fff;
   font-size: 12.5px; color: var(--muted); cursor: pointer;

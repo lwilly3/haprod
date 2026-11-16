@@ -214,7 +214,7 @@ def run(ctx: TaskContext) -> None:
     ctx.save(force=True)
     out = ask(ctx, prompt(pid, beat, motion),
               SYSTEM.format(rules=montage_tasks.MOTION_RULES, sound=SOUND_RULES, lang=language_name()),
-              "Read,Write,Edit,Glob")
+              "Read,Write,Edit,Glob", level="heavy")
     if not target.is_file() or target.stat().st_mtime == before:
         raise RuntimeError("Daryl n'a pas écrit la composition." + (f" Il dit : {out['text'][:300]}" if out["text"] else ""))
     state["reply"] = out["text"].strip()

@@ -9,6 +9,7 @@ from pathlib import Path
 from ...core import claude, jobs
 from ...core.tasks import Task, TaskContext
 from ..projects import media
+from ..settings.service import claude_model
 from . import captions, service
 from . import render as montage
 
@@ -54,7 +55,7 @@ def chat(ctx: TaskContext) -> None:
     settings = {**service.DEFAULT_SETTINGS, **state.get("settings", {})}
     has_captions = (directory / captions.JSON_FILE).is_file()
     events = claude.stream(prompt, directory, service.system_prompt(settings, has_captions),
-                           state.get("session_id"), ctx.payload.get("model"), ctx.check_cancel)
+                           state.get("session_id"), ctx.payload.get("model") or claude_model("heavy"), ctx.check_cancel)
     status = "thinking"
     # l'outil en cours : son nom et son entree JSON, qui arrive par morceaux
     tool, tool_input = "", ""
