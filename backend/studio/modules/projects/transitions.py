@@ -14,7 +14,7 @@ import subprocess
 from pathlib import Path
 
 from ...config import DATA_DIR
-from ...core.system import tool
+from ...core.system import has_filter, tool
 
 # id (= nom xfade), famille, ce qu'on voit (pour Daryl)
 CATALOG: list[tuple[str, str, str]] = [
@@ -125,7 +125,9 @@ def demo(fx: str) -> Path:
     DEMO_DIR.mkdir(parents=True, exist_ok=True)
     w, h = DEMO_SIZE
     length = DEMO_HOLD * 2 + DEMO_DUR
-    font = "C\\:/Windows/Fonts/arialbd.ttf" if Path("C:/Windows/Fonts/arialbd.ttf").is_file() else ""
+    fonts = ("C:/Windows/Fonts/arialbd.ttf", "/System/Library/Fonts/Supplemental/Arial Bold.ttf")
+    # le « : » du lecteur Windows s'échappe dans un filtre ffmpeg
+    font = next((f.replace(":", "\\:") for f in fonts if Path(f).is_file()), "") if has_filter("drawtext") else ""
     def plate(name: str, c0: str, c1: str) -> str:
         text = (f",drawtext=fontfile='{font}':text={name}:fontsize={h // 2}:fontcolor=white@0.92:"
                 f"x=(w-tw)/2:y=(h-th)/2") if font else ""

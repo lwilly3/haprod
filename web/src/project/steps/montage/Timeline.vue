@@ -750,7 +750,7 @@ function motionState(id: string) {
 .ghost.on { border-style: solid; outline: 2px solid var(--red); outline-offset: -1px; z-index: 2; }
 .ghost .edge:hover { background: color-mix(in srgb, var(--c) 35%, transparent); }
 .ghost span { overflow: hidden; text-overflow: ellipsis; padding: 0 6px; pointer-events: none; }
-.item.text { background: #F4E9C8; color: var(--ink); font-family: "Ink Free", "Segoe Print", cursive; font-size: 12px; border: 1px solid #D8C68E; }
+.item.text { background: #F4E9C8; color: var(--ink); font-family: "Ink Free", "Bradley Hand", "Segoe Print", cursive; font-size: 12px; border: 1px solid #D8C68E; }
 .item.text.empty { color: var(--faint); font-style: italic; }
 .item.motion { background: #7C5CE0; color: #fff; font-weight: 600; }
 .item.motion.pending { background: repeating-linear-gradient(135deg, #9C84EA 0 6px, #8A70E5 6px 12px); }

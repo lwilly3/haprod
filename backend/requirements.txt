@@ -5,10 +5,16 @@ watchfiles
 yt-dlp
 # certificats pour télécharger les images trouvées (étape Assets)
 certifi
+# transcription cloud (ElevenLabs, Gladia)
+httpx
 faster-whisper>=1.2
+# PyAV 19 a retiré une option que faster-whisper 1.2 passe encore (TypeError à la transcription)
+av<19
+# Whisper sur le GPU des Mac Apple Silicon (TRANSCRIPT_DEVICE=cpu pour s'en passer)
+mlx-whisper; sys_platform == "darwin" and platform_machine == "arm64"
 # DLL CUDA pour faire tourner Whisper sur le GPU (inutile en CPU)
-nvidia-cublas-cu12
-nvidia-cudnn-cu12==9.*
+nvidia-cublas-cu12; sys_platform != "darwin"
+nvidia-cudnn-cu12==9.*; sys_platform != "darwin"
 # publication YouTube (API YouTube Data v3, OAuth)
 google-api-python-client
 google-auth-oauthlib

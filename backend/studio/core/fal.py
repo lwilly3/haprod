@@ -1,22 +1,22 @@
 """
 fal.ai : les modeles d'image (et plus tard de video) heberges par fal, appeles par leur
 file d'attente HTTP. La cle vient de FAL_KEY : de l'environnement, ou a defaut de celui
-de l'utilisateur Windows (un `setx FAL_KEY ...` suffit, sans rouvrir de terminal).
+de l'utilisateur Windows (`setx FAL_KEY ...`) ou du Trousseau de macOS : voir system.secret.
 
   POST queue.fal.run/<endpoint>  -> request_id, status_url, response_url, cancel_url
   GET  status_url                -> IN_QUEUE | IN_PROGRESS | COMPLETED
   GET  response_url              -> le resultat ({"images": [{"url": ...}]} pour une image)
 """
 import json
-import os
 import ssl
-import sys
 import time
 import urllib.error
 import urllib.request
 from typing import Callable
 
 import certifi
+
+from . import system
 
 QUEUE_URL = "https://queue.fal.run"
 POLL_EVERY = 1.5
@@ -26,21 +26,17 @@ SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 
 def key() -> str | None:
-    found = os.environ.get("FAL_KEY")
-    if found or sys.platform != "win32":
-        return found
-    import winreg
-    try:
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment") as reg:
-            return winreg.QueryValueEx(reg, "FAL_KEY")[0] or None
-    except OSError:
-        return None
+    return system.secret("FAL_KEY")
+
+
+def missing() -> str:
+    return f"clé fal.ai absente : définis FAL_KEY ({system.secret_hint('FAL_KEY')})"
 
 
 def _request(url: str, method: str = "GET", body: dict | None = None) -> dict:
     api_key = key()
     if not api_key:
-        raise RuntimeError("clé fal.ai absente : définis FAL_KEY (setx FAL_KEY \"ta-clé\")")
+        raise RuntimeError(missing())
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, method=method,
                                  headers={"Authorization": f"Key {api_key}", "Content-Type": "application/json"})

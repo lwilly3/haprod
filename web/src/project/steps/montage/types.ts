@@ -283,7 +283,7 @@ export function newId(tl: Timeline, prefix: string): string {
 export const clone = (tl: Timeline): Timeline => JSON.parse(JSON.stringify(tl));
 
 /** L'écriture manuscrite des textes, la même qu'au rendu (render.TEXT_FONT) ; son contour, en fraction de la taille. */
-export const TEXT_FONT = '"Ink Free", "Segoe Print", cursive';
+export const TEXT_FONT = '"Ink Free", "Bradley Hand", "Segoe Print", cursive';
 export const TEXT_BORDER = 0.07;
 /** Le fondu d'un texte à l'entrée et à la sortie (s), comme au rendu. */
 export const TEXT_FADE = 0.15;

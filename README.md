@@ -28,6 +28,10 @@ A lot runs on your machine (Whisper, ffmpeg, HyperFrames), and you can plug in o
 (ElevenLabs or Gladia for transcription, fal.ai for thumbnails). The interface is available in English
 and French, and Daryl writes in the language of your channel.
 
+> **This is a fork.** haprod is based on [Daryl](https://rickub.com/hlassiege/daryl) by Hugo Lassiège
+> (AGPL-3.0) and stays under the same license. Changes so far: macOS support (native dialogs, Finder,
+> Keychain, fonts, Chrome lookup, Whisper on the Apple GPU) and two dependency fixes (`httpx`, `av<19`).
+
 ## A personal tool, shared as is
 
 I use Daryl every week for [my own channel](https://www.youtube.com/@EventuallyCoding). I'm releasing it
@@ -92,10 +96,11 @@ HyperFrames (see [Third-party notices](THIRD_PARTY_NOTICES.md)).
 
 ## Requirements
 
-- **Windows** (native file dialogs, keys read from the Windows user environment)
+- **Windows** or **macOS** (native file dialogs, keys read from the Windows user environment or the macOS Keychain)
 - **Python 3.12**
 - **Node.js** and **pnpm**
-- **ffmpeg** in the PATH (`winget install ffmpeg`)
+- **ffmpeg** in the PATH (`winget install ffmpeg`; on macOS `brew install ffmpeg-full`: the plain `ffmpeg`
+  formula has no `drawtext` filter, which the on-screen texts of the edit need)
 - **[Claude Code](https://claude.com/claude-code)** installed and logged in (`claude auth login`). Other
   LLMs are not supported.
 - Optional: an NVIDIA GPU for Whisper (otherwise it runs on the CPU, slower)
@@ -113,6 +118,24 @@ py -3.12 -m venv .venv
 .venv\Scripts\pip install -r backend\requirements.txt
 cd web; pnpm install
 ```
+
+On macOS:
+
+```bash
+git clone <this repository> haprod
+cd haprod
+python3.12 -m venv .venv
+.venv/bin/pip install -r backend/requirements.txt
+cd web && pnpm install        # or: npx pnpm install
+cd ../backend && ../.venv/bin/python -m studio
+```
+
+On Apple Silicon, Whisper runs on the GPU through [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper)
+(`TRANSCRIPT_DEVICE=cpu` goes back to faster-whisper on the CPU). The model (about 1.6 GB) is downloaded
+on the first transcription.
+Video is encoded by the Mac's hardware encoder (VideoToolbox); `STUDIO_ENCODER=x264` goes back to libx264.
+The fal.ai key goes in the Keychain:
+`security add-generic-password -U -s FAL_KEY -a "$USER" -w "your-key"`.
 
 `backend/requirements.txt` installs the CUDA DLLs for Whisper; on a machine without an NVIDIA GPU,
 you can remove the `nvidia-*` lines.

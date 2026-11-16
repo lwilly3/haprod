@@ -23,6 +23,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import threading
 import time
 from fractions import Fraction
@@ -30,7 +31,7 @@ from pathlib import Path
 from typing import Callable
 
 from ...core import jobs
-from ...core.system import tool
+from ...core.system import h264, need_drawtext, tool
 from ...core.tasks import TaskContext
 from . import media, montage, service
 
@@ -48,9 +49,11 @@ CHUNK_SECONDS = 60
 # ffmpeg arrêté s'il n'avance plus depuis ce temps (s) : un job en erreur plutôt qu'un job qui tourne à vide
 STALL_SECONDS = 300
 # ce que `ffmpeg -progress` écrit : tout le reste est un message d'erreur
-# les textes : l'écriture manuscrite de Windows, celle de l'aperçu (font-family « Ink Free »), avec un contour
-# noir (fraction de la taille du texte) et un fondu à l'entrée et à la sortie
-TEXT_FONT = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts" / "Inkfree.ttf"
+# les textes : l'écriture manuscrite du système, celle de l'aperçu (font-family « Ink Free » sous Windows,
+# « Bradley Hand » sous macOS), avec un contour noir (fraction de la taille du texte) et un fondu à l'entrée
+# et à la sortie
+TEXT_FONT = (Path("/System/Library/Fonts/Supplemental/Bradley Hand Bold.ttf") if sys.platform == "darwin"
+             else Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts" / "Inkfree.ttf")
 TEXT_BORDER = 0.07
 TEXT_FADE = 0.15
 PROGRESS_KEYS = {"frame", "fps", "bitrate", "total_size", "out_time_us", "out_time_ms", "out_time",
@@ -98,6 +101,8 @@ def plan(pid: str, quality: str) -> dict:
     if missing:
         raise ValueError(f"motion pas encore rendu : {', '.join(missing[:3])}{'…' if len(missing) > 3 else ''}"
                          " (le rendu se fait tout seul à l'étape Montage)")
+    if any(x["text"].strip() for x in timeline["texts"]):
+        need_drawtext()
     if any(x["text"].strip() for x in timeline["texts"]) and not TEXT_FONT.is_file():
         raise ValueError(f"police des textes introuvable : {TEXT_FONT}")
     info = media.probe(Path(source["path"]))
@@ -410,7 +415,7 @@ def segment_args(p: dict, seg: dict, dest: Path) -> list[str]:
     script = dest.with_suffix(".txt")
     script.write_text(";\n".join(graph), encoding="utf-8")
     return args + ["-filter_complex_script", str(script), "-map", "[v]", "-map", "[a]", "-frames:v", str(n),
-                   "-c:v", "libx264", "-preset", "veryfast", "-crf", "12", "-pix_fmt", "yuv420p",
+                   *h264(12, "veryfast"), "-pix_fmt", "yuv420p",
                    "-c:a", "pcm_s16le", str(dest)]
 
 
@@ -579,7 +584,7 @@ def chunk_args(p: dict, aroll: Path, span: tuple[int, int], dest: Path, script: 
     graph.append(f"{video}format=yuv420p[vout]")
     script.write_text(";\n".join(graph), encoding="utf-8")
     return args + ["-filter_complex_script", str(script), "-map", "[vout]", "-frames:v", str(frames), "-r", rate,
-                   "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p", str(dest)]
+                   *h264(18, "medium"), "-pix_fmt", "yuv420p", str(dest)]
 
 
 def mix_args(p: dict, aroll: Path, dest: Path, script: Path) -> list[str]:

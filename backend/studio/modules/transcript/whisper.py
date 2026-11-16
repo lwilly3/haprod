@@ -36,6 +36,9 @@ def _pick_device() -> tuple[str, str]:
         for ct in ("float16", "int8_float16", "int8", "float32"):
             if ct in supported:
                 return "cuda", ct
+    # la puce Apple (Metal) : encore expérimental dans ctranslate2, donc seulement sur demande
+    if wanted == "mps" and sys.platform == "darwin":
+        return "mps", "float16"
     return "cpu", "int8"
 
 
@@ -46,7 +49,7 @@ class Engine:
         self.device, self.compute_type = _pick_device()
 
     def describe(self) -> dict:
-        label = "GPU" if self.device == "cuda" else "CPU"
+        label = "CPU" if self.device == "cpu" else "GPU"
         return {"model": MODEL_NAME, "device": label, "compute_type": self.compute_type,
                 "loaded": self._model is not None}
 
@@ -57,7 +60,7 @@ class Engine:
         return self._model
 
     def _fallback_to_cpu(self) -> None:
-        print("CUDA indisponible, bascule sur le CPU.", file=sys.stderr)
+        print("GPU indisponible, bascule sur le CPU.", file=sys.stderr)
         self._model = None
         self.device, self.compute_type = "cpu", "int8"
 
@@ -74,7 +77,7 @@ class Engine:
                 return self._run(wav, language, on_status, on_segment, check_cancel)
             except RuntimeError:
                 # DLL CUDA manquantes : l'erreur ne sort qu'au premier encodage
-                if self.device != "cuda":
+                if self.device == "cpu":
                     raise
                 self._fallback_to_cpu()
                 on_status("reset")

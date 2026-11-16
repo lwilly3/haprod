@@ -13,7 +13,7 @@ import subprocess
 from pathlib import Path
 from typing import Callable
 
-from ...core.system import tool
+from ...core.system import MAC_BIN_DIRS, tool
 from ..settings.service import language
 from . import captions
 
@@ -95,9 +95,13 @@ def _npx() -> str:
     if found:
         return found
     # le PATH herite n'a pas toujours Node.js (process lance avant son installation...)
-    installed = Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "nodejs" / "npx.cmd"
-    if installed.is_file():
-        return str(installed)
+    if os.name == "nt":
+        candidates = [Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "nodejs" / "npx.cmd"]
+    else:
+        candidates = [Path(folder) / "npx" for folder in MAC_BIN_DIRS]
+    for installed in candidates:
+        if installed.is_file():
+            return str(installed)
     raise RuntimeError("npx est introuvable : installe Node.js pour le rendu vidéo.")
 
 

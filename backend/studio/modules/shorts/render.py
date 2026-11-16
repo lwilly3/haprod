@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 from typing import Callable
 
-from ...core.system import tool
+from ...core.system import h264, tool
 
 VERTICAL = (1080, 1920)
 # fondu tres court a chaque coupe : evite les clics dans le son
@@ -91,7 +91,7 @@ def render(sources: list[Path], parts: list[dict], clips: list[list[float]], fmt
     args += ["-filter_complex", ";".join(filters)]
     if has_video:
         # une image cle par seconde : le navigateur et le rendu HyperFrames s'y deplacent sans figer
-        args += ["-map", "[v]", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
+        args += ["-map", "[v]", *h264(20, "veryfast"),
                  "-g", str(max(1, round(info["fps"])))]
     args += ["-map", "[a]", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart"]
 
