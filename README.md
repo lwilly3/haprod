@@ -94,6 +94,17 @@ Some editing jobs are done from a Claude Code session opened in this repository,
 `EPIDEMIC_SOUND_API_KEY`). The `hyperframes-*`, `gsap`, `three` and `motion-graphics` skills come from
 HyperFrames (see [Third-party notices](THIRD_PARTY_NOTICES.md)).
 
+## Versions
+
+Each version is a git tag (`v0.2.0`…), described in the [changelog](CHANGELOG.md). To get a given version:
+
+```bash
+git clone --branch v0.2.0 --depth 1 <this repository> haprod
+```
+
+or, in an existing clone, `git fetch --tags && git checkout v0.2.0`. A release is one commit
+(`chore(release): vX.Y.Z`) that bumps `web/package.json` and the changelog, then the tag of the same name.
+
 ## Requirements
 
 - **Windows** or **macOS** (native file dialogs, keys read from the Windows user environment or the macOS Keychain)

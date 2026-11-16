@@ -27,6 +27,7 @@ Thumbs.db
 /panoplie.json
 /panoplie.lock
 /.claude/settings.json
+/.claude/launch.json
 
 # vidéos d'exemple du skill hyperframes-animation (37 Mo, gardées en local par panoplie)
 /.claude/skills/hyperframes-animation/examples/assets/*.mp4
