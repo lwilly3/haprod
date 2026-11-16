@@ -89,9 +89,10 @@ def index_rush(pid: str, rush: dict, check_cancel) -> int:
     m = _model()
     vectors = []
     with tempfile.TemporaryDirectory() as tmp:
+        # format=yuvj420p : le JPEG veut des couleurs « pleine plage », que les vidéos d'iPhone n'ont pas toujours
         # les images clés seulement (une toutes les demi-secondes sur un boîtier) : décoder de la 4K entière serait long
         proc = subprocess.run([tool("ffmpeg"), "-y", "-v", "error", "-skip_frame", "nokey", "-i", rush["path"], "-an",
-                               "-vf", f"fps=1/{STEP},scale=336:-2", "-q:v", "4", str(Path(tmp) / "%06d.jpg")],
+                               "-vf", f"fps=1/{STEP},scale=336:-2,format=yuvj420p", "-q:v", "4", str(Path(tmp) / "%06d.jpg")],
                               capture_output=True, text=True, encoding="utf-8", errors="replace")
         files = sorted(Path(tmp).glob("*.jpg"))
         if proc.returncode != 0 and not files:
@@ -119,12 +120,19 @@ def run(ctx: TaskContext) -> None:
     state["activity"] = "charge le modèle"
     ctx.save(force=True)
     _model()
+    failed = []
     for n, rush in enumerate(todo):
         state["activity"] = f"regarde {rush['name']}"
         ctx.progress = n / len(todo)
         ctx.save(force=True)
-        index_rush(pid, rush, ctx.check_cancel)
+        try:
+            index_rush(pid, rush, ctx.check_cancel)
+        except RuntimeError:
+            # un rush illisible ne prive pas les autres de la recherche
+            failed.append(rush["name"])
     state["activity"] = None
+    if failed:
+        raise RuntimeError("rushes illisibles : " + ", ".join(failed))
 
 
 def status(project: dict, job_id: str | None) -> dict:
@@ -205,7 +213,7 @@ def frame(pid: str, rush: dict, t: float) -> Path:
     if not out.is_file():
         out.parent.mkdir(parents=True, exist_ok=True)
         proc = subprocess.run([tool("ffmpeg"), "-y", "-v", "error", "-ss", f"{max(0.0, t):.2f}", "-i", rush["path"],
-                               "-frames:v", "1", "-vf", "scale=320:-2", "-q:v", "4", str(out)],
+                               "-frames:v", "1", "-vf", "scale=320:-2,format=yuvj420p", "-q:v", "4", str(out)],
                               capture_output=True, text=True, encoding="utf-8", errors="replace")
         if proc.returncode != 0 or not out.is_file():
             raise RuntimeError("image indisponible")
