@@ -99,7 +99,7 @@ HyperFrames (see [Third-party notices](THIRD_PARTY_NOTICES.md)).
 Each version is a git tag (`v0.2.0`…), described in the [changelog](CHANGELOG.md). To get a given version:
 
 ```bash
-git clone --branch v0.2.0 --depth 1 <this repository> haprod
+git clone --branch v0.2.0 --depth 1 https://github.com/lwilly3/haprod.git
 ```
 
 or, in an existing clone, `git fetch --tags && git checkout v0.2.0`. A release is one commit
@@ -133,7 +133,7 @@ cd web; pnpm install
 On macOS:
 
 ```bash
-git clone <this repository> haprod
+git clone https://github.com/lwilly3/haprod.git
 cd haprod
 python3.12 -m venv .venv
 .venv/bin/pip install -r backend/requirements.txt
